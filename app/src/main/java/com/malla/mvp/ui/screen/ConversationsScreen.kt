@@ -57,6 +57,11 @@ fun ConversationsScreen(
     LaunchedEffect(conversationDao) {
         conversationDao?.getAllVisibleConversations()?.collect { list ->
             conversations = list
+            android.widget.Toast.makeText(
+                context,
+                "DEBUG conversaciones: " + list.joinToString { it.id },
+                android.widget.Toast.LENGTH_LONG
+            ).show()
         } ?: run { conversations = emptyList() }
     }
 
