@@ -42,6 +42,33 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
 
     companion object {
+        private const val SELF_CHAT_SQL_COLUMNS =
+            "(id, title, lastMessage, timestamp, unreadCount, lastMessageStatus, isHidden, isGroup, chatBackgroundColor)"
+
+        private fun selfChatValues(): String {
+            val now = System.currentTimeMillis()
+            return "('self_chat', 'Yo (Mensajes guardados)', 'Toca para guardar notas, imágenes...', $now, 0, 0, 0, 0, NULL)"
+        }
+
+        val CALLBACK = object : RoomDatabase.Callback() {
+            override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                super.onCreate(db)
+                try {
+                    db.execSQL("INSERT INTO conversations $SELF_CHAT_SQL_COLUMNS VALUES ${selfChatValues()}")
+                } catch (e: Exception) {
+                    Log.e("AppDatabase", "Error insertando self_chat en onCreate", e)
+                }
+            }
+            override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                super.onOpen(db)
+                try {
+                    db.execSQL("INSERT OR IGNORE INTO conversations $SELF_CHAT_SQL_COLUMNS VALUES ${selfChatValues()}")
+                } catch (e: Exception) {
+                    Log.e("AppDatabase", "Error insertando self_chat en onOpen", e)
+                }
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -55,6 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
                             "malla_database"
                         )
                             .fallbackToDestructiveMigration()
+                            .addCallback(CALLBACK)
                             .build()
                             .also { INSTANCE = it }
                     } catch (e: Exception) {
@@ -70,6 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                             "malla_database"
                         )
                             .fallbackToDestructiveMigration()
+                            .addCallback(CALLBACK)
                             .build()
                         INSTANCE = instance
                         instance
