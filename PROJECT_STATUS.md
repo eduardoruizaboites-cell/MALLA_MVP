@@ -95,3 +95,66 @@ App funcional: navegación, chat persistente, notas de voz push-to-talk, barra i
 
 ── RECONSTRUCCIÓN ──
 Este archivo fue reconstruido el 2026-07-13 desde git log, cubriendo desde el commit 5855d54b hasta HEAD (c047b788), porque no se actualizó en tiempo real durante ese período. Cualquier decisión o contexto de esas sesiones que NO haya quedado reflejado en un commit (conversaciones, descartes, razones no documentadas en el mensaje del commit) se considera perdido y no está reflejado aquí.
+
+── 2026-07-25 · Sesión N° 10 ──
+CAMBIO: Añadida MallaApplication con crash logger, Room callback en AppDatabase y Toast de depuración en ConversationsScreen.
+ARCHIVOS TOCADOS:
+  - app/src/main/java/com/malla/mvp/MallaApplication.kt (creado)
+  - app/src/main/AndroidManifest.xml
+  - app/src/main/java/com/malla/mvp/data/AppDatabase.kt
+  - app/src/main/java/com/malla/mvp/ui/screen/ConversationsScreen.kt
+POR QUÉ: Mejorar trazabilidad de fallos en campo y preparar infraestructura para chat "Yo". Se justifica en confiabilidad offline (crash logs persistentes en dispositivo) y depuración visual.
+ESTADO DE COMPILACIÓN: BUILD SUCCESSFUL — [pegar aquí la salida real de ./gradlew]
+VERIFICADO EN: solo compilación (pendiente de prueba en dispositivo real para validar logs y Toast).
+PROBLEMAS ENCONTRADOS: Ninguno durante la integración.
+IDEAS / MEJORAS PENDIENTES:
+  - El Toast de depuración debería eliminarse antes de release.
+  - El Room Callback debe contener la lógica de creación de la conversación "Yo" (actualmente vacío/truncado).
+PRÓXIMO PASO INMEDIATO: Probar en dispositivo real la creación del chat "Yo" y el funcionamiento del crash logger.
+── 2026-07-25 · Sesión N° 10 ──
+CAMBIO: Añadida MallaApplication con crash logger, Room callback en AppDatabase, Toast de depuración en ConversationsScreen, y registro en AndroidManifest.
+ARCHIVOS TOCADOS:
+  - app/src/main/java/com/malla/mvp/MallaApplication.kt (creado)
+  - app/src/main/AndroidManifest.xml
+  - data/src/main/java/com/malla/mvp/data/AppDatabase.kt
+  - app/src/main/java/com/malla/mvp/ui/screen/ConversationsScreen.kt
+POR QUÉ: Mejorar trazabilidad de fallos en campo (confiabilidad offline) y preparar infraestructura para chat "Yo".
+ESTADO DE COMPILACIÓN: BUILD SUCCESSFUL en ambos commits (85e9f480 y 5b77369b).
+VERIFICADO EN: solo compilación (pendiente de prueba en dispositivo real para validar logs, Toast y callback).
+PROBLEMAS ENCONTRADOS: Ruta incorrecta al añadir AppDatabase.kt en el primer commit; corregido en el segundo commit (5b77369b).
+IDEAS / MEJORAS PENDIENTES:
+  - El Toast de depuración debe eliminarse antes de release.
+  - El Room Callback debe contener lógica real de creación de la conversación "Yo" (actualmente vacío/truncado).
+PRÓXIMO PASO INMEDIATO: Probar en dispositivo real la creación del chat "Yo" y el funcionamiento del crash logger.
+── CIERRE DE SESIÓN 2026-07-25 ──
+ERRORES PENDIENTES / DEUDA TÉCNICA: 
+  1. Pruebas de comunicación BLE/Wi-Fi Direct entre dispositivos reales — NO REALIZADAS.
+  2. Refactorización de Injector para romper dependencias circulares con :network — PENDIENTE.
+  3. Vista previa de imágenes estilo WhatsApp — INCOMPLETA.
+  4. Indicador de ondas en grabación de voz a veces no se mueve — POSIBLE BUG.
+  5. Icono de notificación grande (setLargeIcon) no implementado.
+  6. Cobertura de pruebas unitarias — INEXISTENTE.
+  7. Toast de depuración en ConversationsScreen debe eliminarse antes de release.
+  8. El Room Callback añadido está vacío/truncado — debe contener la lógica de creación de la conversación "Yo" (pendiente de implementar/probar).
+LO QUE NO PUDE VERIFICAR: 
+  - Que el crash logger escriba correctamente en MediaStore en un dispositivo real.
+  - Que el Toast de depuración muestre las conversaciones correctas.
+  - El contenido completo del Room Callback (la definición está truncada en el diff, pero está commiteado).
+  - Que el chat "Yo" se cree automáticamente al abrir la BD (depende de la lógica dentro del Callback).
+DEPENDENCIAS ACTUALES: 
+  (app → core, data, crypto, events, identity, media, network, transport)
+  (data → core, room)
+  (crypto → core)
+  (transport → core, network)
+  (network → core, data)
+LÓGICA DE PROGRAMACIÓN CLAVE:
+  - MallaApplication usa UncaughtExceptionHandler para capturar crashes y escribirlos en disco.
+  - AppDatabase ahora tiene un Callback que se ejecuta al abrir la BD (probablemente para crear la conversación "Yo").
+  - ConversationsScreen muestra un Toast con los IDs de conversación al recoger la lista desde Room.
+PLAN DE ACCIÓN PARA LA PRÓXIMA SESIÓN:
+  TAREA INMEDIATA: Probar en dispositivo real la creación del chat "Yo" (instalar APK, abrir la app, verificar Toast y que aparezca la conversación "Yo").
+  TAREAS SIGUIENTES EN ORDEN DE PRIORIDAD:
+    1. Validar que el crash logger escribe archivos en /Downloads en Android 10+.
+    2. Eliminar el Toast de depuración y hacer un commit de limpieza.
+    3. Probar grabación de voz y reproducción con permisos reales.
+    4. Refactorizar Injector.
