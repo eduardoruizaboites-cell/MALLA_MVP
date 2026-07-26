@@ -1,66 +1,69 @@
 package com.malla.mvp.viewmodel
 
 import android.app.Application
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.network.MeshMessage
 import com.malla.mvp.network.NetworkService
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import java.util.UUID
 
-/**
- * ViewModel para la pantalla de chat.
- * Orquesta la carga de mensajes desde Room, el envío de mensajes mesh,
- * las encuestas, y el estado efímero.
- *
- * Referencia: Arquitectura V3.0 — Sprint 1.4
- */
 class MeshChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
 
-    // Estado de la conversación activa
     private val _conversationId = MutableStateFlow<String?>(null)
     val conversationId: StateFlow<String?> = _conversationId.asStateFlow()
 
-    val messages: StateFlow<List<MessageEntity>> = _conversationId
-        .flatMapLatest { convId ->
-            if (convId != null && db != null) {
-                db.messageDao().getMessagesForConversation(convId)
-            } else {
-                flowOf(emptyList())
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _messages = MutableStateFlow<List<MessageEntity>>(emptyList())
+    val messages: StateFlow<List<MessageEntity>> = _messages.asStateFlow()
 
-    // Encuestas
+    private var messageJob: Job? = null
+    private var lastMessageTimestamp = 0L
+
     private val _polls = MutableStateFlow<List<PollEntity>>(emptyList())
     val polls: StateFlow<List<PollEntity>> = _polls.asStateFlow()
 
     private val _optionsMap = MutableStateFlow<Map<String, List<PollOptionEntity>>>(emptyMap())
     val optionsMap: StateFlow<Map<String, List<PollOptionEntity>>> = _optionsMap.asStateFlow()
 
-    // Texto de entrada y estado de grabación
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
-    /**
-     * Inicia la carga de la conversación indicada.
-     */
     fun loadConversation(convId: String) {
+        if (_conversationId.value == convId) return
         _conversationId.value = convId
+        _messages.value = emptyList()
+        refreshMessages(convId)
         loadPolls(convId)
+    }
+
+    private fun refreshMessages(convId: String) {
+        viewModelScope.launch {
+            messageJob?.cancelAndJoin()
+            messageJob = launch {
+                try {
+                    val database = db ?: return@launch
+                    val msgs = database.messageDao().getMessagesForConversationOnce(convId)
+                    _messages.value = msgs.filter { it.conversationId == convId }
+                    if (msgs.isNotEmpty()) {
+                        lastMessageTimestamp = msgs.maxOf { it.timestamp }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MeshChatVM", "Error cargando mensajes", e)
+                }
+            }
+        }
     }
 
     private fun loadPolls(convId: String) {
@@ -83,9 +86,33 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     fun startRecording() { _isRecording.value = true }
     fun stopRecording() { _isRecording.value = false }
 
-    /**
-     * Envía un mensaje de texto (con posible cita).
-     */
+    fun isMessageNew(timestamp: Long): Boolean {
+        return timestamp > lastMessageTimestamp
+    }
+
+    fun sendZumbido() {
+        val convId = _conversationId.value ?: return
+        viewModelScope.launch {
+            val msg = MessageEntity(
+                id = UUID.randomUUID().toString(),
+                conversationId = convId,
+                content = "📳 Zumbido",
+                isOwn = true
+            )
+            db?.messageDao()?.insertMessage(msg)
+            if (convId != "self_chat") {
+                NetworkService.sendMessage(
+                    MeshMessage(
+                        content = "📳 Zumbido",
+                        senderId = "self",
+                        type = "zumbido"
+                    )
+                )
+            }
+            refreshMessages(convId)
+        }
+    }
+
     fun sendMessage(
         text: String,
         quotedMessageId: String? = null,
@@ -108,26 +135,25 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 quotedMessageContent = quotedMessageContent
             )
             db?.messageDao()?.insertMessage(msg)
-            NetworkService.sendMessage(
-                MeshMessage(
-                    content = msg.content,
-                    senderId = "self",
-                    timestamp = System.currentTimeMillis(),
-                    quotedMessageId = quotedMessageId,
-                    quotedMessageContent = quotedMessageContent
+            if (convId != "self_chat") {
+                NetworkService.sendMessage(
+                    MeshMessage(
+                        content = msg.content,
+                        senderId = "self",
+                        timestamp = System.currentTimeMillis(),
+                        quotedMessageId = quotedMessageId,
+                        quotedMessageContent = quotedMessageContent
+                    )
                 )
-            )
+            }
             _inputText.value = ""
+            refreshMessages(convId)
         }
     }
 
-    /**
-     * Vota en una encuesta (demo: suma 1 voto a la primera opción).
-     */
     fun votePoll(optionId: String, pollId: String) {
         viewModelScope.launch {
             db?.pollDao()?.incrementVoteCount(optionId, 1)
-            // Actualizar el mapa local
             val currentOptions = _optionsMap.value[pollId] ?: return@launch
             val updated = currentOptions.map { opt ->
                 if (opt.id == optionId) opt.copy(voteCount = opt.voteCount + 1) else opt
@@ -146,13 +172,15 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     db?.pollDao()?.insertOption(PollOptionEntity(id = UUID.randomUUID().toString(), pollId = pollId, text = text))
                 }
             }
-            loadPolls(convId) // refrescar
+            loadPolls(convId)
         }
     }
 
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             db?.messageDao()?.deleteMessage(messageId)
+            val convId = _conversationId.value ?: return@launch
+            refreshMessages(convId)
         }
     }
 }
