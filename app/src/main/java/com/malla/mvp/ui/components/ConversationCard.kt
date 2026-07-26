@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import com.malla.mvp.data.entity.ConversationEntity
 import kotlinx.coroutines.launch
@@ -53,6 +55,7 @@ fun ConversationCard(
     val leftActionWidth = 120.dp
     val rightActionWidth = 160.dp
     val density = LocalDensity.current
+    val ctx = LocalContext.current
     val leftActionWidthPx = with(density) { leftActionWidth.toPx() }
     val rightActionWidthPx = with(density) { rightActionWidth.toPx() }
     val dismissThreshold = 0.4f
@@ -97,11 +100,11 @@ fun ConversationCard(
 
     // Colores del avatar
     val defaultAvatarColor = remember(conversation.title) {
-        val hue = (conversation.title.hashCode() % 360).toFloat()
+        val hue = (conversation.title.hashCode() % 360).let { Math.abs(it).toFloat() }
         Color.hsl(hue = hue, saturation = 0.6f, lightness = 0.5f, alpha = 0.3f)
     }
     val textColor = remember(conversation.title) {
-        val hue = (conversation.title.hashCode() % 360).toFloat()
+        val hue = (conversation.title.hashCode() % 360).let { Math.abs(it).toFloat() }
         Color.hsl(hue = hue, saturation = 0.8f, lightness = 0.4f, alpha = 1f)
     }
 

@@ -27,7 +27,7 @@ interface ConversationDao {
     @Query("UPDATE conversations SET chatBackgroundColor = :color WHERE id = :conversationId")
     suspend fun updateChatBackgroundColor(conversationId: String, color: Int)
 
-    @Query("SELECT * FROM conversations ORDER BY lastMessageTimestamp DESC")
+    @Query("SELECT * FROM conversations ORDER BY timestamp DESC")
     fun getAllConversations(): Flow<List<ConversationEntity>>
 
     @Query("SELECT COUNT(*) FROM conversations")

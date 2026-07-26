@@ -158,3 +158,34 @@ PLAN DE ACCIÓN PARA LA PRÓXIMA SESIÓN:
     2. Eliminar el Toast de depuración y hacer un commit de limpieza.
     3. Probar grabación de voz y reproducción con permisos reales.
     4. Refactorizar Injector.
+
+── 2026-07-25 · Sesión N° 10 (continuación) ──
+CAMBIO: Diagnóstico y reparación del chat "Yo" que no se creaba.
+DIAGNÓSTICO:
+  - AppDatabase.getInstance() devolvía null porque Room no generaba AppDatabase_Impl.
+  - Causa raíz: faltaba KSP y room-compiler en data/build.gradle.kts.
+  - Errores adicionales detectados por KSP:
+    * PollVoteEntity no estaba en la lista de entidades de @Database.
+    * ConversationDao.getAllConversations() usaba "lastMessageTimestamp" en lugar de "timestamp".
+  - Crash al dibujar ConversationCard por valor HSL negativo (hashCode de "Yo (Mensajes guardados)").
+SOLUCIONES APLICADAS:
+  - Agregado plugin KSP y dependencia room-compiler en data/build.gradle.kts.
+  - Agregada PollVoteEntity a @Database en AppDatabase.kt.
+  - Corregido nombre de columna en ConversationDao.kt.
+  - Implementada creación del chat "Yo" en MainActivity.onCreate() con diagnóstico de errores vía Toasts.
+  - Corregido cálculo de color HSL en ConversationCard.kt usando Math.abs().
+  - Eliminados Toasts de depuración en ConversationsScreen.kt y ConversationCard.kt.
+ARCHIVOS MODIFICADOS:
+  - data/build.gradle.kts (plugin KSP, room-compiler)
+  - data/src/main/java/com/malla/mvp/data/AppDatabase.kt (PollVoteEntity en @Database)
+  - data/src/main/java/com/malla/mvp/data/dao/ConversationDao.kt (timestamp)
+  - app/src/main/java/com/malla/mvp/MainActivity.kt (creación de chat "Yo" con diagnóstico)
+  - app/src/main/java/com/malla/mvp/ui/components/ConversationCard.kt (Math.abs en HSL)
+  - app/src/main/java/com/malla/mvp/ui/screen/ConversationsScreen.kt (limpieza de Toasts)
+ESTADO DE COMPILACIÓN: BUILD SUCCESSFUL.
+VERIFICADO EN: dispositivo real. El chat "Yo (Mensajes guardados)" aparece correctamente en la lista de conversaciones.
+DEUDA TÉCNICA ACTUALIZADA:
+  - Toast de depuración en ConversationsScreen: ELIMINADO.
+  - Room Callback para chat "Yo": REEMPLAZADO por lógica directa en MainActivity (más confiable).
+  - Crash logger: verificado que escribe en Downloads; se usó para diagnosticar el error de HSL.
+PRÓXIMO PASO INMEDIATO: Probar comunicación BLE/Wi-Fi Direct entre dispositivos reales.

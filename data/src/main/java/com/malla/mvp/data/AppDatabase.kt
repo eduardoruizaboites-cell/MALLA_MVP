@@ -18,6 +18,7 @@ import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.data.entity.UserIdentityEntity
 import com.malla.mvp.data.entity.ContactEntity
+import com.malla.mvp.data.entity.PollVoteEntity
 import java.io.File
 
 @Database(
@@ -28,7 +29,8 @@ import java.io.File
         PollEntity::class,
         PollOptionEntity::class,
         UserIdentityEntity::class,
-        ContactEntity::class
+        ContactEntity::class,
+        PollVoteEntity::class
     ],
     version = 9,
     exportSchema = false
