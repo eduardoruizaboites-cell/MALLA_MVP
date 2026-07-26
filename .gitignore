@@ -27,3 +27,8 @@ temp_repo/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Archivos de compilación y dependencias
+.gradle/
+build/
+local.properties
