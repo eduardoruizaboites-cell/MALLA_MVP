@@ -141,12 +141,25 @@ fun PerfilScreen() {
         Spacer(modifier = Modifier.height(90.dp))
 
         // Nombre y teléfono reales
-        Text(
-            text = userName,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            color = Color.White,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+        Row(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = userName,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            if (userName.isNotBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "✓",
+                    color = Color(0xFF4CAF50),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = phoneNumber,

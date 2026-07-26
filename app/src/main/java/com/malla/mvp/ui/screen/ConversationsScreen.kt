@@ -43,6 +43,7 @@ fun ConversationsScreen(
     val conversationDao = remember { db?.conversationDao() }
     val storyDao = remember { db?.storyDao() }
     var conversations by remember { mutableStateOf<List<ConversationEntity>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(0) }
     var showStoryViewer by remember { mutableStateOf(false) }
@@ -57,6 +58,7 @@ fun ConversationsScreen(
     LaunchedEffect(conversationDao) {
         conversationDao?.getAllVisibleConversations()?.collect { list ->
             conversations = list
+            isLoading = false
         } ?: run { conversations = emptyList() }
     }
 
@@ -85,6 +87,13 @@ fun ConversationsScreen(
         }
     }
 
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF0A1B2A), Color(0xFF0A1118)))
+        ), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
+    } else {
     Box(modifier = Modifier.fillMaxSize().background(
         Brush.verticalGradient(listOf(Color(0xFF0A1B2A), Color(0xFF0A1118)))
     )) {
@@ -338,4 +347,5 @@ fun ConversationsScreen(
             )
         }
     }
+    } // cierre del if/else
 }

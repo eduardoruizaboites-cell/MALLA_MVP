@@ -139,9 +139,14 @@ class MainActivity : FragmentActivity() {
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
 
             val isOnline by ConnectivityMonitor.isOnline.collectAsState()
+            val meshToastShown = remember { mutableStateOf(false) }
             LaunchedEffect(isOnline) {
                 try {
                     if (!isOnline) {
+                        if (!meshToastShown.value) {
+                            android.widget.Toast.makeText(context, "Modo Mesh activado – Tema OLED para ahorro de batería", android.widget.Toast.LENGTH_LONG).show()
+                            meshToastShown.value = true
+                        }
                         // MeshChatService eliminado temporalmente
                         LogBuffer.add("MAIN", "Iniciando servicio mesh")
                         NetworkService.startServer()
@@ -361,7 +366,7 @@ fun MainApp(
     }
     val onProfileClick = { selectedTab = 2 }
     Scaffold(
-        topBar = { MainTopBar(onSettingsClick = onSettingsClick, onChatSettingsClick = onChatSettingsClick, onProfileClick = onProfileClick, isOnline = !isMeshMode) },
+        topBar = { MainTopBar(onSettingsClick = onSettingsClick, onChatSettingsClick = onChatSettingsClick, onProfileClick = onProfileClick, isOnline = !isMeshMode, showEncryption = currentConversationId != null) },
         bottomBar = {
             NavigationBar(
                 modifier = Modifier.height(56.dp),

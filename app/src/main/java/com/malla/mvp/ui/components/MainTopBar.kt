@@ -31,7 +31,8 @@ fun MainTopBar(
     onSettingsClick: () -> Unit,
     onChatSettingsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    isOnline: Boolean
+    isOnline: Boolean,
+    showEncryption: Boolean = false
 ) {
     val currentAvatar by IdentityManager.avatarBitmap.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
@@ -66,13 +67,24 @@ fun MainTopBar(
 
     TopAppBar(
         title = {
-            Text(
-                text = "MALLA",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                letterSpacing = 2.sp,
-                color = Color.White
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "MALLA",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    letterSpacing = 2.sp,
+                    color = Color.White
+                )
+                if (showEncryption) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "Cifrado E2E",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         },
         navigationIcon = {
             Box {

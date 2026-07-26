@@ -2,11 +2,6 @@ package com.malla.mvp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Paleta de colores completa para un tema de MALLA.
- * Todos los temas oscuros están optimizados para pantallas OLED
- * (fondos oscuros = píxeles apagados = ahorro de batería).
- */
 data class MallaColorScheme(
     val name: String,
     val primary: Color,
@@ -24,16 +19,15 @@ data class MallaColorScheme(
     val isDark: Boolean = true
 ) {
     companion object {
-        // Tema 1: MALLA Oscuro (cyan + azul noche) — POR DEFECTO
         val MALLA_DARK = MallaColorScheme(
             name = "MALLA Oscuro",
-            primary = Color(0xFF4CE6FF),        // Cyan apagado
+            primary = Color(0xFF4CE6FF),
             onPrimary = Color(0xFF0A1B2A),
             primaryContainer = Color(0xFF003640),
             secondary = Color(0xFFFFB347),
             onSecondary = Color(0xFF0A0E14),
             secondaryContainer = Color(0xFFCC7A00),
-            background = Color(0xFF0A0E14),     // Azul noche profundo
+            background = Color(0xFF0A0E14),
             surface = Color(0xFF141B22),
             onBackground = Color(0xFFE0E0E0),
             onSurface = Color(0xFFE0E0E0),
@@ -42,16 +36,15 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 2: OLED Puro (máxima eficiencia energética) — FORZADO EN MODO MESH
         val OLED_PURE = MallaColorScheme(
             name = "OLED Puro",
-            primary = Color(0xFF66BB6A),        // Verde apagado
+            primary = Color(0xFF66BB6A),
             onPrimary = Color(0xFF000000),
             primaryContainer = Color(0xFF1B5E20),
             secondary = Color(0xFF81C784),
             onSecondary = Color(0xFF000000),
             secondaryContainer = Color(0xFF2E7D32),
-            background = Color(0xFF000000),     // Negro total (OLED apagado)
+            background = Color(0xFF000000),
             surface = Color(0xFF0A0A0A),
             onBackground = Color(0xFFCCCCCC),
             onSurface = Color(0xFFCCCCCC),
@@ -60,16 +53,15 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 3: Midnight (azul profundo + gris)
         val MIDNIGHT = MallaColorScheme(
             name = "Midnight",
-            primary = Color(0xFF5C6BC0),        // Índigo apagado
+            primary = Color(0xFF5C6BC0),
             onPrimary = Color(0xFF0D1117),
             primaryContainer = Color(0xFF1A237E),
             secondary = Color(0xFF78909C),
             onSecondary = Color(0xFF0D1117),
             secondaryContainer = Color(0xFF37474F),
-            background = Color(0xFF0D1117),     // Casi negro azulado
+            background = Color(0xFF0D1117),
             surface = Color(0xFF161B22),
             onBackground = Color(0xFFC8CCD0),
             onSurface = Color(0xFFC8CCD0),
@@ -78,10 +70,9 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 4: Forest (verde bosque)
         val FOREST = MallaColorScheme(
             name = "Forest",
-            primary = Color(0xFF4CAF50),        // Verde bosque
+            primary = Color(0xFF4CAF50),
             onPrimary = Color(0xFF0D1A0D),
             primaryContainer = Color(0xFF1B5E20),
             secondary = Color(0xFF8D6E63),
@@ -96,10 +87,9 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 5: Serenity (morado suave)
         val SERENITY = MallaColorScheme(
             name = "Serenity",
-            primary = Color(0xFF9575CD),        // Morado suave
+            primary = Color(0xFF9575CD),
             onPrimary = Color(0xFF111118),
             primaryContainer = Color(0xFF4527A0),
             secondary = Color(0xFF80CBC4),
@@ -114,10 +104,9 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 6: Sunset (naranja quemado)
         val SUNSET = MallaColorScheme(
             name = "Sunset",
-            primary = Color(0xFFFF7043),        // Naranja quemado
+            primary = Color(0xFFFF7043),
             onPrimary = Color(0xFF1A1008),
             primaryContainer = Color(0xFFBF360C),
             secondary = Color(0xFFFFCA28),
@@ -132,16 +121,15 @@ data class MallaColorScheme(
             isDark = true
         )
 
-        // Tema 7: Claro (blanco hueso + gris)
         val LIGHT = MallaColorScheme(
             name = "Claro",
-            primary = Color(0xFF00838F),        // Teal oscuro
+            primary = Color(0xFF00838F),
             onPrimary = Color(0xFFFFFFFF),
             primaryContainer = Color(0xFFB2EBF2),
             secondary = Color(0xFF43A047),
             onSecondary = Color(0xFFFFFFFF),
             secondaryContainer = Color(0xFFC8E6C9),
-            background = Color(0xFFF5F0EB),     // Blanco hueso
+            background = Color(0xFFF5F0EB),
             surface = Color(0xFFFFFFFF),
             onBackground = Color(0xFF1A1A1A),
             onSurface = Color(0xFF1A1A1A),
@@ -150,7 +138,42 @@ data class MallaColorScheme(
             isDark = false
         )
 
-        // Lista de todos los temas disponibles
-        val ALL = listOf(MALLA_DARK, OLED_PURE, MIDNIGHT, FOREST, SERENITY, SUNSET, LIGHT)
+        // NUEVO: Tema Táctico (alto contraste para exteriores)
+        val TACTICAL = MallaColorScheme(
+            name = "Táctico",
+            primary = Color(0xFFFFD600),
+            onPrimary = Color(0xFF000000),
+            primaryContainer = Color(0xFF3E3E00),
+            secondary = Color(0xFF9E9E9E),
+            onSecondary = Color(0xFF000000),
+            secondaryContainer = Color(0xFF424242),
+            background = Color(0xFF0D0D0D),
+            surface = Color(0xFF1A1A1A),
+            onBackground = Color(0xFFFFD600),
+            onSurface = Color(0xFFFFD600),
+            outline = Color(0xFFFFD600),
+            surfaceVariant = Color(0xFF2A2A00),
+            isDark = true
+        )
+
+        // NUEVO: Tema Discreto (bajo perfil, tonos grises)
+        val STEALTH = MallaColorScheme(
+            name = "Discreto",
+            primary = Color(0xFF607D8B),
+            onPrimary = Color(0xFF0A0A0A),
+            primaryContainer = Color(0xFF37474F),
+            secondary = Color(0xFF78909C),
+            onSecondary = Color(0xFF0A0A0A),
+            secondaryContainer = Color(0xFF455A64),
+            background = Color(0xFF121212),
+            surface = Color(0xFF1E1E1E),
+            onBackground = Color(0xFFB0B0B0),
+            onSurface = Color(0xFFB0B0B0),
+            outline = Color(0xFF546E7A),
+            surfaceVariant = Color(0xFF263238),
+            isDark = true
+        )
+
+        val ALL = listOf(MALLA_DARK, OLED_PURE, MIDNIGHT, FOREST, SERENITY, SUNSET, LIGHT, TACTICAL, STEALTH)
     }
 }
