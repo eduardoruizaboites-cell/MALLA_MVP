@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,41 +150,7 @@ fun ChatScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(contactName, color = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Indicador de canal seguro
-                            val channelLabel = when {
-                                isMeshMode -> "Mesh"
-                                else -> "Internet"
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF4CAF50).copy(alpha = 0.12f),
-                                modifier = Modifier.height(24.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Lock,
-                                        contentDescription = "E2E Seguro",
-                                        tint = Color(0xFF4CAF50),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = channelLabel,
-                                        color = Color(0xFF4CAF50),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-                    },
+                    title = { Text(contactName, color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
