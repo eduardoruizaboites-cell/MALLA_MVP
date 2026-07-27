@@ -40,6 +40,11 @@ import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -104,6 +109,8 @@ fun ChatScreen(
     var showAttachmentSheet by remember { mutableStateOf(false) }
     var showGalleryPanel by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     var zumbidoCooldown by remember { mutableStateOf(false) }
     val pendingMediaUris = remember { mutableStateListOf<Uri>() }
     var captionText by remember { mutableStateOf("") }
@@ -152,60 +159,123 @@ fun ChatScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(contactName, color = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Indicador de canal seguro
-                            val channelLabel = when {
-                                isMeshMode -> "Mesh"
-                                else -> "Internet"
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF4CAF50).copy(alpha = 0.12f),
-                                modifier = Modifier.height(24.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Lock,
-                                        contentDescription = "E2E Seguro",
-                                        tint = Color(0xFF4CAF50),
-                                        modifier = Modifier.size(14.dp)
+                        // Barra de búsqueda animada o título normal
+                        AnimatedContent(
+                            targetState = showSearch,
+                            transitionSpec = {
+                                (slideInHorizontally { -it } + fadeIn(tween(300))) togetherWith
+                                        (slideOutHorizontally { it } + fadeOut(tween(300)))
+                            },
+                            label = "search_transition"
+                        ) { isSearching ->
+                            if (isSearching) {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Buscar mensajes...", color = Color.White.copy(alpha = 0.5f)) },
+                                    leadingIcon = { Icon(Icons.Filled.Search, null, tint = Color.White) },
+                                    trailingIcon = {
+                                        IconButton(onClick = { showSearch = false; searchQuery = "" }) {
+                                            Icon(Icons.Filled.Close, "Cerrar", tint = Color.White)
+                                        }
+                                    },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.White.copy(alpha = 0.5f),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = channelLabel,
-                                        color = Color(0xFF4CAF50),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                )
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(contactName, color = Color.White)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    // Indicador de canal seguro
+                                    val channelLabel = when {
+                                        isMeshMode -> "Mesh"
+                                        else -> "Internet"
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFF4CAF50).copy(alpha = 0.12f),
+                                        modifier = Modifier.height(24.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Lock,
+                                                contentDescription = "E2E Seguro",
+                                                tint = Color(0xFF4CAF50),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = channelLabel,
+                                                color = Color(0xFF4CAF50),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
+                        if (showSearch) {
+                            IconButton(onClick = { showSearch = false; searchQuery = "" }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
+                            }
+                        } else {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
+                            }
                         }
                     },
                     actions = {
-                        IconButton(onClick = onProfileClicked) {
-                            Surface(
-                                modifier = Modifier.size(64.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = contactName.take(1).uppercase(),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 28.sp
-                                    )
+                        var showAvatarMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { showAvatarMenu = true }) {
+                                Surface(
+                                    modifier = Modifier.size(40.dp),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = contactName.take(1).uppercase(),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp
+                                        )
+                                    }
                                 }
+                            }
+                            DropdownMenu(
+                                expanded = showAvatarMenu,
+                                onDismissRequest = { showAvatarMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Row { Icon(Icons.Filled.Search, null); Spacer(Modifier.width(8.dp)); Text("Buscar") } },
+                                    onClick = { showAvatarMenu = false; showSearch = true; searchQuery = "" }
+                                )
+                                DropdownMenuItem(
+                                    text = { Row { Icon(Icons.Filled.Person, null); Spacer(Modifier.width(8.dp)); Text("Perfil") } },
+                                    onClick = { showAvatarMenu = false; onProfileClicked() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Row { Icon(Icons.Filled.Notifications, null); Spacer(Modifier.width(8.dp)); Text("Notificaciones") } },
+                                    onClick = { showAvatarMenu = false; /* TODO: implementar notificaciones */ }
+                                )
+                                DropdownMenuItem(
+                                    text = { Row { Icon(Icons.Filled.Delete, null); Spacer(Modifier.width(8.dp)); Text("Eliminar chat") } },
+                                    onClick = { showAvatarMenu = false; /* TODO: eliminar conversación */ }
+                                )
                             }
                         }
                     },
@@ -220,11 +290,12 @@ fun ChatScreen(
                     .padding(padding)
             ) {
                 // Lista de mensajes
+                val filteredMessages = if (searchQuery.isNotBlank()) messages.filter { it.content.contains(searchQuery, ignoreCase = true) } else messages
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     state = listState
                 ) {
-                    items(messages) { msg ->
+                    items(filteredMessages) { msg ->
                         MessageBubbleV2(msg = msg, animate = vm.isMessageNew(msg.timestamp), onImageClick = { uri -> fullScreenImageUri = uri })
                     }
                 }
