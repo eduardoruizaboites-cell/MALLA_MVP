@@ -9,6 +9,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,6 +41,7 @@ fun ChatInputBar(
     onSendText: (String) -> Unit,
     onSendVoice: (File) -> Unit,
     onSendZumbido: () -> Unit,
+    onTextChanged: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -45,9 +49,11 @@ fun ChatInputBar(
     var isRecording by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
 
+    // Contenedor principal que se ancla al fondo y respeta las barras del sistema
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Bottom
     ) {
@@ -76,40 +82,50 @@ fun ChatInputBar(
             contentAlignment = Alignment.BottomCenter
         ) { recording ->
             if (!recording) {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Mensaje", color = Color.Gray) },
-                    maxLines = 3,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontSize = 16.sp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF4CE6FF),
-                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
-                        focusedContainerColor = Color(0xFF1A2A3A),
-                        unfocusedContainerColor = Color(0xFF1A2A3A)
-                    ),
-                    leadingIcon = {
-                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
-                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
-                        }
-                    },
-                    trailingIcon = {
-                        Row(
-                            modifier = Modifier.animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
-                        ) {
-                            IconButton(onClick = { /* TODO attachment */ }) {
-                                Icon(Icons.Filled.AttachFile, "Adjuntar", tint = Color(0xFF4CE6FF))
+                // Campo de texto táctico multilínea con scroll
+                Box(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp, max = 150.dp)) {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it; onTextChanged(it) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp, max = 150.dp)
+                            .verticalScroll(rememberScrollState()),
+                        placeholder = { Text("Mensaje", color = Color.Gray) },
+                        maxLines = Int.MAX_VALUE,  // permitir scroll ilimitado, limitado por la altura
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            lineHeight = 22.sp
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4CE6FF),
+                            unfocusedBorderColor = Color(0xFF4CE6FF).copy(alpha = 0.3f),
+                            focusedContainerColor = Color(0xFF0D1B2A),  // fondo más oscuro para mejor contraste
+                            unfocusedContainerColor = Color(0xFF0D1B2A)
+                        ),
+                        leadingIcon = {
+                            IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
+                                Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
                             }
-                            if (text.isBlank()) {
-                                IconButton(onClick = { /* TODO cámara */ }) {
-                                    Icon(Icons.Filled.CameraAlt, "Cámara", tint = Color(0xFF4CE6FF))
+                        },
+                        trailingIcon = {
+                            Row(
+                                modifier = Modifier.animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                            ) {
+                                IconButton(onClick = { /* TODO attachment */ }) {
+                                    Icon(Icons.Filled.AttachFile, "Adjuntar", tint = Color(0xFF4CE6FF))
+                                }
+                                if (text.isBlank()) {
+                                    IconButton(onClick = { /* TODO cámara */ }) {
+                                        Icon(Icons.Filled.CameraAlt, "Cámara", tint = Color(0xFF4CE6FF))
+                                    }
                                 }
                             }
                         }
-                    }
-                )
+                    )
+                }
             } else {
                 EqualizerBarsIndicator(
                     amplitudeFlow = voiceRecorder.amplitude,
