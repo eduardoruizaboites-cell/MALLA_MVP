@@ -20,12 +20,6 @@ interface MessageDao {
     @Query("DELETE FROM messages WHERE id = :messageId")
     suspend fun deleteMessage(messageId: String)
 
-    @Query("UPDATE messages SET reaction = :reaction WHERE id = :messageId")
-    suspend fun updateReaction(messageId: String, reaction: String?)
-
-    @Query("SELECT * FROM messages WHERE id = :id")
-    suspend fun getMessageById(id: String): MessageEntity?
-
     @Query("SELECT * FROM messages ORDER BY timestamp ASC")
     fun observeAllMessages(): Flow<List<MessageEntity>>
 

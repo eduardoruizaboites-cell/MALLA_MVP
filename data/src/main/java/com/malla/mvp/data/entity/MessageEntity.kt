@@ -11,10 +11,10 @@ data class MessageEntity(
     val timestamp: Long = System.currentTimeMillis(),
     val isOwn: Boolean = false,
     val status: Int = 0,
+    val reaction: String? = null,
     val expireAt: Long? = null,
     val mediaUri: String? = null,
     val viewOnce: Boolean = false,
     val quotedMessageId: String? = null,        // NUEVO
-    val quotedMessageContent: String? = null,    // NUEVO
-    val reaction: String? = null
+    val quotedMessageContent: String? = null    // NUEVO
 )

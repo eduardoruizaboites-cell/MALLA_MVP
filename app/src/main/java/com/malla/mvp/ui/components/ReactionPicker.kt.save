@@ -1,0 +1,134 @@
+package com.malla.mvp.ui.components
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+
+@Composable
+fun ReactionPicker(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    onEmojiSelected: (String) -> Unit,
+    onPlusClicked: () -> Unit
+) {
+    if (!show) return
+
+    Popup(
+        alignment = Alignment.Center,
+        offset = IntOffset(0, -80),
+        properties = PopupProperties(focusable = false),
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xE6101010),
+            border = BorderStroke(1.dp, Color(0xFF4CE6FF).cop
+package com.malla.mvp.ui.components
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+
+@Composable
+fun ReactionPicker(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    onEmojiSelected: (String) -> Unit,
+    onPlusClicked: () -> Unit
+) {
+    if (!show) return
+
+    Popup(
+        alignment = Alignment.Center,
+        offset = IntOffset(0, -80),
+        properties = PopupProperties(focusable = false),
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xE6101010),
+            border = BorderStroke(1.dp, Color(0xFF4CE6FF).copy(alpha = 0.3f)),
+            shadowElevation = 8.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val quickEmojis = listOf("👍", "❤️", "😂", "😢")
+                quickEmojis.forEach { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CE6FF).copy(alpha = 0.08f))
+                            .border(1.dp, Color(0xFF4CE6FF).copy(alpha = 0.25f), CircleShape)
+                            .clickable { onEmojiSelected(emoji); onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 22.sp)
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF4CE6FF).copy(alpha = 0.15f), Color(0xFF003640))
+                            )
+                        )
+                        .border(1.dp, Color(0xFF4CE6FF).copy(alpha = 0.4f), CircleShape)
+                        .clickable { onPlusClicked() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Más emojis",
+                        tint = Color(0xFF4CE6FF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
