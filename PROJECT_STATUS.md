@@ -189,3 +189,32 @@ DEUDA TÉCNICA ACTUALIZADA:
   - Room Callback para chat "Yo": REEMPLAZADO por lógica directa en MainActivity (más confiable).
   - Crash logger: verificado que escribe en Downloads; se usó para diagnosticar el error de HSL.
 PRÓXIMO PASO INMEDIATO: Probar comunicación BLE/Wi-Fi Direct entre dispositivos reales.
+
+── 2026-08-01 · Sesión de estabilización y mejoras visuales ──
+CAMBIO: Estabilización completa de la app y adición del indicador de escritura profesional.
+DIAGNÓSTICO (cierres al enviar mensajes):
+  - Existía un duplicado de la clase MessageData en los módulos app y core, con diferentes campos. El mapeador usaba la versión del módulo app pero en ejecución se cargaba la del core, provocando NoSuchMethodError.
+  - Adicionalmente, ChatScreen referenciaba ChatViewModel (inexistente) en lugar de MeshChatViewModel.
+SOLUCIONES APLICADAS:
+  - Eliminada la definición duplicada de MessageData en el módulo app.
+  - Añadido campo reaction a la definición de MessageData en el módulo core.
+  - Creado MessageMapper para centralizar la conversión entre MessageEntity y MessageData.
+  - ChatScreen actualizado para usar MeshChatViewModel.
+  - Integrado ComposingBubble (indicador de escritura con puntos saltarines y avatar).
+  - Añadido parámetro onTextChanged a ChatInputBar para conectar el indicador.
+  - Corregido smart cast de mediaUri mediante variable local 'media'.
+ARCHIVOS MODIFICADOS:
+  - app/.../core/data/IMessageRepository.kt (eliminado duplicado)
+  - core/.../core/data/IMessageRepository.kt (añadido campo reaction)
+  - app/.../core/data/MessageMapper.kt (creado)
+  - app/.../ui/screen/ChatScreen.kt (ViewModel corregido, indicador de escritura)
+  - app/.../ui/components/ChatInputBar.kt (parámetro onTextChanged)
+  - app/.../ui/components/ComposingBubble.kt (creado, componente del indicador)
+  - data/.../entity/MessageEntity.kt (campo reaction)
+ESTADO DE COMPILACIÓN: BUILD SUCCESSFUL.
+VERIFICADO EN: dispositivo real. La app no se cierra al enviar mensajes; el indicador de escritura funciona correctamente.
+DEUDA TÉCNICA ACTUALIZADA:
+  - Reacciones (doble tap): pendiente, capa de datos lista (falta UI).
+  - Caja de texto que crece hacia arriba: pendiente, requiere reestructurar layout (mover al bottomBar).
+  - Búsqueda en el chat: pendiente (ya se implementó en sesión anterior pero fue revertida; se puede re-aplicar).
+PRÓXIMO PASO INMEDIATO: Implementar reacciones con doble tap (picker flotante de emojis).

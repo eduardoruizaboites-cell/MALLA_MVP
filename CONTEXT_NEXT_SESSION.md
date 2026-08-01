@@ -1,0 +1,1 @@
+Contexto para nueva sesión: App MALLA MVP estable. Rama feature/chat-yo. Último commit: checkpoint estable con indicador de escritura, envío de mensajes funcionando, capa de abstracción con MessageMapper. Próxima tarea: implementar reacciones (doble tap).
