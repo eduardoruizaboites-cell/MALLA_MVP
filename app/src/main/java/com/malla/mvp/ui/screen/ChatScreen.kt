@@ -71,8 +71,10 @@ import coil.compose.AsyncImage
 import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.ui.components.GalleryPickerPanel
+import com.malla.mvp.ui.components.ComposingBubble
+import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.ui.components.ChatInputBar
-import com.malla.mvp.viewmodel.ChatViewModel
+import com.malla.mvp.viewmodel.MeshChatViewModel
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.Canvas
@@ -97,7 +99,7 @@ fun ChatScreen(
     onVideoCallClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val vm: ChatViewModel = viewModel()
+    val vm: MeshChatViewModel = viewModel()
     val messages by vm.messages.collectAsState()
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
@@ -112,6 +114,8 @@ fun ChatScreen(
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
+
+    var typingText by remember { mutableStateOf("") }
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -299,11 +303,25 @@ fun ChatScreen(
                         }
                     }
                 } else {
+                    AnimatedVisibility(
+                        visible = typingText.isNotEmpty(),
+                        enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
+                        exit = scaleOut(tween(150)) + fadeOut(tween(150))
+                    ) {
+                        val avatarBitmap = IdentityManager.avatarBitmap.collectAsState().value
+                        ComposingBubble(
+                            isOwn = true,
+                            avatarBitmap = avatarBitmap,
+                            userName = contactName.take(1).uppercase(),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
                     ChatInputBar(
                         voiceRecorder = voiceRecorder,
-                        onSendText = { msg -> vm.sendMessage(msg) },
-                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath) },
-                        onSendZumbido = { vm.sendZumbido() }
+                        onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
+                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
+                        onSendZumbido = { vm.sendZumbido() },
+                        onTextChanged = { newText -> typingText = newText }
                     )
                 }
                 // Panel de emojis
@@ -514,10 +532,11 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
                 )
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    if (msg.mediaUri != null) {
-                        val uri = Uri.parse(msg.mediaUri)
-                        if (msg.mediaUri.endsWith(".3gp") || msg.mediaUri.endsWith(".m4a") || msg.mediaUri.contains("voice_")) {
-                            AudioBubblePlayer(filePath = msg.mediaUri, modifier = Modifier.fillMaxWidth())
+                    val media = msg.mediaUri
+                    if (media != null) {
+                        val uri = Uri.parse(media)
+                        if (media.endsWith(".3gp") || media.endsWith(".m4a") || media.contains("voice_")) {
+                            AudioBubblePlayer(filePath = media, modifier = Modifier.fillMaxWidth())
                             Spacer(modifier = Modifier.height(4.dp))
                         } else {
                             Box(

@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +39,7 @@ fun ChatInputBar(
     onSendText: (String) -> Unit,
     onSendVoice: (File) -> Unit,
     onSendZumbido: () -> Unit,
+    onTextChanged: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -78,7 +80,7 @@ fun ChatInputBar(
             if (!recording) {
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { text = it; onTextChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Mensaje", color = Color.Gray) },
                     maxLines = 3,
@@ -212,21 +214,20 @@ private fun EqualizerBarsIndicator(
     Canvas(modifier = modifier) {
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val barWidth = canvasWidth / (barCount * 2f) // gap between bars
+        val barWidth = canvasWidth / (barCount * 2f)
         val maxBarHeight = canvasHeight * 0.8f
         val normalizedAmp = (amp / 32767f).coerceIn(0.05f, 1f)
 
         for (i in 0 until barCount) {
             val fraction = i.toFloat() / barCount
-            // simulate different heights with variation based on amplitude and a wave pattern
             val barHeight = maxBarHeight * normalizedAmp * (0.4f + 0.6f * kotlin.math.sin(fraction * Math.PI.toFloat()).toFloat())
-            val x = i * (barWidth * 2f) // each bar occupies barWidth and gap
+            val x = i * (barWidth * 2f)
             val y = canvasHeight - barHeight
             drawRoundRect(
                 color = primaryColor,
                 topLeft = Offset(x, y),
                 size = Size(barWidth, barHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2f, 2f)
+                cornerRadius = CornerRadius(2f, 2f)
             )
         }
     }

@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
+import com.malla.mvp.core.data.MessageMapper
+import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.network.MeshMessage
@@ -22,8 +24,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _conversationId = MutableStateFlow<String?>(null)
     val conversationId: StateFlow<String?> = _conversationId.asStateFlow()
 
-    private val _messages = MutableStateFlow<List<MessageEntity>>(emptyList())
-    val messages: StateFlow<List<MessageEntity>> = _messages.asStateFlow()
+    private val _messages = MutableStateFlow<List<MessageData>>(emptyList())
+    val messages: StateFlow<List<MessageData>> = _messages.asStateFlow()
 
     private var messageJob: Job? = null
     private var lastMessageTimestamp = 0L
@@ -55,7 +57,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 try {
                     val database = db ?: return@launch
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
-                    _messages.value = msgs.filter { it.conversationId == convId }
+                    _messages.value = msgs.filter { it.conversationId == convId }.map { MessageMapper.toMessageData(it) }
                     if (msgs.isNotEmpty()) {
                         lastMessageTimestamp = msgs.maxOf { it.timestamp }
                     }

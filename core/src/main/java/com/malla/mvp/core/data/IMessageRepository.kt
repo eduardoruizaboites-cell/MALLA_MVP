@@ -11,7 +11,8 @@ data class MessageData(
     val mediaUri: String? = null,
     val expireAt: Long? = null,
     val viewOnce: Boolean = false,
-    val transport: String? = null
+    val transport: String? = null,
+    val reaction: String? = null
 )
 
 interface IMessageRepository {
