@@ -9,6 +9,7 @@ import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
 import com.malla.mvp.core.data.MessageMapper
 import com.malla.mvp.core.data.MessageData
+import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.network.MeshMessage
@@ -118,6 +119,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     )
                 )
             }
+            // Emitir zumbido local para vibrar el dispositivo que envía
+            MallaEventBus.zumbidoReceived.tryEmit(
+                MeshMessage(
+                    content = "📳 Zumbido",
+                    senderId = "self",
+                    type = "zumbido"
+                )
+            )
             refreshMessages(convId)
         }
     }
@@ -157,6 +166,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             }
             _inputText.value = ""
             _typingText.value = ""
+            // Emitir zumbido local para vibrar el dispositivo que envía
+            MallaEventBus.zumbidoReceived.tryEmit(
+                MeshMessage(
+                    content = "📳 Zumbido",
+                    senderId = "self",
+                    type = "zumbido"
+                )
+            )
             refreshMessages(convId)
         }
     }
@@ -190,6 +207,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             db?.messageDao()?.deleteMessage(messageId)
             val convId = _conversationId.value ?: return@launch
+            // Emitir zumbido local para vibrar el dispositivo que envía
+            MallaEventBus.zumbidoReceived.tryEmit(
+                MeshMessage(
+                    content = "📳 Zumbido",
+                    senderId = "self",
+                    type = "zumbido"
+                )
+            )
             refreshMessages(convId)
         }
     }

@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
+import android.media.MediaPlayer
 import android.os.Vibrator
+import android.widget.Toast
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -70,6 +72,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
+import com.malla.mvp.network.NetworkService
 import com.malla.mvp.ui.components.GalleryPickerPanel
 import com.malla.mvp.ui.components.ComposingBubble
 import com.malla.mvp.identity.IdentityManager
@@ -81,6 +84,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.awaitFirstDown
 import com.malla.mvp.ui.components.AudioBubblePlayer
+import com.malla.mvp.R
 import com.malla.mvp.media.VoiceRecorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -121,21 +125,49 @@ fun ChatScreen(
         vm.loadConversation(conversationId)
     }
 
+
+    // Puente: recibir zumbidos desde la red y emitirlos al bus
+    LaunchedEffect(Unit) {
+        NetworkService.messages.collect { msg ->
+            if (msg.type == "zumbido") {
+                MallaEventBus.zumbidoReceived.tryEmit(msg)
+            }
+        }
+    }
+
     // Receptor de zumbido
     LaunchedEffect(Unit) {
         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         MallaEventBus.zumbidoReceived.collect { msg ->
+            // Patrón de vibración MSN: tres pulsos cortos
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+                vibrator?.vibrate(VibrationEffect.createWaveform(
+                    longArrayOf(0, 100, 80, 100, 80, 100),
+                    intArrayOf(0, 255, 0, 255, 0, 255),
+                    -1
+                ))
             } else {
                 @Suppress("DEPRECATION")
-                vibrator?.vibrate(200)
+                vibrator?.vibrate(longArrayOf(0, 100, 80, 100, 80, 100), -1)
             }
-            repeat(3) {
-                shakeOffset.animateTo(12f, animationSpec = tween(50))
-                shakeOffset.animateTo(-12f, animationSpec = tween(50))
+            // Reproducir sonido de zumbido
+            try {
+                val mp = android.media.MediaPlayer.create(context, R.raw.zumbido)
+                if (mp != null) {
+                    mp.start()
+                    mp.setOnCompletionListener { it.release() }
+                } else {
+                    Toast.makeText(context, "Error al cargar sonido", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
-            shakeOffset.animateTo(0f, animationSpec = tween(50))
+            // Shake más pronunciado: 4 ciclos con mayor desplazamiento
+            repeat(4) {
+                shakeOffset.animateTo(20f, animationSpec = tween(60))
+                shakeOffset.animateTo(-20f, animationSpec = tween(60))
+            }
+            shakeOffset.animateTo(0f, animationSpec = tween(80))
         }
     }
 
