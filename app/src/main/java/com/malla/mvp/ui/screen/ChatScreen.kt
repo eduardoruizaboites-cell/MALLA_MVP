@@ -4,9 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
-import android.media.MediaPlayer
 import android.os.Vibrator
-import android.widget.Toast
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -72,7 +70,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
-import com.malla.mvp.network.NetworkService
 import com.malla.mvp.ui.components.GalleryPickerPanel
 import com.malla.mvp.ui.components.ComposingBubble
 import com.malla.mvp.identity.IdentityManager
@@ -84,12 +81,17 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.awaitFirstDown
 import com.malla.mvp.ui.components.AudioBubblePlayer
-import com.malla.mvp.R
 import com.malla.mvp.media.VoiceRecorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.malla.mvp.R
+import android.media.MediaPlayer
+import com.malla.mvp.network.NetworkService
+import androidx.compose.foundation.border
+import com.malla.mvp.ui.theme.LocalColorScheme
+import com.malla.mvp.ui.theme.MallaColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,8 +116,10 @@ fun ChatScreen(
     var captionText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val colorScheme = LocalColorScheme.current
     val shakeOffset = remember { Animatable(0f) }
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showZumbidoOverlay by remember { mutableStateOf(false) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
 
@@ -125,8 +129,6 @@ fun ChatScreen(
         vm.loadConversation(conversationId)
     }
 
-
-    // Puente: recibir zumbidos desde la red y emitirlos al bus
     LaunchedEffect(Unit) {
         NetworkService.messages.collect { msg ->
             if (msg.type == "zumbido") {
@@ -139,7 +141,7 @@ fun ChatScreen(
     LaunchedEffect(Unit) {
         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         MallaEventBus.zumbidoReceived.collect { msg ->
-            // Patrón de vibración MSN: tres pulsos cortos
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator?.vibrate(VibrationEffect.createWaveform(
                     longArrayOf(0, 100, 80, 100, 80, 100),
@@ -150,19 +152,12 @@ fun ChatScreen(
                 @Suppress("DEPRECATION")
                 vibrator?.vibrate(longArrayOf(0, 100, 80, 100, 80, 100), -1)
             }
-            // Reproducir sonido de zumbido
             try {
-                val mp = android.media.MediaPlayer.create(context, R.raw.zumbido)
-                if (mp != null) {
-                    mp.start()
-                    mp.setOnCompletionListener { it.release() }
-                } else {
-                    Toast.makeText(context, "Error al cargar sonido", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-            // Shake más pronunciado: 4 ciclos con mayor desplazamiento
+                val mp = MediaPlayer.create(context, R.raw.zumbido)
+                mp?.start()
+                mp?.setOnCompletionListener { mp2 -> mp2.release() }
+            } catch (_: Exception) { }
+            showZumbidoOverlay = true
             repeat(4) {
                 shakeOffset.animateTo(20f, animationSpec = tween(60))
                 shakeOffset.animateTo(-20f, animationSpec = tween(60))
@@ -213,17 +208,132 @@ fun ChatScreen(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A1B2A))
                 )
             },
-            bottomBar = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF0A1118))
-                        .imePadding().animateContentSize()
+            containerColor = Color(0xFF0A1118)
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                // Lista de mensajes
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    state = listState
                 ) {
+                    items(messages) { msg ->
+                        MessageBubbleV2(msg = msg, animate = vm.isMessageNew(msg.timestamp), onImageClick = { uri -> fullScreenImageUri = uri })
+                    }
+                }
+
+                // Auto-scroll al último mensaje
+                LaunchedEffect(messages.size) {
+                    if (messages.isNotEmpty()) {
+                        listState.animateScrollToItem(messages.size - 1)
+                    }
+                }
+
+                // Barra inferior: cambia entre vista previa y composición normal
+                if (pendingMediaUris.isNotEmpty()) {
+                    // Barra de vista previa (WhatsApp-like)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 8.dp,
+                        color = Color(0xFF1A1A1A)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            // Fila de miniaturas con X para eliminar y botón + al final
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(pendingMediaUris) { uri ->
+                                    Box(
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = uri,
+                                            contentDescription = "Miniatura",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        // Botón X para eliminar
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .size(16.dp)
+                                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                                .clickable { pendingMediaUris.remove(uri) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                contentDescription = "Eliminar",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                // Botón + para agregar más imágenes
+                                item {
+                                    IconButton(
+                                        onClick = { showGalleryPanel = true },
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
+                                    ) {
+                                        Icon(Icons.Filled.Add, "Agregar más", tint = Color(0xFF4CE6FF))
+                                    }
+                                }
+                            }
+                            // Fila con caption, emoji y enviar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                OutlinedTextField(
+                                    value = captionText,
+                                    onValueChange = { captionText = it },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("Añade un pie de foto...", color = Color.Gray) },
+                                    maxLines = 2,
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
+                                    leadingIcon = {
+                                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
+                                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
+                                        }
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF4CE6FF),
+                                        unfocusedBorderColor = Color.Gray
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                IconButton(onClick = {
+                                    coroutineScope.launch {
+                                        // Enviar primera imagen con caption, las demás sin texto
+                                        pendingMediaUris.forEachIndexed { index, uri ->
+                                            val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
+                                            vm.sendMessage(textToSend, mediaUri = uri.toString())
+                                        }
+                                        pendingMediaUris.clear()
+                                        captionText = ""
+                                    }
+                                }) {
+                                    Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = Color(0xFF4CE6FF))
+                                }
+                            }
+                        }
+                    }
+                } else {
                     AnimatedVisibility(
-                        visible = typingText.isNotEmpty() && pendingMediaUris.isEmpty(),
-                        enter = expandVertically(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
-                        exit = shrinkVertically(tween(150)) + fadeOut(tween(150))
+                        visible = typingText.isNotEmpty(),
+                        enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
+                        exit = scaleOut(tween(150)) + fadeOut(tween(150))
                     ) {
                         val avatarBitmap = IdentityManager.avatarBitmap.collectAsState().value
                         ComposingBubble(
@@ -233,128 +343,46 @@ fun ChatScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
                     }
-
-                    if (pendingMediaUris.isNotEmpty()) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shadowElevation = 8.dp,
-                            color = Color(0xFF1A1A1A)
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                LazyRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    items(pendingMediaUris) { uri ->
-                                        Box(
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            AsyncImage(
-                                                model = uri,
-                                                contentDescription = "Miniatura",
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .clip(RoundedCornerShape(8.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .size(16.dp)
-                                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                                                    .clickable { pendingMediaUris.remove(uri) },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    Icons.Filled.Close,
-                                                    contentDescription = "Eliminar",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                    item {
-                                        IconButton(
-                                            onClick = { showGalleryPanel = true },
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
-                                        ) {
-                                            Icon(Icons.Filled.Add, "Agregar más", tint = Color(0xFF4CE6FF))
-                                        }
-                                    }
+                    ChatInputBar(
+                        voiceRecorder = voiceRecorder,
+                        onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
+                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
+                        onSendZumbido = { vm.sendZumbido() },
+                        onTextChanged = { newText -> typingText = newText }
+                    )
+                }
+                // Panel de emojis
+                if (showEmojiPicker) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2A38))
+                    ) {
+                        val emojis = listOf("😀","😂","😍","😢","😡","👍","👋","🎉","❤️","🔥","😎","🙏","💪","🤔","😴","🥳")
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.SpaceEvenly) {
+                                emojis.take(8).forEach { emoji ->
+                                    Text(emoji, fontSize = 24.sp, modifier = Modifier.padding(4.dp).clickable {
+                                        text = text + emoji; showEmojiPicker = false
+                                    })
                                 }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 8.dp),
-                                    verticalAlignment = Alignment.Bottom
-                                ) {
-                                    OutlinedTextField(
-                                        value = captionText,
-                                        onValueChange = { captionText = it },
-                                        modifier = Modifier.weight(1f),
-                                        placeholder = { Text("Añade un pie de foto...", color = Color.Gray) },
-                                        maxLines = 2,
-                                        textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
-                                        leadingIcon = {
-                                            IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
-                                                Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
-                                            }
-                                        },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF4CE6FF),
-                                            unfocusedBorderColor = Color.Gray
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    IconButton(onClick = {
-                                        coroutineScope.launch {
-                                            pendingMediaUris.forEachIndexed { index, uri ->
-                                                val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
-                                                vm.sendMessage(textToSend, mediaUri = uri.toString())
-                                            }
-                                            pendingMediaUris.clear()
-                                            captionText = ""
-                                        }
-                                    }) {
-                                        Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = Color(0xFF4CE6FF))
-                                    }
+                            }
+                            Row(horizontalArrangement = Arrangement.SpaceEvenly) {
+                                emojis.drop(8).forEach { emoji ->
+                                    Text(emoji, fontSize = 24.sp, modifier = Modifier.padding(4.dp).clickable {
+                                        text = text + emoji; showEmojiPicker = false
+                                    })
                                 }
                             }
                         }
-                    } else {
-                        ChatInputBar(
-                            voiceRecorder = voiceRecorder,
-                            onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
-                            onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
-                            onSendZumbido = { vm.sendZumbido() },
-                            onTextChanged = { newText -> typingText = newText }
-                        )
                     }
                 }
-            },
-            containerColor = Color(0xFF0A1118)
-        ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            items(messages) { msg ->
-                MessageBubbleV2(msg = msg, animate = vm.isMessageNew(msg.timestamp), onImageClick = { uri -> fullScreenImageUri = uri })
             }
         }
+    }
 
-        LaunchedEffect(messages.size, typingText) {
-            if (messages.isNotEmpty()) {
-                listState.animateScrollToItem(messages.size - 1)
-            }
-        }
-        }
+    if (showZumbidoOverlay) {
+        ZumbidoOverlay(onDismiss = { showZumbidoOverlay = false }, colorScheme = colorScheme)
     }
 
     // Paneles externos (no se mueven con el shake)
@@ -593,4 +621,70 @@ fun formatSeconds(seconds: Int): String {
     val min = seconds / 60
     val sec = seconds % 60
     return "%02d:%02d".format(min, sec)
+
+@Composable
+fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
+    val scale = remember { Animatable(0.5f) }
+    val alpha = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, tween(300))
+        delay(1200)
+        alpha.animateTo(0f, tween(600))
+        onDismiss()
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    this.alpha = alpha.value
+                }
+                .background(colorScheme.primary.copy(alpha = 0.15f), CircleShape)
+                .border(2.dp, colorScheme.primary, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📳", fontSize = 36.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Zumbido", color = colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+
+}
+
+@Composable
+fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
+    val scale = remember { Animatable(0.5f) }
+    val alpha = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, tween(300))
+        delay(1200)
+        alpha.animateTo(0f, tween(600))
+        onDismiss()
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    this.alpha = alpha.value
+                }
+                .background(colorScheme.primary.copy(alpha = 0.15f), CircleShape)
+                .border(2.dp, colorScheme.primary, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📳", fontSize = 36.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Zumbido", color = colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+    }
 }

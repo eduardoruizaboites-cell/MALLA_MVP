@@ -28,9 +28,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _messages = MutableStateFlow<List<MessageData>>(emptyList())
     val messages: StateFlow<List<MessageData>> = _messages.asStateFlow()
 
-    private val _typingText = MutableStateFlow("")
-    val typingText: StateFlow<String> = _typingText.asStateFlow()
-
     private var messageJob: Job? = null
     private var lastMessageTimestamp = 0L
 
@@ -85,10 +82,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun updateTypingText(text: String) {
-        _typingText.value = text
-    }
-
     fun updateInputText(text: String) {
         _inputText.value = text
     }
@@ -103,31 +96,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     fun sendZumbido() {
         val convId = _conversationId.value ?: return
         viewModelScope.launch {
-            val msg = MessageEntity(
-                id = UUID.randomUUID().toString(),
-                conversationId = convId,
-                content = "📳 Zumbido",
-                isOwn = true
+            MallaEventBus.zumbidoReceived.tryEmit(
+                MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
             )
-            db?.messageDao()?.insertMessage(msg)
             if (convId != "self_chat") {
                 NetworkService.sendMessage(
-                    MeshMessage(
-                        content = "📳 Zumbido",
-                        senderId = "self",
-                        type = "zumbido"
-                    )
+                    MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
                 )
             }
-            // Emitir zumbido local para vibrar el dispositivo que envía
-            MallaEventBus.zumbidoReceived.tryEmit(
-                MeshMessage(
-                    content = "📳 Zumbido",
-                    senderId = "self",
-                    type = "zumbido"
-                )
-            )
-            refreshMessages(convId)
         }
     }
 
@@ -165,15 +141,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 )
             }
             _inputText.value = ""
-            _typingText.value = ""
-            // Emitir zumbido local para vibrar el dispositivo que envía
-            MallaEventBus.zumbidoReceived.tryEmit(
-                MeshMessage(
-                    content = "📳 Zumbido",
-                    senderId = "self",
-                    type = "zumbido"
-                )
-            )
             refreshMessages(convId)
         }
     }
@@ -207,14 +174,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             db?.messageDao()?.deleteMessage(messageId)
             val convId = _conversationId.value ?: return@launch
-            // Emitir zumbido local para vibrar el dispositivo que envía
-            MallaEventBus.zumbidoReceived.tryEmit(
-                MeshMessage(
-                    content = "📳 Zumbido",
-                    senderId = "self",
-                    type = "zumbido"
-                )
-            )
             refreshMessages(convId)
         }
     }

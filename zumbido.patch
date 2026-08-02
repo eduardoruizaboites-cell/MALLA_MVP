@@ -1,0 +1,123 @@
+diff --git a/app/src/main/java/com/malla/mvp/ui/screen/ChatScreen.kt b/app/src/main/java/com/malla/mvp/ui/screen/ChatScreen.kt
+index 7265ac5..f2e1b9d 100644
+--- a/app/src/main/java/com/malla/mvp/ui/screen/ChatScreen.kt
++++ b/app/src/main/java/com/malla/mvp/ui/screen/ChatScreen.kt
+@@ -1,3 +1,6 @@
++import androidx.compose.foundation.border
++import android.media.MediaPlayer
++import com.malla.mvp.network.NetworkService
+ import com.malla.mvp.core.data.MessageData
+ import com.malla.mvp.events.MallaEventBus
+ import com.malla.mvp.ui.components.GalleryPickerPanel
+@@ -113,6 +116,8 @@ fun ChatScreen(
+     val listState = rememberLazyListState()
+     val coroutineScope = rememberCoroutineScope()
+     val colorScheme = LocalColorScheme.current
++    var showZumbidoOverlay by remember { mutableStateOf(false) }
++
+     val shakeOffset = remember { Animatable(0f) }
+     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
+         var elapsedSeconds by remember { mutableIntStateOf(0) }
+@@ -124,6 +129,16 @@ fun ChatScreen(
+         vm.loadConversation(conversationId)
+     }
+ 
++    // Puente: recibir zumbidos desde la red y emitirlos al bus local
++    LaunchedEffect(Unit) {
++        NetworkService.messages.collect { msg ->
++            if (msg.type == "zumbido") {
++                MallaEventBus.zumbidoReceived.tryEmit(msg)
++            }
++        }
++    }
++
+     // Receptor de zumbido
+     LaunchedEffect(Unit) {
+         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+@@ -132,11 +147,18 @@ fun ChatScreen(
+                 vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+             } else {
+                 @Suppress("DEPRECATION")
+-                vibrator?.vibrate(200)
++                vibrator?.vibrate(longArrayOf(0, 100, 80, 100, 80, 100), -1)
+             }
+-            repeat(3) {
+-                shakeOffset.animateTo(12f, animationSpec = tween(50))
+-                shakeOffset.animateTo(-12f, animationSpec = tween(50))
++            // Sonido de zumbido
++            try {
++                val mp = MediaPlayer.create(context, R.raw.zumbido)
++                mp?.start()
++                mp?.setOnCompletionListener { it.release() }
++            } catch (_: Exception) { }
++            // Mostrar overlay
++            showZumbidoOverlay = true
++            repeat(4) {
++                shakeOffset.animateTo(20f, animationSpec = tween(60))
++                shakeOffset.animateTo(-20f, animationSpec = tween(60))
+             }
+             shakeOffset.animateTo(0f, animationSpec = tween(50))
+         }
+@@ -329,6 +351,15 @@ fun ChatScreen(
+         }
+     }
+ 
++    // Overlay de zumbido
++    if (showZumbidoOverlay) {
++        ZumbidoOverlay(
++            onDismiss = { showZumbidoOverlay = false },
++            colorScheme = colorScheme
++        )
++    }
++
++
+     // Paneles externos (no se mueven con el shake)
+     if (showAttachmentSheet) {
+         ModalBottomSheet(
+@@ -443,3 +474,4 @@ fun getBestLocation(context: Context): Location? {
+     if (best == null) try { best = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER) } catch (_: Exception) {}
+     return best
+ }
++
+diff --git a/app/src/main/java/com/malla/mvp/viewmodel/MeshChatViewModel.kt b/app/src/main/java/com/malla/mvp/viewmodel/MeshChatViewModel.kt
+index 5e7b123..a2d456e 100644
+--- a/app/src/main/java/com/malla/mvp/viewmodel/MeshChatViewModel.kt
++++ b/app/src/main/java/com/malla/mvp/viewmodel/MeshChatViewModel.kt
+@@ -7,6 +7,7 @@ import com.malla.mvp.data.AppDatabase
+ import com.malla.mvp.data.entity.MessageEntity
+ import com.malla.mvp.core.data.MessageMapper
+ import com.malla.mvp.core.data.MessageData
++import com.malla.mvp.events.MallaEventBus
+ import com.malla.mvp.data.entity.PollEntity
+ import com.malla.mvp.data.entity.PollOptionEntity
+ import com.malla.mvp.network.MeshMessage
+@@ -91,20 +92,19 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
+     fun sendZumbido() {
+         val convId = _conversationId.value ?: return
+         viewModelScope.launch {
+-            val msg = MessageEntity(
+-                id = UUID.randomUUID().toString(),
+-                conversationId = convId,
+-                content = "📳 Zumbido",
+-                isOwn = true
++            MallaEventBus.zumbidoReceived.tryEmit(
++                MeshMessage(
++                    content = "📳 Zumbido",
++                    senderId = "self",
++                    type = "zumbido"
++                )
+             )
+-            db?.messageDao()?.insertMessage(msg)
+             if (convId != "self_chat") {
+                 NetworkService.sendMessage(
+                     MeshMessage(
+                         content = "📳 Zumbido",
+                         senderId = "self",
+                         type = "zumbido"
+-                    )
+-                )
++                    ))
+             }
+-            refreshMessages(convId)
+         }
+     }
