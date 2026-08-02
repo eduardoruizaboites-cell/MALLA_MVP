@@ -27,9 +27,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _messages = MutableStateFlow<List<MessageData>>(emptyList())
     val messages: StateFlow<List<MessageData>> = _messages.asStateFlow()
 
-    private val _typingText = MutableStateFlow("")
-    val typingText: StateFlow<String> = _typingText.asStateFlow()
-
     private var messageJob: Job? = null
     private var lastMessageTimestamp = 0L
 
@@ -82,10 +79,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
-    }
-
-    fun updateTypingText(text: String) {
-        _typingText.value = text
     }
 
     fun updateInputText(text: String) {
@@ -156,7 +149,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 )
             }
             _inputText.value = ""
-            _typingText.value = ""
             refreshMessages(convId)
         }
     }

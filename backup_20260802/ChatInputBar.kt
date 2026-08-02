@@ -2,7 +2,6 @@ package com.malla.mvp.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -20,23 +19,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.malla.mvp.media.VoiceRecorder
-import com.malla.mvp.ui.theme.LocalColorScheme
 import java.io.File
 
 @Composable
@@ -49,8 +43,6 @@ fun ChatInputBar(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val view = LocalView.current
-    val colorScheme = LocalColorScheme.current
     var text by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
@@ -58,94 +50,63 @@ fun ChatInputBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.Bottom
     ) {
-        // Icono de vibrar (fuera del bubble)
         AnimatedVisibility(
             visible = !isRecording,
-            enter = fadeIn(tween(200)) + scaleIn(),
-            exit = fadeOut(tween(200)) + scaleOut()
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(200))
         ) {
             IconButton(onClick = onSendZumbido) {
-                Icon(Icons.Filled.Vibration, "Zumbido", tint = colorScheme.primary)
+                Icon(Icons.Filled.Vibration, "Zumbido", tint = Color(0xFF4CE6FF))
             }
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
-
-        // Caja de texto con borde neón (bubble)
-        val neonActive = text.isNotEmpty() || isRecording
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .animateContentSize()
-                .clip(RoundedCornerShape(28.dp))
-                .background(colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .then(
-                    if (neonActive) Modifier.drawBehind {
-                        val borderWidth = 2.dp.toPx()
-                        val gradient = Brush.linearGradient(
-                            listOf(colorScheme.primary, colorScheme.secondary, colorScheme.primary),
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, size.height)
-                        )
-                        drawRoundRect(
-                            brush = gradient,
-                            size = size,
-                            cornerRadius = CornerRadius(28.dp.toPx()),
-                            style = Stroke(width = borderWidth)
-                        )
-                    } else Modifier
-                )
-        ) {
-            if (!isRecording) {
+        AnimatedContent(
+            targetState = isRecording,
+            transitionSpec = {
+                if (!targetState) {
+                    (slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200))) togetherWith
+                            (slideOutVertically(targetOffsetY = { -it }) + fadeOut(tween(200)))
+                } else {
+                    (slideInVertically(initialOffsetY = { -it }) + fadeIn(tween(200))) togetherWith
+                            (slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(200)))
+                }
+            },
+            modifier = Modifier.weight(1f).heightIn(max = 48.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) { recording ->
+            if (!recording) {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it; onTextChanged(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                        .animateContentSize(),
-                    placeholder = { Text("Mensaje", color = colorScheme.onSurface.copy(alpha = 0.5f)) },
-                    maxLines = 5,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = colorScheme.onSurface,
-                        fontSize = 16.sp
-                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Mensaje", color = Color.Gray) },
+                    maxLines = 3,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontSize = 16.sp),
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        cursorColor = colorScheme.primary
+                        focusedBorderColor = Color(0xFF4CE6FF),
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedContainerColor = Color(0xFF1A2A3A),
+                        unfocusedContainerColor = Color(0xFF1A2A3A)
                     ),
                     leadingIcon = {
                         IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
-                            Icon(
-                                Icons.Filled.InsertEmoticon,
-                                "Emoji",
-                                tint = colorScheme.primary  // unificado al tema
-                            )
+                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
                         }
                     },
                     trailingIcon = {
-                        Row {
+                        Row(
+                            modifier = Modifier.animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                        ) {
                             IconButton(onClick = { /* TODO attachment */ }) {
-                                Icon(
-                                    Icons.Filled.AttachFile,
-                                    "Adjuntar",
-                                    tint = colorScheme.primary  // unificado
-                                )
+                                Icon(Icons.Filled.AttachFile, "Adjuntar", tint = Color(0xFF4CE6FF))
                             }
                             if (text.isBlank()) {
                                 IconButton(onClick = { /* TODO cámara */ }) {
-                                    Icon(
-                                        Icons.Filled.CameraAlt,
-                                        "Cámara",
-                                        tint = colorScheme.primary  // unificado
-                                    )
+                                    Icon(Icons.Filled.CameraAlt, "Cámara", tint = Color(0xFF4CE6FF))
                                 }
                             }
                         }
@@ -154,23 +115,17 @@ fun ChatInputBar(
             } else {
                 EqualizerBarsIndicator(
                     amplitudeFlow = voiceRecorder.amplitude,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    primaryColor = colorScheme.primary
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
-
-        // Icono de micrófono / enviar (fuera del bubble)
         if (text.isBlank() || isRecording) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(colorScheme.primary.copy(alpha = 0.1f))
+                    .background(if (isRecording) Color(0xFF4CE6FF).copy(alpha = 0.1f) else Color(0xFF4CE6FF).copy(alpha = 0.1f))
                     .pointerInput(isRecording) {
                         awaitPointerEventScope {
                             while (true) {
@@ -203,45 +158,19 @@ fun ChatInputBar(
                 if (isRecording) {
                     val pulse = rememberInfiniteTransition(label = "micPulse")
                     val micScale by pulse.animateFloat(1f, 1.15f, infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "s")
-                    Icon(
-                        Icons.Filled.Mic,
-                        "Grabando",
-                        tint = Color(0xFFFF4C4C),
-                        modifier = Modifier.size(24.dp).scale(micScale)
-                    )
+                    Icon(Icons.Filled.Mic, "Grabando", tint = Color(0xFFFF4C4C), modifier = Modifier.size(24.dp).scale(micScale))
                 } else {
-                    Icon(
-                        Icons.Filled.Mic,
-                        "Grabar",
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(Icons.Filled.Mic, "Grabar", tint = Color(0xFF4CE6FF), modifier = Modifier.size(24.dp))
                 }
             }
         } else {
-            val sendScale = remember { Animatable(1f) }
-            LaunchedEffect(text) {
-                if (text.isNotEmpty()) {
-                    sendScale.animateTo(1.1f, tween(100))
-                    sendScale.animateTo(1f, tween(100))
+            IconButton(onClick = {
+                if (text.isNotBlank()) {
+                    onSendText(text)
+                    text = ""
                 }
-            }
-            IconButton(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onSendText(text)
-                        text = ""
-                    }
-                },
-                modifier = Modifier.scale(sendScale.value)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    "Enviar",
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
+            }) {
+                Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = Color(0xFF4CE6FF))
             }
         }
     }
@@ -250,7 +179,7 @@ fun ChatInputBar(
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2A38))
         ) {
             val emojis = listOf("😀","😂","😍","😢","😡","👍","👋","🎉","❤️","🔥","😎","🙏","💪","🤔","😴","🥳")
             Column(modifier = Modifier.padding(8.dp)) {
