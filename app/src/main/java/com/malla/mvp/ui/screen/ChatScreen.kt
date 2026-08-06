@@ -369,6 +369,7 @@ fun ChatScreen(
                             val intent = CameraContract.createIntent(context, "photo")
                             cameraLauncher.launch(intent)
                         },
+                        onAttachmentClick = { showAttachmentPanel = true },
                         onTextChanged = { newText -> typingText = newText }
                     )
                 }

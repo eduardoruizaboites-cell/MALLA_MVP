@@ -29,7 +29,8 @@ fun EmojiPicker(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()  // Ocupar todo el espacio disponible del ModalBottomSheet
+            .fillMaxWidth()
+            .heightIn(max = 400.dp)  // Ocupar todo el espacio disponible del ModalBottomSheet
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // Tab Row
