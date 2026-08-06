@@ -23,7 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -59,10 +60,18 @@ fun ChatInputBar(
     val context = LocalContext.current
     val view = LocalView.current
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
     val colorScheme = LocalColorScheme.current
     var text by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+
+    // Cuando se cierra el panel de emojis, solicitar foco al campo de texto
+    LaunchedEffect(showEmojiPicker) {
+        if (!showEmojiPicker) {
+            focusRequester.requestFocus()
+        }
+    }
 
     Row(
         modifier = modifier
@@ -70,7 +79,6 @@ fun ChatInputBar(
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icono de vibrar (fuera del bubble)
         AnimatedVisibility(
             visible = !isRecording,
             enter = fadeIn(tween(200)) + scaleIn(),
@@ -83,7 +91,6 @@ fun ChatInputBar(
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Caja de texto con borde neón (bubble)
         val neonActive = text.isNotEmpty() || isRecording
         Box(
             modifier = Modifier
@@ -116,9 +123,7 @@ fun ChatInputBar(
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
                         .animateContentSize()
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) showEmojiPicker = false
-                        },
+                        .focusRequester(focusRequester),
                     placeholder = { Text("Mensaje", color = colorScheme.onSurface.copy(alpha = 0.5f)) },
                     maxLines = 5,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -137,7 +142,7 @@ fun ChatInputBar(
                         IconButton(onClick = {
                             showEmojiPicker = !showEmojiPicker
                             if (showEmojiPicker) {
-                                focusManager.clearFocus() // oculta el teclado
+                                focusManager.clearFocus()
                             }
                         }) {
                             Icon(
@@ -153,14 +158,14 @@ fun ChatInputBar(
                                 Icon(
                                     Icons.Filled.AttachFile,
                                     "Adjuntar",
-                                    tint = colorScheme.primary  // unificado
+                                    tint = colorScheme.primary
                                 )
                             }
                             IconButton(onClick = onCameraClick) {
                                 Icon(
                                     Icons.Filled.CameraAlt,
                                     "Cámara",
-                                    tint = colorScheme.primary  // unificado
+                                    tint = colorScheme.primary
                                 )
                             }
                         }
@@ -179,7 +184,6 @@ fun ChatInputBar(
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Icono de micrófono / enviar (fuera del bubble)
         if (text.isBlank() || isRecording) {
             Box(
                 modifier = Modifier
@@ -270,7 +274,6 @@ fun ChatInputBar(
             onEmojiSelected = { emoji -> text = text + emoji },
             onDismissKeyboard = {
                 showEmojiPicker = false
-                // Mostrar teclado de nuevo (opcional)
             },
             modifier = Modifier
                 .fillMaxWidth()
