@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.malla.mvp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":camera"))
     implementation(project(":core"))
     implementation(project(":data"))
     implementation(project(":media"))

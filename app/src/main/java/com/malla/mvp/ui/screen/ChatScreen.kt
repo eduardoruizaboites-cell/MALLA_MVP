@@ -92,6 +92,10 @@ import com.malla.mvp.network.NetworkService
 import androidx.compose.foundation.border
 import com.malla.mvp.ui.theme.LocalColorScheme
 import com.malla.mvp.ui.theme.MallaColorScheme
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.malla.mvp.camera.contract.CameraContract
+import android.app.Activity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +126,17 @@ fun ChatScreen(
     var showZumbidoOverlay by remember { mutableStateOf(false) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uriString = result.data?.getStringExtra(CameraContract.EXTRA_RESULT_URI)
+            if (uriString != null) {
+                val uri = Uri.parse(uriString)
+                pendingMediaUris.add(uri)
+            }
+        }
+    }
 
     var typingText by remember { mutableStateOf("") }
 
@@ -348,6 +363,10 @@ fun ChatScreen(
                         onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
                         onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
                         onSendZumbido = { vm.sendZumbido() },
+                        onCameraClick = {
+                            val intent = CameraContract.createIntent(context, "photo")
+                            cameraLauncher.launch(intent)
+                        },
                         onTextChanged = { newText -> typingText = newText }
                     )
                 }

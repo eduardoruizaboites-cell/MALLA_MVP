@@ -45,6 +45,7 @@ fun ChatInputBar(
     onSendText: (String) -> Unit,
     onSendVoice: (File) -> Unit,
     onSendZumbido: () -> Unit,
+    onCameraClick: () -> Unit = {},
     onTextChanged: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -139,14 +140,12 @@ fun ChatInputBar(
                                     tint = colorScheme.primary  // unificado
                                 )
                             }
-                            if (text.isBlank()) {
-                                IconButton(onClick = { /* TODO cámara */ }) {
-                                    Icon(
-                                        Icons.Filled.CameraAlt,
-                                        "Cámara",
-                                        tint = colorScheme.primary  // unificado
-                                    )
-                                }
+                            IconButton(onClick = onCameraClick) {
+                                Icon(
+                                    Icons.Filled.CameraAlt,
+                                    "Cámara",
+                                    tint = colorScheme.primary  // unificado
+                                )
                             }
                         }
                     }
