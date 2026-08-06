@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -248,18 +249,22 @@ fun ChatInputBar(
         }
     }
 
-    if (showEmojiPicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showEmojiPicker = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        ) {
-            EmojiPicker(
-                onEmojiSelected = { emoji -> text = text + emoji },
-                onDismissKeyboard = { showEmojiPicker = false }
-            )
-        }
+    AnimatedVisibility(
+        visible = showEmojiPicker,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(200))
+    ) {
+        EmojiPicker(
+            onEmojiSelected = { emoji -> text = text + emoji },
+            onDismissKeyboard = {
+                showEmojiPicker = false
+                // Mostrar teclado de nuevo (opcional)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 300.dp)
+                .background(colorScheme.surface)
+        )
     }
 }
 

@@ -21,16 +21,16 @@ import com.malla.mvp.emoji.emojiCategories
 @Composable
 fun EmojiPicker(
     onEmojiSelected: (String) -> Unit,
-    onDismissKeyboard: () -> Unit
+    onDismissKeyboard: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val categories = emojiCategories
     val recentEmojis = remember { mutableStateListOf<String>() }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 400.dp)  // Ocupar todo el espacio disponible del ModalBottomSheet
+        modifier = modifier
+            .fillMaxWidth()  // Ocupar todo el espacio disponible del ModalBottomSheet
             .background(MaterialTheme.colorScheme.surface)
     ) {
         // Tab Row
