@@ -16,12 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +58,7 @@ fun ChatInputBar(
 ) {
     val context = LocalContext.current
     val view = LocalView.current
+    val focusManager = LocalFocusManager.current
     val colorScheme = LocalColorScheme.current
     var text by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
@@ -111,7 +115,10 @@ fun ChatInputBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
-                        .animateContentSize(),
+                        .animateContentSize()
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) showEmojiPicker = false
+                        },
                     placeholder = { Text("Mensaje", color = colorScheme.onSurface.copy(alpha = 0.5f)) },
                     maxLines = 5,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -127,11 +134,16 @@ fun ChatInputBar(
                         cursorColor = colorScheme.primary
                     ),
                     leadingIcon = {
-                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
+                        IconButton(onClick = {
+                            showEmojiPicker = !showEmojiPicker
+                            if (showEmojiPicker) {
+                                focusManager.clearFocus() // oculta el teclado
+                            }
+                        }) {
                             Icon(
-                                Icons.Filled.InsertEmoticon,
-                                "Emoji",
-                                tint = colorScheme.primary  // unificado al tema
+                                if (showEmojiPicker) Icons.Default.Keyboard else Icons.Default.InsertEmoticon,
+                                if (showEmojiPicker) "Teclado" else "Emoji",
+                                tint = colorScheme.primary
                             )
                         }
                     },

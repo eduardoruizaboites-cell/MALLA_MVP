@@ -47,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.draw.alpha
 import com.malla.mvp.ui.settings.ChatSettings
@@ -97,6 +96,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.malla.mvp.camera.contract.CameraContract
 import android.app.Activity
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,9 +114,9 @@ fun ChatScreen(
     val messages by vm.messages.collectAsState()
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
-    var showAttachmentPanel by remember { mutableStateOf(false) }
     var showGalleryPanel by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var showAttachmentPanel by remember { mutableStateOf(false) }
     var zumbidoCooldown by remember { mutableStateOf(false) }
     val pendingMediaUris = remember { mutableStateListOf<Uri>() }
     var captionText by remember { mutableStateOf("") }
@@ -434,7 +434,7 @@ fun ChatScreen(
                                 val lat = loc.latitude; val lon = loc.longitude
                                 vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
                             } else {
-                                vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
+                                vm.sendMessage("📍 No se pudo obtener la ubicación. Concede permisos.")
                             }
                         })
                     }
@@ -749,52 +749,22 @@ fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
 
 
 @Composable
-fun AttachmentOptionPremium(
-    icon: ImageVector,
-    label: String,
-    color: Color,
-    onClick: () -> Unit
-) {
+fun AttachmentOptionPremium(icon: ImageVector, label: String, color: Color, onClick: () -> Unit) {
     val scale = remember { Animatable(1f) }
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onClick() }
-            .scale(scale.value),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { onClick() }.scale(scale.value),
         color = color.copy(alpha = 0.12f),
         shape = RoundedCornerShape(20.dp),
         tonalElevation = 4.dp
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = color,
-                    modifier = Modifier.size(32.dp)
-                )
+        Column(modifier = Modifier.padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = label, tint = color, modifier = Modifier.size(32.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = label,
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Text(text = label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
-    LaunchedEffect(Unit) {
-        scale.animateTo(1f, spring())
-    }
+    LaunchedEffect(Unit) { scale.animateTo(1f, spring()) }
 }
 
