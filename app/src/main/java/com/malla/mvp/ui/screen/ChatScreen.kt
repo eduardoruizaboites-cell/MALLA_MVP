@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.draw.alpha
 import com.malla.mvp.ui.settings.ChatSettings
@@ -113,6 +114,7 @@ fun ChatScreen(
     val messages by vm.messages.collectAsState()
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
+    var showAttachmentPanel by remember { mutableStateOf(false) }
     var showGalleryPanel by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var zumbidoCooldown by remember { mutableStateOf(false) }
@@ -402,6 +404,42 @@ fun ChatScreen(
 
     if (showZumbidoOverlay) {
         ZumbidoOverlay(onDismiss = { showZumbidoOverlay = false }, colorScheme = colorScheme)
+    }
+
+
+    // ── Panel de adjuntos premium ─────────────────────────────────
+    if (showAttachmentPanel) {
+        ModalBottomSheet(
+            onDismissRequest = { showAttachmentPanel = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1A2E),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp)) {
+                Text("Adjuntar archivo", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        AttachmentOptionPremium(icon = Icons.Default.Photo, label = "Galería", color = Color(0xFF4CE6FF), onClick = { showAttachmentPanel = false; showGalleryPanel = true })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AttachmentOptionPremium(icon = Icons.Default.InsertDriveFile, label = "Documento", color = Color(0xFF6C63FF), onClick = { /* TODO */ })
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        AttachmentOptionPremium(icon = Icons.Default.CameraAlt, label = "Cámara", color = Color(0xFFFF6B6B), onClick = { showAttachmentPanel = false; val intent = CameraContract.createIntent(context, "photo"); cameraLauncher.launch(intent) })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AttachmentOptionPremium(icon = Icons.Default.LocationOn, label = "Ubicación", color = Color(0xFF4CAF50), onClick = {
+                            showAttachmentPanel = false
+                            val loc = getBestLocation(context)
+                            if (loc != null) {
+                                val lat = loc.latitude; val lon = loc.longitude
+                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
+                            } else {
+                                vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
+                            }
+                        })
+                    }
+                }
+            }
+        }
     }
 
     // Paneles externos (no se mueven con el shake)
@@ -707,3 +745,55 @@ fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
         }
     }
 }
+
+
+@Composable
+fun AttachmentOptionPremium(
+    icon: ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    val scale = remember { Animatable(1f) }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .scale(scale.value),
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = label,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, spring())
+    }
+}
+

@@ -46,6 +46,7 @@ fun ChatInputBar(
     onSendVoice: (File) -> Unit,
     onSendZumbido: () -> Unit,
     onCameraClick: () -> Unit = {},
+    onAttachmentClick: () -> Unit = {},
     onTextChanged: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -133,7 +134,7 @@ fun ChatInputBar(
                     },
                     trailingIcon = {
                         Row {
-                            IconButton(onClick = { /* TODO attachment */ }) {
+                            IconButton(onClick = onAttachmentClick) {
                                 Icon(
                                     Icons.Filled.AttachFile,
                                     "Adjuntar",
