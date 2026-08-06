@@ -37,9 +37,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.malla.mvp.media.VoiceRecorder
 import com.malla.mvp.ui.theme.LocalColorScheme
+import com.malla.mvp.emoji.ui.EmojiPicker
 import java.io.File
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ChatInputBar(
     voiceRecorder: VoiceRecorder,
     onSendText: (String) -> Unit,
@@ -247,28 +249,16 @@ fun ChatInputBar(
     }
 
     if (showEmojiPicker) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant)
+        ModalBottomSheet(
+            onDismissRequest = { showEmojiPicker = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            val emojis = listOf("😀","😂","😍","😢","😡","👍","👋","🎉","❤️","🔥","😎","🙏","💪","🤔","😴","🥳")
-            Column(modifier = Modifier.padding(8.dp)) {
-                Row(horizontalArrangement = Arrangement.SpaceEvenly) {
-                    emojis.take(8).forEach { emoji ->
-                        Text(emoji, fontSize = 24.sp, modifier = Modifier.padding(4.dp).clickable {
-                            text = text + emoji; showEmojiPicker = false
-                        })
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.SpaceEvenly) {
-                    emojis.drop(8).forEach { emoji ->
-                        Text(emoji, fontSize = 24.sp, modifier = Modifier.padding(4.dp).clickable {
-                            text = text + emoji; showEmojiPicker = false
-                        })
-                    }
-                }
-            }
+            EmojiPicker(
+                onEmojiSelected = { emoji -> text = text + emoji },
+                onDismissKeyboard = { showEmojiPicker = false }
+            )
         }
     }
 }

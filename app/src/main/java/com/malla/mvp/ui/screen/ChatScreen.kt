@@ -369,7 +369,6 @@ fun ChatScreen(
                             val intent = CameraContract.createIntent(context, "photo")
                             cameraLauncher.launch(intent)
                         },
-                        onAttachmentClick = { showAttachmentPanel = true },
                         onTextChanged = { newText -> typingText = newText }
                     )
                 }
@@ -408,74 +407,35 @@ fun ChatScreen(
     }
 
 
-    // ── Panel de adjuntos premium (compacto, adaptado al tema) ──
+    // ── Panel de adjuntos premium ─────────────────────────────────
     if (showAttachmentPanel) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { showAttachmentPanel = false },
-            sheetState = sheetState,
-            containerColor = colorScheme.background,  // usa el fondo del tema
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1A2E),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
-                    .heightIn(max = 280.dp)  // altura máxima compacta
-            ) {
-                Text(
-                    "Adjuntar archivo",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp)) {
+                Text("Adjuntar archivo", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
-                        AttachmentOptionPremium(
-                            icon = Icons.Default.Photo,
-                            label = "Galería",
-                            color = colorScheme.primary,
-                            onClick = { showAttachmentPanel = false; showGalleryPanel = true }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        AttachmentOptionPremium(
-                            icon = Icons.Default.InsertDriveFile,
-                            label = "Documento",
-                            color = colorScheme.primary,
-                            onClick = { /* TODO */ }
-                        )
+                        AttachmentOptionPremium(icon = Icons.Default.Photo, label = "Galería", color = Color(0xFF4CE6FF), onClick = { showAttachmentPanel = false; showGalleryPanel = true })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AttachmentOptionPremium(icon = Icons.Default.InsertDriveFile, label = "Documento", color = Color(0xFF6C63FF), onClick = { /* TODO */ })
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        AttachmentOptionPremium(
-                            icon = Icons.Default.CameraAlt,
-                            label = "Cámara",
-                            color = colorScheme.secondary,
-                            onClick = {
-                                showAttachmentPanel = false
-                                val intent = CameraContract.createIntent(context, "photo")
-                                cameraLauncher.launch(intent)
+                        AttachmentOptionPremium(icon = Icons.Default.CameraAlt, label = "Cámara", color = Color(0xFFFF6B6B), onClick = { showAttachmentPanel = false; val intent = CameraContract.createIntent(context, "photo"); cameraLauncher.launch(intent) })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AttachmentOptionPremium(icon = Icons.Default.LocationOn, label = "Ubicación", color = Color(0xFF4CAF50), onClick = {
+                            showAttachmentPanel = false
+                            val loc = getBestLocation(context)
+                            if (loc != null) {
+                                val lat = loc.latitude; val lon = loc.longitude
+                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
+                            } else {
+                                vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
                             }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        AttachmentOptionPremium(
-                            icon = Icons.Default.LocationOn,
-                            label = "Ubicación",
-                            color = Color(0xFF4CAF50),
-                            onClick = {
-                                showAttachmentPanel = false
-                                val loc = getBestLocation(context)
-                                if (loc != null) {
-                                    val lat = loc.latitude
-                                    val lon = loc.longitude
-                                    vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=" + lat + "," + lon)
-                                } else {
-                                    vm.sendMessage("📍 No se pudo obtener la ubicación. Concede permisos.")
-                                }
-                            }
-                        )
+                        })
                     }
                 }
             }
@@ -519,7 +479,7 @@ fun ChatScreen(
                             val loc = getBestLocation(context)
                             if (loc != null) {
                                 val lat = loc.latitude; val lon = loc.longitude
-                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=" + lat + "," + lon)
+                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
                             } else {
                                 vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
                             }
@@ -794,32 +754,46 @@ fun AttachmentOptionPremium(
     color: Color,
     onClick: () -> Unit
 ) {
+    val scale = remember { Animatable(1f) }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .scale(scale.value),
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 4.dp
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 16.dp),
+            modifier = Modifier.padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = label,
-                color = color,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
             )
         }
+    }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, spring())
     }
 }
 
