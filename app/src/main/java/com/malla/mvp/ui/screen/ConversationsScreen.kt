@@ -52,6 +52,8 @@ fun ConversationsScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showIpDialog by remember { mutableStateOf(false) }
+    var showPhoneDialog by remember { mutableStateOf(false) }
+    var showCodeDialog by remember { mutableStateOf(false) }
     var showCodeInput by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -276,7 +278,7 @@ fun ConversationsScreen(
                 title = { Text("Agregar usuario", style = MaterialTheme.typography.titleMedium) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { showAddContactDialog = false; showCodeDialog = true }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Tag, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Ingresar código de 8 dígitos")
@@ -286,7 +288,7 @@ fun ConversationsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Escanear QR")
                         }
-                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { showAddContactDialog = false; showPhoneDialog = true }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Phone, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Buscar por número de teléfono")
