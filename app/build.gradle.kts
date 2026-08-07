@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":crypto"))
     implementation(project(":emoji"))
     implementation(project(":camera"))
     implementation(project(":core"))

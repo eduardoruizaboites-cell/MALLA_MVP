@@ -20,13 +20,15 @@ import java.security.PublicKey
 import java.security.spec.ECGenParameterSpec
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 object IdentityManager {
     private const val TAG = "IdentityManager"
     private const val KEY_ALIAS = "malla_identity"
     private const val USER_NAME_KEY = "user_name"
     private const val USER_PHONE_KEY = "user_phone"
-    private const val USER_NICKNAME_KEY = "user_nickname"
     private const val USER_STATUS_KEY = "user_status"
     private const val AVATAR_FILE = "avatar.jpg"
     private const val BANNER_FILE = "banner.jpg"
@@ -181,6 +183,8 @@ object IdentityManager {
         val file = File(context.filesDir, BANNER_FILE)
         return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
     }
+
+    // ── Funciones para el ID único ─────────────────────────────────
     private const val USER_ID_KEY = "user_id"
 
     fun generateUniqueId(location: android.location.Location?): String {
@@ -209,26 +213,46 @@ object IdentityManager {
         return result.reverse().toString()
     }
 
-    fun saveUserId(context: android.content.Context, id: String) {
-        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", android.content.Context.MODE_PRIVATE)
+    fun saveUserId(context: Context, id: String) {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
         prefs.edit().putString(USER_ID_KEY, id).apply()
     }
 
-    fun getUserId(context: android.content.Context): String? {
-        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", android.content.Context.MODE_PRIVATE)
+    fun getUserId(context: Context): String? {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
         return prefs.getString(USER_ID_KEY, null)
     }
 
-
     fun setUserNickname(context: Context, nickname: String) {
         val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
-        prefs.edit().putString(USER_NICKNAME_KEY, nickname).apply()
+        prefs.edit().putString("user_nickname", nickname).apply()
     }
 
     fun getUserNickname(context: Context): String? {
         val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
-        return prefs.getString(USER_NICKNAME_KEY, null)
+        return prefs.getString("user_nickname", null)
     }
 
-
+    /**
+     * Guarda nuestra propia identidad en la tabla de contactos para facilitar la verificación.
+     */
+    fun ensureSelfContact(context: Context) {
+        val pubKey = getPublicKeyBase64() ?: return
+        val userId = getUserId(context) ?: return
+        val alias = getUserName(context)
+        val db = com.malla.mvp.data.AppDatabase.getInstance(context) ?: return
+        MainScope().launch(Dispatchers.IO) {
+            val existing = db.contactDao().getContact(pubKey)
+            if (existing == null) {
+                val self = com.malla.mvp.data.entity.ContactEntity(
+                    pubKeyBase64 = pubKey,
+                    userId = userId,
+                    localAlias = alias,
+                    addedVia = "SELF",
+                    status = com.malla.mvp.data.entity.ContactStatus.CONFIRMED
+                )
+                db.contactDao().insertContact(self)
+            }
+        }
+    }
 }

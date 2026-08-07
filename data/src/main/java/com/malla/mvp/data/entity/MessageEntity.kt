@@ -15,6 +15,7 @@ data class MessageEntity(
     val expireAt: Long? = null,
     val mediaUri: String? = null,
     val viewOnce: Boolean = false,
-    val quotedMessageId: String? = null,        // NUEVO
-    val quotedMessageContent: String? = null    // NUEVO
+    val quotedMessageId: String? = null,
+    val quotedMessageContent: String? = null,
+    val encrypted: Boolean = false  // NUEVO: indica si 'content' está cifrado
 )

@@ -36,7 +36,7 @@ import com.malla.mvp.ui.components.QrCodeDisplay
 import kotlinx.coroutines.launch
 
 @Composable
-fun PerfilScreen() {
+fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

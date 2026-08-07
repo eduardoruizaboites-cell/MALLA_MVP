@@ -17,15 +17,15 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE pubKeyBase64 = :pubKey LIMIT 1")
     suspend fun getContact(pubKey: String): ContactEntity?
 
+    @Query("SELECT * FROM contacts WHERE userId = :userId LIMIT 1")
+    suspend fun getContactByUserId(userId: String): ContactEntity?  // NUEVO
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertContact(contact: ContactEntity)
+    suspend fun insertContact(contact: ContactEntity)
+
+    @Update
+    suspend fun updateContact(contact: ContactEntity)
 
     @Query("UPDATE contacts SET status = :status WHERE pubKeyBase64 = :pubKey")
-    suspend fun updateStatus(pubKey: String, status: ContactStatus)
-
-    @Query("DELETE FROM contacts WHERE pubKeyBase64 = :pubKey")
-    suspend fun deleteContact(pubKey: String)
-
-    @Query("SELECT COUNT(*) FROM contacts WHERE status = 'CONFIRMED'")
-    suspend fun confirmedCount(): Int
+    suspend fun updateContactStatus(pubKey: String, status: ContactStatus)
 }

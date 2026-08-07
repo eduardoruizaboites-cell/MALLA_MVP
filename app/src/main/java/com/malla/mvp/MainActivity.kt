@@ -126,6 +126,7 @@ class MainActivity : FragmentActivity() {
             val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
             var showQrScanner by remember { mutableStateOf(false) }
+    var showVerification by remember { mutableStateOf(false) }
             var showRegistration by remember { mutableStateOf(IdentityManager.getUserId(context) == null) }
             var currentConversationId by remember { mutableStateOf<String?>(null) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
@@ -215,7 +216,10 @@ class MainActivity : FragmentActivity() {
                                             } catch (_: Exception) {}
                                         }
                                     )
-                                } else if (showQrScanner) {
+                                } else if (showVerification) {
+                                BackHandler { showVerification = false }
+                                VerificationScreen(onBack = { showVerification = false })
+                            } else if (showQrScanner) {
                                     BackHandler { showQrScanner = false }
                                     QrScanScreen(
                                         onQrScanned = { ip ->
@@ -239,6 +243,7 @@ class MainActivity : FragmentActivity() {
                                     ContactProfileScreen(contactName = selectedContact!!, onBack = { selectedContact = null })
                                 } else {
                                     MainApp(
+                                        onVerifyClick = { showVerification = true },
                                         isMeshMode = !isOnline,
                                         currentConversationId = currentConversationId,
                                         onConversationChanged = { convId -> currentConversationId = convId },
@@ -322,6 +327,7 @@ fun SettingsScreenWrapper(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(
+    onVerifyClick: () -> Unit = {},
     onVoiceCallClick: () -> Unit = {},
     onVideoCallClick: () -> Unit = {},
     isMeshMode: Boolean,
@@ -426,7 +432,7 @@ fun MainApp(
                     onProfileClicked = onProfileClicked
                 )
                 1 -> PulsoScreen(onNavigateToQrScanner = onNavigateToQrScanner, onConnectToPeer = onConnectToPeer)
-                2 -> PerfilScreen()
+                2 -> PerfilScreen(onVerifyClick = onVerifyClick)
             }
         }
     }

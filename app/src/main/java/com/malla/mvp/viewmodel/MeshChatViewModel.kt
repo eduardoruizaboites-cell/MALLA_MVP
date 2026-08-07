@@ -7,6 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
+import javax.crypto.SecretKey
+import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.crypto.CryptoEngine
+import com.malla.mvp.crypto.SessionCipher
 import com.malla.mvp.core.data.MessageMapper
 import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
@@ -30,6 +34,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
 
     private var messageJob: Job? = null
     private var lastMessageTimestamp = 0L
+    private var sessionKey: SecretKey? = null
+    private var encryptionEnabled = false
 
     private val _polls = MutableStateFlow<List<PollEntity>>(emptyList())
     val polls: StateFlow<List<PollEntity>> = _polls.asStateFlow()
@@ -49,6 +55,27 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         _messages.value = emptyList()
         refreshMessages(convId)
         loadPolls(convId)
+        initEncryption(convId)
+    }
+
+    
+    private fun initEncryption(convId: String) {
+        viewModelScope.launch {
+            if (encryptionEnabled || convId == "self_chat") return@launch
+            try {
+                val database = db ?: return@launch
+                val contactDao = database.contactDao()
+                val contact = contactDao.getContactByUserId(convId) ?: contactDao.getContact(convId)
+                if (contact != null) {
+                    val remotePubKey = CryptoEngine.base64ToPublicKey(contact.pubKeyBase64)
+                    val localPrivKey = IdentityManager.getPrivateKey()
+                    sessionKey = SessionCipher.deriveSessionKey(localPrivKey, remotePubKey)
+                    encryptionEnabled = true
+                }
+            } catch (e: Exception) {
+                // No se pudo obtener clave pública
+            }
+        }
     }
 
     private fun refreshMessages(convId: String) {
@@ -58,7 +85,16 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 try {
                     val database = db ?: return@launch
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
-                    _messages.value = msgs.filter { it.conversationId == convId }.map { MessageMapper.toMessageData(it) }
+                    _messages.value = msgs.filter { it.conversationId == convId }.map { msg ->
+                if (msg.encrypted && sessionKey != null) {
+                    try {
+                        val decryptedContent = SessionCipher.decrypt(msg.content, sessionKey!!)
+                        msg.copy(content = decryptedContent)
+                    } catch (e: Exception) {
+                        msg
+                    }
+                } else msg
+            }.map { MessageMapper.toMessageData(it) }
                     if (msgs.isNotEmpty()) {
                         lastMessageTimestamp = msgs.maxOf { it.timestamp }
                     }
@@ -117,16 +153,26 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     ) {
         val convId = _conversationId.value ?: return
         viewModelScope.launch {
+            val finalContent = if (encryptionEnabled && sessionKey != null) {
+                try {
+                    SessionCipher.encrypt(text.ifBlank { "📷 Imagen" }, sessionKey!!)
+                } catch (e: Exception) {
+                    text.ifBlank { "📷 Imagen" }
+                }
+            } else {
+                text.ifBlank { "📷 Imagen" }
+            }
             val msg = MessageEntity(
                 id = UUID.randomUUID().toString(),
                 conversationId = convId,
-                content = text.ifBlank { "📷 Imagen" },
+                content = finalContent,
                 isOwn = true,
                 expireAt = expireAt,
                 mediaUri = mediaUri,
                 viewOnce = viewOnce,
                 quotedMessageId = quotedMessageId,
-                quotedMessageContent = quotedMessageContent
+                quotedMessageContent = quotedMessageContent,
+                encrypted = encryptionEnabled
             )
             db?.messageDao()?.insertMessage(msg)
             if (convId != "self_chat") {

@@ -9,8 +9,9 @@ enum class ContactStatus { PENDING, CONFIRMED, BLOCKED }
 data class ContactEntity(
     @PrimaryKey
     val pubKeyBase64: String,
+    val userId: String? = null,         // NUEVO: ID de 12 caracteres
     val localAlias: String?,
-    val addedVia: String, // "QR", "CODE", "NFC", "AGENDA"
+    val addedVia: String,               // "QR", "CODE", "NFC", "AGENDA"
     val status: ContactStatus = ContactStatus.PENDING,
     val addedAt: Long = System.currentTimeMillis(),
     val lastSeenAt: Long? = null
