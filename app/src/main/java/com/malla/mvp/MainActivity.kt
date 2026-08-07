@@ -67,7 +67,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-enum class AppState { Splash, Onboarding, Main }
+enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,8 +123,10 @@ class MainActivity : FragmentActivity() {
         val database = AppDatabase.getInstance(application)
 
         setContent {
+            val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
             var showQrScanner by remember { mutableStateOf(false) }
+            var showRegistration by remember { mutableStateOf(IdentityManager.getUserId(context) == null) }
             var currentConversationId by remember { mutableStateOf<String?>(null) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
@@ -133,7 +135,6 @@ class MainActivity : FragmentActivity() {
             var callContact by remember { mutableStateOf("") }
             var callType by remember { mutableStateOf("voice") }
             var showTutorial by remember { mutableStateOf(false) }
-            val context = LocalContext.current
             val flashlight = remember { FlashlightTransport(context) }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
@@ -147,13 +148,10 @@ class MainActivity : FragmentActivity() {
                             android.widget.Toast.makeText(context, "Modo Mesh activado – Tema OLED para ahorro de batería", android.widget.Toast.LENGTH_LONG).show()
                             meshToastShown.value = true
                         }
-                        // MeshChatService eliminado temporalmente
                         LogBuffer.add("MAIN", "Iniciando servicio mesh")
                         NetworkService.startServer()
                         LogBuffer.add("MAIN", "NetworkService iniciado")
-                        //MeshMessageHandler.start(application) (reemplazado por MessageReceiver)
                         LogBuffer.add("MAIN", "MeshMessageHandler iniciado")
-                    } else {
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("MallaMesh", "Error gestionando mesh (ignorado)", e)
@@ -177,78 +175,85 @@ class MainActivity : FragmentActivity() {
             }
 
             MallaTheme(colorScheme = effectiveScheme, fontScale = AccessibilitySettings.fontScale.value) {
-                AnimatedContent(
-                    targetState = appState,
-                    transitionSpec = {
-                        (slideInHorizontally { width -> width } + fadeIn(tween(300))) togetherWith
-                                (slideOutHorizontally { width -> -width } + fadeOut(tween(300)))
-                    },
-                    label = "app_state_transition"
-                ) { state ->
-                    when (state) {
-                        AppState.Splash -> SplashScreen {
-                            if (isFirstLaunch) {
-                                try { prefs?.edit()?.putBoolean("first_launch", false)?.apply() } catch (_: Exception) {}
-                                appState = AppState.Onboarding
-                            } else appState = AppState.Main
+                // Registro premium (sin teléfono)
+                if (showRegistration) {
+                    RegistrationScreen(
+                        onRegistrationComplete = { id ->
+                            showRegistration = false
+                            // Marcar que ya no es primer lanzamiento y activar tutorial
+                            try {
+                                getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
+                                    ?.edit()?.putBoolean("first_launch", false)?.apply()
+                                getSharedPreferences("tutorial", Context.MODE_PRIVATE)
+                                    ?.edit()?.putBoolean("shown", false)?.apply()
+                            } catch (_: Exception) {}
+                            showTutorial = true
+                            Toast.makeText(context, "ID creado: $id", Toast.LENGTH_LONG).show()
                         }
-                        AppState.Onboarding -> IdentityOnboardingScreen {
-                            appState = AppState.Main
-                            val tutorialPrefs = getSharedPreferences("tutorial", MODE_PRIVATE)
-                            val alreadyShown = tutorialPrefs.getBoolean("shown", false)
-                            if (!alreadyShown) {
-                                showTutorial = true
+                    )
+                } else {
+                    AnimatedContent(
+                        targetState = appState,
+                        transitionSpec = {
+                            (slideInHorizontally { width -> width } + fadeIn(tween(300))) togetherWith
+                                    (slideOutHorizontally { width -> -width } + fadeOut(tween(300)))
+                        },
+                        label = "app_state_transition"
+                    ) { state ->
+                        when (state) {
+                            AppState.Splash -> SplashScreen {
+                                appState = AppState.Main
                             }
-                        }
-                        AppState.Main -> {
-                            if (showTutorial) {
-                                TutorialOverlay(
-                                    onDismiss = {
-                                        showTutorial = false
-                                        try {
-                                            getSharedPreferences("tutorial", Context.MODE_PRIVATE)
-                                                ?.edit()?.putBoolean("shown", true)?.apply()
-                                        } catch (_: Exception) {}
-                                    }
-                                )
-                            } else if (showQrScanner) {
-                                BackHandler { showQrScanner = false }
-                                QrScanScreen(
-                                    onQrScanned = { ip ->
-                                        showQrScanner = false
-                                        connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
-                                    },
-                                    onBack = { showQrScanner = false }
-                                )
-                            } else if (showChatSettings) {
-                                BackHandler { showChatSettings = false }
-                                ChatSettingsScreen(onBack = { showChatSettings = false })
-                            } else if (showSettings) {
-                                BackHandler { showSettings = false }
-                                SettingsScreenWrapper(
-                                    currentScheme = effectiveScheme,
-                                    onSchemeSelected = { scheme -> appThemeState.selectScheme(scheme) },
-                                    onBack = { showSettings = false }
-                                )
-                            } else if (selectedContact != null) {
-                                BackHandler { selectedContact = null }
-                                ContactProfileScreen(contactName = selectedContact!!, onBack = { selectedContact = null })
-                            } else {
-                                MainApp(
-                                    isMeshMode = !isOnline,
-                                    currentConversationId = currentConversationId,
-                                    onConversationChanged = { convId -> currentConversationId = convId },
-                                    onSettingsClick = { showSettings = true },
-                                    onChatSettingsClick = { showChatSettings = true },
-                                    onProfileClicked = { contactName -> selectedContact = contactName },
-                                    onNavigateToQrScanner = { showQrScanner = true },
-                                    onConnectToPeer = { ip ->
-                                        connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
-                                    },
-                                    onVoiceCallClick = { showCall = true; callContact = "Contacto"; callType = "voice" },
-                                    onVideoCallClick = { showCall = true; callContact = "Contacto"; callType = "video" },
-                                    db = database
-                                )
+                            AppState.Main -> {
+                                if (showTutorial) {
+                                    TutorialOverlay(
+                                        onDismiss = {
+                                            showTutorial = false
+                                            try {
+                                                getSharedPreferences("tutorial", Context.MODE_PRIVATE)
+                                                    ?.edit()?.putBoolean("shown", true)?.apply()
+                                            } catch (_: Exception) {}
+                                        }
+                                    )
+                                } else if (showQrScanner) {
+                                    BackHandler { showQrScanner = false }
+                                    QrScanScreen(
+                                        onQrScanned = { ip ->
+                                            showQrScanner = false
+                                            connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
+                                        },
+                                        onBack = { showQrScanner = false }
+                                    )
+                                } else if (showChatSettings) {
+                                    BackHandler { showChatSettings = false }
+                                    ChatSettingsScreen(onBack = { showChatSettings = false })
+                                } else if (showSettings) {
+                                    BackHandler { showSettings = false }
+                                    SettingsScreenWrapper(
+                                        currentScheme = effectiveScheme,
+                                        onSchemeSelected = { scheme -> appThemeState.selectScheme(scheme) },
+                                        onBack = { showSettings = false }
+                                    )
+                                } else if (selectedContact != null) {
+                                    BackHandler { selectedContact = null }
+                                    ContactProfileScreen(contactName = selectedContact!!, onBack = { selectedContact = null })
+                                } else {
+                                    MainApp(
+                                        isMeshMode = !isOnline,
+                                        currentConversationId = currentConversationId,
+                                        onConversationChanged = { convId -> currentConversationId = convId },
+                                        onSettingsClick = { showSettings = true },
+                                        onChatSettingsClick = { showChatSettings = true },
+                                        onProfileClicked = { contactName -> selectedContact = contactName },
+                                        onNavigateToQrScanner = { showQrScanner = true },
+                                        onConnectToPeer = { ip ->
+                                            connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
+                                        },
+                                        onVoiceCallClick = { showCall = true; callContact = "Contacto"; callType = "voice" },
+                                        onVideoCallClick = { showCall = true; callContact = "Contacto"; callType = "video" },
+                                        db = database
+                                    )
+                                }
                             }
                         }
                     }
@@ -314,8 +319,6 @@ fun SettingsScreenWrapper(
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(
@@ -370,7 +373,7 @@ fun MainApp(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier.height(56.dp),
-                containerColor = Color(0xFF0A1B2A)  // Azul petróleo profundo
+                containerColor = Color(0xFF0A1B2A)
             ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,

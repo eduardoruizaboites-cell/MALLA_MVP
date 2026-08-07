@@ -26,6 +26,7 @@ object IdentityManager {
     private const val KEY_ALIAS = "malla_identity"
     private const val USER_NAME_KEY = "user_name"
     private const val USER_PHONE_KEY = "user_phone"
+    private const val USER_NICKNAME_KEY = "user_nickname"
     private const val USER_STATUS_KEY = "user_status"
     private const val AVATAR_FILE = "avatar.jpg"
     private const val BANNER_FILE = "banner.jpg"
@@ -180,4 +181,54 @@ object IdentityManager {
         val file = File(context.filesDir, BANNER_FILE)
         return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
     }
+    private const val USER_ID_KEY = "user_id"
+
+    fun generateUniqueId(location: android.location.Location?): String {
+        val pubKey = getPublicKeyBase64() ?: throw IllegalStateException("No hay clave pública")
+        val timestamp = System.currentTimeMillis().toString()
+        val locationStr = if (location != null) {
+            "${location.latitude},${location.longitude}"
+        } else {
+            ""
+        }
+        val combined = "$pubKey|$timestamp|$locationStr"
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(combined.toByteArray(Charsets.UTF_8))
+        return toBase58(hash).take(12)
+    }
+
+    private fun toBase58(data: ByteArray): String {
+        val ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+        var bigInt = java.math.BigInteger(1, data)
+        val result = StringBuilder()
+        while (bigInt > java.math.BigInteger.ZERO) {
+            val divRem = bigInt.divideAndRemainder(java.math.BigInteger.valueOf(58))
+            result.append(ALPHABET[divRem[1].toInt()])
+            bigInt = divRem[0]
+        }
+        return result.reverse().toString()
+    }
+
+    fun saveUserId(context: android.content.Context, id: String) {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString(USER_ID_KEY, id).apply()
+    }
+
+    fun getUserId(context: android.content.Context): String? {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", android.content.Context.MODE_PRIVATE)
+        return prefs.getString(USER_ID_KEY, null)
+    }
+
+
+    fun setUserNickname(context: Context, nickname: String) {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
+        prefs.edit().putString(USER_NICKNAME_KEY, nickname).apply()
+    }
+
+    fun getUserNickname(context: Context): String? {
+        val prefs = encryptedPrefs ?: context.getSharedPreferences("malla_secure_identity_fallback", Context.MODE_PRIVATE)
+        return prefs.getString(USER_NICKNAME_KEY, null)
+    }
+
+
 }
