@@ -1,35 +1,39 @@
 # PROJECT_STATUS.md — MALLA MVP
-**Última actualización:** 2026-08-02 (Sesión de cierre tras implementación de zumbido premium y caja de texto en bottomBar)
+**Última actualización:** 2026-08-07 (Sesión de cierre tras implementación de E2EE y verificación de contactos)
 
 ## Resumen Ejecutivo
-La app alcanzó un estado estable y visualmente premium. La caja de texto ahora reside en el `bottomBar` del `Scaffold`, crece multilínea con animación fluida, y todos los íconos están centrados y tematizados. El botón de zumbido activa una experiencia completa estilo MSN (vibración, sonido personalizado, shake de pantalla y overlay animado) sin dejar burbuja en el historial. No se introdujeron regresiones; el flujo de mensajería normal funciona sin interferencias.
+La app alcanzó un estado estable y altamente seguro. Se implementó un sistema de identidad único biométrico (sin dependencia de número telefónico), verificación de contactos mediante código QR o ID de 12 caracteres, y cifrado de extremo a extremo (E2EE) con ECDH + AES‑256‑GCM. La interfaz premium incluye caja de texto multilínea en bottomBar, panel de emojis estilo WhatsApp, cámara con modos profesionales, panel de adjuntos y zumbido MSN. No se introdujeron regresiones; el flujo de mensajería normal funciona sin interferencias.
 
 ## Estado General
-- **Fase actual:** 3 – Comunicación Avanzada y Pre‑Mesh Discovery (ampliada con UX premium)
-- **Compilación:** BUILD SUCCESSFUL (243 tareas)
-- **Último commit:** `ba19d9bb` (tag: `checkpoint-20260802-zumbido-premium`)
+- **Fase actual:** 3 – Comunicación Avanzada y Pre‑Mesh Discovery (con seguridad reforzada)
+- **Compilación:** BUILD SUCCESSFUL
+- **Último commit:** `checkpoint-20260807-e2ee-completo`
 - **Archivos modificados en esta sesión:**
-  - `ChatScreen.kt` — Reestructuración completa con `bottomBar`, overlay de zumbido, puente de red, vibración y sonido.
-  - `ChatInputBar.kt` — Rediseño premium: crecimiento multilínea, borde neón adaptativo, háptica, iconos externos centrados, colores dinámicos del tema.
-  - `MeshChatViewModel.kt` — `sendZumbido()` ahora emite evento local sin persistir burbuja.
+  - `IdentityManager.kt` — Generación de ID único (biométrico + GPS), gestión de nickname, `ensureSelfContact`.
+  - `RegistrationScreen.kt` — Nueva pantalla de registro premium con animaciones de ubicación y generación.
+  - `VerificationScreen.kt` — Pantalla de verificación de contactos mediante ID o QR.
+  - `PerfilScreen.kt` — Muestra ID único y botón de verificación.
+  - `ContactEntity.kt` / `ContactDao.kt` — Añadido `userId` para búsqueda por ID.
+  - `MessageEntity.kt` — Añadido campo `encrypted`.
+  - `SessionCipher.kt` (nuevo) — Cifrado/descifrado con AES‑GCM usando clave derivada de ECDH.
+  - `MeshChatViewModel.kt` — Integración de E2EE en envío y carga de mensajes.
+  - `MainActivity.kt` — Integración de `RegistrationScreen`, `VerificationScreen` y eliminación del viejo onboarding.
+  - `AppDatabase.kt` — Versión 11 con `fallbackToDestructiveMigration`.
 
 ## Funcionalidades implementadas (sesión actual)
-- ✅ Caja de texto en `bottomBar` con `animateContentSize`, `heightIn(min = 48.dp)`, `maxLines = 5`.
-- ✅ Borde neón con gradiente usando `drawBehind` y `LocalColorScheme`.
-- ✅ Íconos de vibrar, micrófono y enviar fuera de la burbuja de texto.
-- ✅ Todos los íconos (emoji, adjuntar, cámara) unificados al color primario del tema.
-- ✅ Zumbido MSN:
-  - Vibración patrón (100ms on, 80ms off x3).
-  - Reproducción de `res/raw/zumbido.mp3`.
-  - Shake de pantalla (4 ciclos, 20dp).
-  - Overlay `ZumbidoOverlay` con animación de escala y fade.
-  - Sin inserción de burbuja en el chat.
-- ✅ Puente de red: `NetworkService.messages` redirige zumbidos remotos a `MallaEventBus`.
-- ✅ Háptica sutil en botón enviar (`HapticFeedbackConstants.KEYBOARD_TAP`).
-- ✅ Indicador de escritura (`ComposingBubble`) con fondo translúcido.
+- ✅ Registro premium con ID único de 12 caracteres (huella opcional, ubicación, timestamp).
+- ✅ Pantalla de verificación de contactos (QR propio e ingreso de ID ajeno).
+- ✅ Perfil muestra ID único y botón de verificación.
+- ✅ Cifrado E2EE: mensajes enviados a contactos con clave pública se cifran con AES‑GCM.
+- ✅ Descifrado automático al cargar conversación.
+- ✅ Eliminado el viejo `IdentityOnboardingScreen` (sin teléfono).
+- ✅ Animación visual durante la generación del ID (ubicación + generación).
+- ✅ Campo `encrypted` en `MessageEntity` para distinguir mensajes cifrados.
+- ✅ `SessionCipher` en módulo `crypto` como wrapper de `CryptoEngine`.
+- ✅ `ensureSelfContact` guarda la propia identidad en la BD para verificación.
 
 ## Estructura de módulos (recordatorio)
-(app → core, data, crypto, events, identity, media, network, transport)
+(app → core, data, crypto, events, identity, media, network, transport, camera, emoji)
 (data → core, room)
 (crypto → core)
 (transport → core, network)
@@ -38,38 +42,30 @@ La app alcanzó un estado estable y visualmente premium. La caja de texto ahora 
 ## Deuda técnica pendiente
 1. Pruebas de comunicación BLE/Wi‑Fi Direct entre dispositivos reales — NO REALIZADAS.
 2. Refactorización de `Injector` para romper dependencias circulares con `:network` — PENDIENTE.
-3. Búsqueda en el chat — PENDIENTE (implementada antes, se puede re‑aplicar).
+3. Búsqueda en el chat — PENDIENTE.
 4. Indicador de ondas en grabación de voz a veces no se mueve — POSIBLE BUG.
 5. Icono de notificación grande (`setLargeIcon`) no implementado.
 6. Cobertura de pruebas unitarias — INEXISTENTE.
-7. `R.raw.zumbido` debe existir; si se elimina, el zumbido no sonará.
+7. `DoubleRatchet` real (Perfect Forward Secrecy) — PENDIENTE (actualmente se usa ECDH simétrico).
+8. Integración de verificación de contactos en el flujo de agregar usuario (código/QR) — PARCIAL.
 
 ## Próxima sesión – Plan de acción
-**Objetivo:** Implementar los iconos de cámara, adjuntar y emojis/GIFs como módulos independientes, sin afectar la app compilada.
+**Objetivo:** Refinar la verificación de contactos, activar el DoubleRatchet completo y preparar pruebas de comunicación real.
 
-1. **Módulo de Cámara Premium (`:camera`)**
-   - Crear un módulo `:camera` que encapsule toda la lógica de captura.
-   - Detectar la resolución máxima soportada por el hardware.
-   - Aplicar mejoras automáticas (HDR, balance de blancos, reducción de ruido) aprovechando `CameraX`.
-   - Funciones selfie premium: modo belleza, filtros sutiles, temporizador.
-   - Conectar el icono de cámara en `ChatInputBar` para abrir este módulo.
+1. **Verificación de contactos mejorada**
+   - Al escanear QR o ingresar código de 8 dígitos (ahora ID de 12), insertar el contacto en la BD con su `userId`.
+   - Al verificarlo en `VerificationScreen`, confirmar el estado y marcar como `CONFIRMED`.
+   - Añadir identicon visual para comparación fuera de banda.
 
-2. **Módulo de Adjuntos (`:attachments`)**
-   - Permitir seleccionar documentos, imágenes de galería y audio.
-   - Integrar con el `GalleryPickerPanel` existente o mejorarlo.
-   - Asegurar que los archivos se compriman/optimicen antes de enviar.
+2. **Implementar DoubleRatchet real**
+   - Almacenar estado del ratchet por conversación (tabla `ratchet_state` o en `MessageEntity`).
+   - Cifrar cada mensaje con una clave de mensaje derivada del ratchet.
+   - Gestionar el intercambio inicial de pre‑keys (usando la DHT o el handshake ECDH existente).
 
-3. **Módulo de Emojis y GIFs (`:emoji`)**
-   - Crear un módulo `:emoji` con una UI deslizable por categorías.
-   - Incluir todos los emojis del estándar Unicode (usar librería `emoji-java` o similar).
-   - Sección de "Recientes" y "Más usados".
-   - Integración de GIFs mediante API de Giphy o Tenor, con búsqueda.
-   - Reemplazar el emoji picker básico en `ChatInputBar` por este nuevo módulo.
-
-4. **Integración y aislamiento**
-   - Cada módulo expondrá una interfaz (`Contract`) para que `:app` solo dependa de ella.
-   - No se modificará la estructura del `Scaffold` ni del `bottomBar` existente; los nuevos módulos se abrirán como pantallas completas o `ModalBottomSheet`.
-   - Se mantendrá la compilación exitosa tras cada paso.
+3. **Pruebas de comunicación real**
+   - Conectar dos dispositivos (físicos o emuladores) vía Wi‑Fi Direct o BLE.
+   - Verificar intercambio de mensajes cifrados, zumbidos y archivos.
+   - Ajustar la UI de conexión en `PulsoScreen`.
 
 ## Checkpoint creado
-`git tag checkpoint-20260802-zumbido-premium` (commit `ba19d9bb`)
+`git tag checkpoint-20260807-e2ee-completo`

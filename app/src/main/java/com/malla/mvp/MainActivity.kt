@@ -48,6 +48,8 @@ import com.malla.mvp.service.MeshChatService
 import com.malla.mvp.network.MeshMessageHandler
 import com.malla.mvp.core.engine.DeviceStateMonitor
 import com.malla.mvp.core.engine.LogBuffer
+
+import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.ui.components.MainTopBar
 import com.malla.mvp.ui.components.StickerPickerDialog
@@ -109,6 +111,7 @@ class MainActivity : FragmentActivity() {
         ConnectivityMonitor.start(application)
         DeviceStateMonitor.start(this)
         IdentityManager.init(this)
+        DhtWrapper.init(this)
         insertSampleStories()
 
         val appThemeState = AppThemeState.create(this)
@@ -150,6 +153,11 @@ class MainActivity : FragmentActivity() {
                             meshToastShown.value = true
                         }
                         LogBuffer.add("MAIN", "Iniciando servicio mesh")
+                        // DHT inicio gestionado por DhtWrapper
+                        // Publicar nuestra presencia en DHT
+                        val myUserId = IdentityManager.getUserId(context) ?: ""
+                        val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
+                        DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
                         NetworkService.startServer()
                         LogBuffer.add("MAIN", "NetworkService iniciado")
                         LogBuffer.add("MAIN", "MeshMessageHandler iniciado")
