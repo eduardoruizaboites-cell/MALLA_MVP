@@ -55,7 +55,19 @@ object DiscoveryService {
         override fun onServiceFound(serviceInfo: NsdServiceInfo) {
             Log.d(TAG, "NSD encontrado: ${serviceInfo.serviceName}")
             // Resolver el servicio para obtener la IP y el puerto
-            nsdManager?.resolveService(serviceInfo, resolveListener)
+            nsdManager?.resolveService(serviceInfo, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(serviceInfo: NsdServiceInfo?, errorCode: Int) {
+                        Log.e(TAG, "Resolución NSD fallida: $errorCode")
+                    }
+                    override fun onServiceResolved(serviceInfo: NsdServiceInfo?) {
+                        serviceInfo?.let {
+                            val host = it.host?.hostAddress ?: return
+                            val port = it.port
+                            Log.d(TAG, "Resuelto: $host:$port (${it.serviceName})")
+                            onPeerResolved?.invoke("$host:$port")
+                        }
+                    }
+                })
         }
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {}
         override fun onDiscoveryStopped(regType: String) {}

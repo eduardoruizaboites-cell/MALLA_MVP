@@ -58,3 +58,15 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 
 ## Checkpoint creado
 `git tag checkpoint-20260808-cierre`
+
+## Sesión 21–22: Corrección de crash al abrir la app
+
+### Error 1: Room – cambio de esquema sin migración
+- **Causa:** Se añadió `ContactEntity` a la base de datos pero no se incrementó la versión en `AppDatabase.kt` (se mantuvo `version = 11`).
+- **Efecto:** Room detectaba una identidad de hash diferente y lanzaba `IllegalStateException: Room cannot verify the data integrity`.
+- **Solución:** Incrementar la versión a 12 en `data/.../AppDatabase.kt`. Como ya se tenía `fallbackToDestructiveMigration()`, Room destruyó la BD antigua y creó la nueva correctamente.
+
+### Error 2: mDNS – `listener already in use`
+- **Causa:** En `DiscoveryService.kt` se reutilizaba una única instancia de `ResolveListener` (`resolveListener`) para cada servicio encontrado. Android no permite que un mismo listener sea usado en múltiples resoluciones simultáneas.
+- **Efecto:** Al escanear servicios mDNS, el segundo `resolveService` lanzaba `IllegalArgumentException: listener already in use`.
+- **Solución:** Crear una instancia anónima nueva de `ResolveListener` cada vez que se llama a `resolveService`, en lugar de reutilizar el objeto `resolveListener` predefinido.
