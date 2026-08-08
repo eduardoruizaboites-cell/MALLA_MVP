@@ -39,6 +39,8 @@ import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.ui.components.NearbyPanel
 import com.malla.mvp.ui.components.IncomingRequestDialog
+import com.malla.mvp.data.entity.ContactEntity
+import com.malla.mvp.util.BiometricAuthHelper
 import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.InvitationManager
 
@@ -404,8 +406,35 @@ fun ConversationsScreen(
         IncomingRequestDialog(
             invitation = incomingInvitation!!,
             onAccept = { inv ->
-                Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
-                incomingInvitation = null
+                scope.launch {
+                        BiometricAuthHelper.authenticate(context,
+                            onSuccess = {
+                                scope.launch {
+                                    try {
+                                        // Guardar contacto en Room
+                                        val contact = ContactEntity(
+                                            contactUserId = inv.senderUserId,
+                                            displayName = inv.senderDisplayName,
+                                            avatarSeed = inv.senderAvatarSeed,
+                                            publicKey = inv.senderPublicKey,
+                                            addedAt = System.currentTimeMillis()
+                                        )
+                                        val db = AppDatabase.getInstance(context)
+                                        db?.contactDao()?.insert(contact)
+                                        Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
+                                        // TODO: Enviar notificación de aceptación al emisor
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
+                                    }
+                                    incomingInvitation = null
+                                }
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                                incomingInvitation = null
+                            }
+                        )
+                    }
             },
             onReject = { inv ->
                 incomingInvitation = null
