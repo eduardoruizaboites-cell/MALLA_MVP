@@ -20,7 +20,6 @@ import com.malla.mvp.network.DhtService
 import com.malla.mvp.network.SeedManager
 import com.malla.mvp.network.MessageReceiver
 import com.malla.mvp.network.UnifiedMessageRouter
-import com.malla.mvp.network.ContactDiscoveryManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -173,7 +172,6 @@ object Injector {
         PremiumManager.init()
         DhtService.start()
         SeedManager.init(context)
-        ContactDiscoveryManager.publishMyPresence()
         CoroutineScope(Dispatchers.IO).launch {
             DeviceProfile.initialize(context)
         }

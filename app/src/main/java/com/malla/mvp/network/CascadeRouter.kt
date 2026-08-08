@@ -92,11 +92,9 @@ object CascadeRouter {
                 return saved
             }
             if (contactId.all { it.isDigit() || it == '+' }) {
-                ContactDiscoveryManager.searchByPhone(contactId)?.let { identityId ->
-                    phoneMap[identityId] = contactId
-                    prefs.edit().putString(identityId, contactId).apply()
-                    return contactId
-                }
+                phoneMap[contactId] = contactId
+                prefs.edit().putString(contactId, contactId).apply()
+                return contactId
             }
             ""
         } catch (e: Exception) {

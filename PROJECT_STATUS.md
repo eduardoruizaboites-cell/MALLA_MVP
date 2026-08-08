@@ -7,7 +7,7 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 ## Estado General
 - **Fase actual:** 3 – Comunicación Avanzada y Pre‑Mesh Discovery (con seguridad reforzada)
 - **Compilación:** BUILD SUCCESSFUL
-- **Último commit:** `checkpoint-20260808-estable`
+- **Último commit:** `checkpoint-20260808-cierre`
 - **Archivos modificados en esta sesión:**
   - `IdentityManager.kt` — Añadidas funciones para ID único, nickname y `ensureSelfContact`.
   - `RegistrationScreen.kt` — Nuevo registro biométrico con animaciones y generación de ID de 12 caracteres.
@@ -48,7 +48,7 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 **Objetivo:** Resolver el conflicto de imports de `DhtService`, activar la DHT global y añadir el escáner de documentos a la cámara.
 
 1. **DHT global (resolver conflicto)**
-   - Crear un wrapper `DhtHelper` en el módulo `:app` que encapsule las llamadas a `DhtService.find()`.
+   - Crear un wrapper `DhtHelper` en el módulo `:app` que encapsule las llamadas a `DhtService.lookup()`.
    - Integrar `DhtHelper` en `ConversationsScreen` para que, al ingresar un código sin IP encriptada, busque en la DHT.
    - Probar con un nodo semilla local (o en Oracle Cloud).
 
@@ -57,4 +57,4 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
    - Añadir UI con guías de encuadre y recorte automático.
 
 ## Checkpoint creado
-`git tag checkpoint-20260808-estable`
+`git tag checkpoint-20260808-cierre`
