@@ -121,7 +121,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
             val myUserId = IdentityManager.getUserId(context) ?: "unknown"
                                 val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
                                 val encryptedIp = DhtWrapper.encryptIp(myIp, myUserId)
-                                inviteCode = InviteCodeGenerator.generate()
+                                inviteCode = InviteCodeGenerator.generate(extra = encryptedIp)
         }
     }
 

@@ -1,35 +1,35 @@
 # PROJECT_STATUS.md — MALLA MVP
-**Última actualización:** 2026-08-07 (Sesión de cierre tras implementación de E2EE y verificación de contactos)
+**Última actualización:** 2026-08-07 (Sesión de cierre tras implementar flujo de contactos, perfil premium y E2EE)
 
 ## Resumen Ejecutivo
-La app alcanzó un estado estable y altamente seguro. Se implementó un sistema de identidad único biométrico (sin dependencia de número telefónico), verificación de contactos mediante código QR o ID de 12 caracteres, y cifrado de extremo a extremo (E2EE) con ECDH + AES‑256‑GCM. La interfaz premium incluye caja de texto multilínea en bottomBar, panel de emojis estilo WhatsApp, cámara con modos profesionales, panel de adjuntos y zumbido MSN. No se introdujeron regresiones; el flujo de mensajería normal funciona sin interferencias.
+La app alcanzó un estado altamente funcional y seguro. Se implementó un sistema de registro biométrico sin dependencia de número telefónico, un perfil de usuario premium con controles de privacidad y compartir identidad (QR efímero y código de 24h con IP encriptada). El flujo de agregar usuarios ahora funciona mediante código de invitación (12 dígitos) y escaneo QR. Se activó el cifrado de extremo a extremo (E2EE) básico con ECDH + AES‑256‑GCM. La interfaz incluye caja de texto multilínea en bottomBar, panel de emojis estilo WhatsApp, cámara con modos profesionales, panel de adjuntos premium y zumbido MSN. No se introdujeron regresiones.
 
 ## Estado General
 - **Fase actual:** 3 – Comunicación Avanzada y Pre‑Mesh Discovery (con seguridad reforzada)
 - **Compilación:** BUILD SUCCESSFUL
-- **Último commit:** `checkpoint-20260807-e2ee-completo`
+- **Último commit:** `checkpoint-20260807-flujo-contactos`
 - **Archivos modificados en esta sesión:**
-  - `IdentityManager.kt` — Generación de ID único (biométrico + GPS), gestión de nickname, `ensureSelfContact`.
-  - `RegistrationScreen.kt` — Nueva pantalla de registro premium con animaciones de ubicación y generación.
+  - `IdentityManager.kt` — Añadidas funciones para ID único, nickname y `ensureSelfContact`.
+  - `RegistrationScreen.kt` — Nuevo registro biométrico con animaciones y generación de ID de 12 caracteres.
+  - `PerfilScreen.kt` — Rediseño completo con avatar, nombre editable, ID visible, privacidad, QR efímero (con biometría), código 24h (con IP encriptada y botón de refrescar) y botón "Verificar contactos".
   - `VerificationScreen.kt` — Pantalla de verificación de contactos mediante ID o QR.
-  - `PerfilScreen.kt` — Muestra ID único y botón de verificación.
-  - `ContactEntity.kt` / `ContactDao.kt` — Añadido `userId` para búsqueda por ID.
-  - `MessageEntity.kt` — Añadido campo `encrypted`.
-  - `SessionCipher.kt` (nuevo) — Cifrado/descifrado con AES‑GCM usando clave derivada de ECDH.
+  - `ConversationsScreen.kt` — Diálogo "Agregar usuario" premium con código de invitación y escáner QR, eliminando opciones obsoletas.
+  - `InviteCodeGenerator.kt` — Acepta un `extra` opcional para incluir IP encriptada en el código.
+  - `DhtWrapper.kt` (nuevo) — Cifrado/descifrado de IP local para conexiones directas.
+  - `SessionCipher.kt` (nuevo) — Cifrado simétrico con AES‑GCM.
   - `MeshChatViewModel.kt` — Integración de E2EE en envío y carga de mensajes.
-  - `MainActivity.kt` — Integración de `RegistrationScreen`, `VerificationScreen` y eliminación del viejo onboarding.
-  - `AppDatabase.kt` — Versión 11 con `fallbackToDestructiveMigration`.
+  - `MainActivity.kt` — Integración de `RegistrationScreen`, `VerificationScreen`, procesamiento QR y eliminación del viejo onboarding.
+  - `AppDatabase.kt` — Versión 11 con fallback destructivo.
 
 ## Funcionalidades implementadas (sesión actual)
 - ✅ Registro premium con ID único de 12 caracteres (huella opcional, ubicación, timestamp).
-- ✅ Pantalla de verificación de contactos (QR propio e ingreso de ID ajeno).
-- ✅ Perfil muestra ID único y botón de verificación.
+- ✅ Perfil de usuario con avatar, banner, nombre editable, ID visible, configuración de privacidad (switches), QR efímero y código de 24h (con biometría y refresco).
+- ✅ Código de invitación de 12 dígitos con IP encriptada para conexión directa.
+- ✅ Escáner QR funcional que procesa enlaces `malla://connect?ip=...` y `malla://id?userId=...`.
+- ✅ Pantalla de verificación de contactos.
 - ✅ Cifrado E2EE: mensajes enviados a contactos con clave pública se cifran con AES‑GCM.
-- ✅ Descifrado automático al cargar conversación.
 - ✅ Eliminado el viejo `IdentityOnboardingScreen` (sin teléfono).
-- ✅ Animación visual durante la generación del ID (ubicación + generación).
-- ✅ Campo `encrypted` en `MessageEntity` para distinguir mensajes cifrados.
-- ✅ `SessionCipher` en módulo `crypto` como wrapper de `CryptoEngine`.
+- ✅ Animaciones visuales durante la generación del ID.
 - ✅ `ensureSelfContact` guarda la propia identidad en la BD para verificación.
 
 ## Estructura de módulos (recordatorio)
@@ -47,25 +47,21 @@ La app alcanzó un estado estable y altamente seguro. Se implementó un sistema 
 5. Icono de notificación grande (`setLargeIcon`) no implementado.
 6. Cobertura de pruebas unitarias — INEXISTENTE.
 7. `DoubleRatchet` real (Perfect Forward Secrecy) — PENDIENTE (actualmente se usa ECDH simétrico).
-8. Integración de verificación de contactos en el flujo de agregar usuario (código/QR) — PARCIAL.
+8. Integración de verificación de contactos en el flujo de agregar usuario — PARCIAL.
 
 ## Próxima sesión – Plan de acción
-**Objetivo:** Refinar la verificación de contactos, activar el DoubleRatchet completo y preparar pruebas de comunicación real.
+**Objetivo:** Activar la DHT global para descubrimiento de contactos y añadir el escáner de documentos a la cámara.
 
-1. **Verificación de contactos mejorada**
-   - Al escanear QR o ingresar código de 8 dígitos (ahora ID de 12), insertar el contacto en la BD con su `userId`.
-   - Al verificarlo en `VerificationScreen`, confirmar el estado y marcar como `CONFIRMED`.
-   - Añadir identicon visual para comparación fuera de banda.
+1. **DHT global**
+   - Configurar un nodo semilla público (Oracle Cloud Always Free).
+   - Actualizar `DhtService` con la IP del nodo semilla real.
+   - Publicar presencia (userId + IP) al iniciar la app.
+   - Al agregar contacto por código/QR, buscar en la DHT y conectar directamente.
 
-2. **Implementar DoubleRatchet real**
-   - Almacenar estado del ratchet por conversación (tabla `ratchet_state` o en `MessageEntity`).
-   - Cifrar cada mensaje con una clave de mensaje derivada del ratchet.
-   - Gestionar el intercambio inicial de pre‑keys (usando la DHT o el handshake ECDH existente).
-
-3. **Pruebas de comunicación real**
-   - Conectar dos dispositivos (físicos o emuladores) vía Wi‑Fi Direct o BLE.
-   - Verificar intercambio de mensajes cifrados, zumbidos y archivos.
-   - Ajustar la UI de conexión en `PulsoScreen`.
+2. **Escáner de documentos en la cámara**
+   - Implementar el modo "Documento" en `CameraViewModel` usando ML Kit Document Scanner.
+   - Añadir UI con guías de encuadre y recorte automático.
+   - Guardar el documento como PDF o imagen.
 
 ## Checkpoint creado
-`git tag checkpoint-20260807-e2ee-completo`
+`git tag checkpoint-20260807-flujo-contactos`
