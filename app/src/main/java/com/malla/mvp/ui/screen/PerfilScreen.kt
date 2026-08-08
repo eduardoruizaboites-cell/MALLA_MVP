@@ -104,27 +104,14 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
 
     fun generateQrAfterAuth() {
         performAfterBiometricAuth {
-            scope.launch {
-                try {
-                    val privateKey = IdentityManager.getPrivateKey()
-                    val userId = IdentityManager.getUserId(context) ?: "Sin ID"
-                    val timestamp = System.currentTimeMillis().toString()
-                    val payload = "$userId|$timestamp"
-                    val signature = android.util.Base64.encodeToString(
-                        java.security.Signature.getInstance("SHA256withECDSA").apply {
-                            initSign(privateKey)
-                            update(payload.toByteArray())
-                        }.sign(),
-                        android.util.Base64.NO_WRAP
-                    )
-                    qrPayload = "$payload|$signature"
-                    qrExpired = false
-                    withContext(Dispatchers.Main) { Toast.makeText(context, "QR generado", Toast.LENGTH_SHORT).show() }
-                    kotlinx.coroutines.delay(60_000L)
-                    qrExpired = true
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+            try {
+                val userId = IdentityManager.getUserId(context) ?: "Sin ID"
+                val ip = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
+                qrPayload = "malla://connect?ip=$ip&userId=$userId"
+                qrExpired = false
+                Toast.makeText(context, "QR generado", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

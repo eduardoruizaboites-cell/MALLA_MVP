@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import android.graphics.Bitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clickable
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.DhtWrapper
@@ -52,8 +54,7 @@ fun ConversationsScreen(
     var customTabs by remember { mutableStateOf(listOf<String>()) }
     var showFabMenu by remember { mutableStateOf(false) }
     var showAddContactDialog by remember { mutableStateOf(false) }
-    var showIpDialog by remember { mutableStateOf(false) }
-    var showCodeInput by remember { mutableStateOf(false) }
+    var showCodeDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(conversationDao) {
@@ -98,17 +99,6 @@ fun ConversationsScreen(
     Box(modifier = Modifier.fillMaxSize().background(
         Brush.verticalGradient(listOf(Color(0xFF0A1B2A), Color(0xFF0A1118)))
     )) {
-    if (showCodeInput) {
-        CodeInputScreen(
-            onCodeValidated = { code ->
-                showCodeInput = false
-                // TODO: buscar y agregar contacto por código
-                Toast.makeText(context, "Código validado: $code", Toast.LENGTH_SHORT).show()
-            },
-            onBack = { showCodeInput = false }
-        )
-        return@Box
-    }
         if (showStoryViewer) {
             StoryViewerScreen(imageUri = currentStoryUri, onFinished = { showStoryViewer = false })
         }
@@ -270,7 +260,7 @@ fun ConversationsScreen(
             }
         }
 
-        // Diálogo Agregar usuario
+        // ── Diálogo Agregar usuario (Premium) ─────────────────
         if (showAddContactDialog) {
             AlertDialog(
                 onDismissRequest = { showAddContactDialog = false },
@@ -282,47 +272,57 @@ fun ConversationsScreen(
                     }
                 },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.Tag, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Código de invitación (12 dígitos)")
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clickable { showAddContactDialog = false; showCodeDialog = true },
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF1A2C3B)
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Tag, null, tint = Color(0xFF4CE6FF), modifier = Modifier.size(32.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text("Código de invitación", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                                    Text("Ingresa el código de 12 dígitos", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                            }
                         }
-                        TextButton(onClick = { showAddContactDialog = false; onNavigateToQrScanner() }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Escanear QR")
-                        }
-                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.Phone, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Buscar contacto")
-                        }
-                        TextButton(onClick = { showAddContactDialog = false; showIpDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.Link, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Conexión directa")
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clickable { showAddContactDialog = false; onNavigateToQrScanner() },
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF1A2C3B)
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.QrCodeScanner, null, tint = Color(0xFF4CE6FF), modifier = Modifier.size(32.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text("Escanear QR", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                                    Text("Apuntar la cámara al código", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                            }
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { showAddContactDialog = false }) { Text("Cancelar") } }
+                confirmButton = {
+                    TextButton(onClick = { showAddContactDialog = false }) { Text("Cancelar", color = Color.Gray) }
+                }
             )
         }
 
-        // Diálogo Conectar por IP
-        if (showIpDialog) {
-            var ipAddress by remember { mutableStateOf("") }
+        // ── Diálogo Ingresar código de invitación (12 dígitos) ──
+        if (showCodeDialog) {
+            var inviteCode by remember { mutableStateOf("") }
             AlertDialog(
-                onDismissRequest = { showIpDialog = false },
-                title = { Text("Conexión directa") },
+                onDismissRequest = { showCodeDialog = false },
+                title = { Text("Código de invitación") },
                 text = {
                     Column {
-                        Text("Ingresa la IP del otro dispositivo (se muestra en la pestaña Pulso)")
+                        Text("Ingresa el código de 12 dígitos que te compartió tu contacto")
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
-                            value = ipAddress,
-                            onValueChange = { ipAddress = it },
-                            label = { Text("Dirección IP") },
+                            value = inviteCode,
+                            onValueChange = { inviteCode = it },
+                            label = { Text("Código de 12 dígitos") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -330,27 +330,35 @@ fun ConversationsScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (ipAddress.isNotBlank()) {
+                        if (inviteCode.isNotBlank() && inviteCode.length >= 12) {
                             scope.launch {
+                                val convId = "invite_" + inviteCode.trim().take(12)
+                                val conv = ConversationEntity(
+                                    id = convId,
+                                    title = "Invitación " + inviteCode.trim().take(12),
+                                    timestamp = System.currentTimeMillis()
+                                )
+                                conversationDao?.insertConversation(conv)
+                                showCodeDialog = false
+                                // Intentar conexión directa (IP encriptada en el código)
                                 try {
-                                    com.malla.mvp.network.NetworkService.connectToPeer(ipAddress.trim())
-                                    val convId = "peer_" + ipAddress.trim().replace(".", "_")
-                                    val conv = ConversationEntity(
-                                        id = convId,
-                                        title = "Peer " + ipAddress.trim(),
-                                        timestamp = System.currentTimeMillis()
-                                    )
-                                    conversationDao?.insertConversation(conv)
-                                    showIpDialog = false
-                                    onChatClicked(convId, "Peer " + ipAddress.trim())
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                                }
+                                    val extra = inviteCode.trim().substring(8)
+                                    val myUserId = IdentityManager.getUserId(context) ?: ""
+                                    val ip = DhtWrapper.decryptIp(extra, myUserId)
+                                    if (ip.isNotBlank()) {
+                                        com.malla.mvp.network.NetworkService.connectToPeer(ip)
+                                        Toast.makeText(context, "Conectando a $ip", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {}
+                                onChatClicked(convId, "Invitación " + inviteCode.trim().take(12))
+                                Toast.makeText(context, "Código aceptado", Toast.LENGTH_SHORT).show()
                             }
+                        } else {
+                            Toast.makeText(context, "Código inválido (debe tener al menos 12 caracteres)", Toast.LENGTH_SHORT).show()
                         }
-                    }) { Text("Conectar") }
+                    }) { Text("Aceptar") }
                 },
-                dismissButton = { TextButton(onClick = { showIpDialog = false }) { Text("Cancelar") } }
+                dismissButton = { TextButton(onClick = { showCodeDialog = false }) { Text("Cancelar") } }
             )
         }
     }
