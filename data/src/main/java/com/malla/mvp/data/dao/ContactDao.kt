@@ -2,30 +2,25 @@ package com.malla.mvp.data.dao
 
 import androidx.room.*
 import com.malla.mvp.data.entity.ContactEntity
-import com.malla.mvp.data.entity.ContactStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContactDao {
+    @Query("SELECT * FROM contacts WHERE isHidden = 0 ORDER BY addedAt DESC")
+    fun observeAllVisible(): Flow<List<ContactEntity>>
 
-    @Query("SELECT * FROM contacts WHERE status = 'CONFIRMED' ORDER BY localAlias ASC")
-    fun observeConfirmedContacts(): Flow<List<ContactEntity>>
-
-    @Query("SELECT * FROM contacts WHERE status = 'PENDING' ORDER BY addedAt DESC")
-    fun observePendingRequests(): Flow<List<ContactEntity>>
-
-    @Query("SELECT * FROM contacts WHERE pubKeyBase64 = :pubKey LIMIT 1")
-    suspend fun getContact(pubKey: String): ContactEntity?
-
-    @Query("SELECT * FROM contacts WHERE userId = :userId LIMIT 1")
-    suspend fun getContactByUserId(userId: String): ContactEntity?  // NUEVO
+    @Query("SELECT * FROM contacts WHERE contactUserId = :userId")
+    suspend fun getById(userId: String): ContactEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertContact(contact: ContactEntity)
+    suspend fun insert(contact: ContactEntity)
 
-    @Update
-    suspend fun updateContact(contact: ContactEntity)
+    @Query("UPDATE contacts SET isBlocked = :blocked WHERE contactUserId = :userId")
+    suspend fun setBlocked(userId: String, blocked: Boolean)
 
-    @Query("UPDATE contacts SET status = :status WHERE pubKeyBase64 = :pubKey")
-    suspend fun updateContactStatus(pubKey: String, status: ContactStatus)
+    @Query("UPDATE contacts SET isHidden = :hidden WHERE contactUserId = :userId")
+    suspend fun setHidden(userId: String, hidden: Boolean)
+
+    @Delete
+    suspend fun delete(contact: ContactEntity)
 }

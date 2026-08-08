@@ -47,10 +47,10 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
 
     val avatarBitmap by IdentityManager.avatarBitmap.collectAsState()
-    val displayName = remember { IdentityManager.getUserNickname(context) ?: IdentityManager.getUserName(context) }
+    val displayName = remember { IdentityManager.getUserName(context) ?: IdentityManager.getUserName(context) }
     var userName by remember { mutableStateOf(displayName) }
     var userStatus by remember { mutableStateOf(IdentityManager.getUserStatus(context)) }
-    val userId = remember { IdentityManager.getUserId(context) ?: "Sin ID" }
+    val userId = remember { IdentityManager.getIdentityId() ?: "Sin ID" }
     var bannerBitmap by remember { mutableStateOf(IdentityManager.loadBanner(context)) }
 
     var showEditNameDialog by remember { mutableStateOf(false) }
@@ -105,7 +105,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
     fun generateQrAfterAuth() {
         performAfterBiometricAuth {
             try {
-                val userId = IdentityManager.getUserId(context) ?: "Sin ID"
+                val userId = IdentityManager.getIdentityId() ?: "Sin ID"
                 val ip = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
                 qrPayload = "malla://connect?ip=$ip&userId=$userId"
                 qrExpired = false
@@ -118,7 +118,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
 
     fun generateCodeAfterAuth() {
         performAfterBiometricAuth {
-            val myUserId = IdentityManager.getUserId(context) ?: "unknown"
+            val myUserId = IdentityManager.getIdentityId() ?: "unknown"
                                 val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
                                 val encryptedIp = DhtWrapper.encryptIp(myIp, myUserId)
                                 inviteCode = InviteCodeGenerator.generate(extra = encryptedIp)
@@ -279,7 +279,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
             onDismissRequest = { showEditNameDialog = false },
             title = { Text("Editar nombre") },
             text = { OutlinedTextField(value = editedName, onValueChange = { editedName = it }, label = { Text("Nombre o apodo") }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = { TextButton(onClick = { if (editedName.isNotBlank()) { userName = editedName; IdentityManager.setUserName(context, editedName); IdentityManager.setUserNickname(context, editedName) }; showEditNameDialog = false }) { Text("Guardar") } },
+            confirmButton = { TextButton(onClick = { if (editedName.isNotBlank()) { userName = editedName; IdentityManager.setUserName(context, editedName); IdentityManager.setUserName(context, editedName) }; showEditNameDialog = false }) { Text("Guardar") } },
             dismissButton = { TextButton(onClick = { showEditNameDialog = false }) { Text("Cancelar") } }
         )
     }

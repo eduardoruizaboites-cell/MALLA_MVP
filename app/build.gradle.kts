@@ -38,6 +38,7 @@ android {
 
 dependencies {
     implementation(project(":network"))
+    implementation(project(":identity"))
     implementation(project(":crypto"))
     implementation(project(":emoji"))
     implementation(project(":camera"))

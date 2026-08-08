@@ -65,9 +65,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             try {
                 val database = db ?: return@launch
                 val contactDao = database.contactDao()
-                val contact = contactDao.getContactByUserId(convId) ?: contactDao.getContact(convId)
+                val contact = contactDao.getById(convId)
                 if (contact != null) {
-                    val remotePubKey = CryptoEngine.base64ToPublicKey(contact.pubKeyBase64)
+                    val remotePubKey = CryptoEngine.base64ToPublicKey(contact.publicKey)
                     val localPrivKey = IdentityManager.getPrivateKey()
                     sessionKey = SessionCipher.deriveSessionKey(localPrivKey, remotePubKey)
                     encryptionEnabled = true

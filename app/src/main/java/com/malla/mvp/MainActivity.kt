@@ -129,8 +129,7 @@ class MainActivity : FragmentActivity() {
             val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
             var showQrScanner by remember { mutableStateOf(false) }
-    var showVerification by remember { mutableStateOf(false) }
-            var showRegistration by remember { mutableStateOf(IdentityManager.getUserId(context) == null) }
+            var showRegistration by remember { mutableStateOf(false) }
             var currentConversationId by remember { mutableStateOf<String?>(null) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
@@ -155,7 +154,7 @@ class MainActivity : FragmentActivity() {
                         LogBuffer.add("MAIN", "Iniciando servicio mesh")
                         // DHT inicio gestionado por DhtWrapper
                         // Publicar nuestra presencia en DHT
-                        val myUserId = IdentityManager.getUserId(context) ?: ""
+                        val myUserId = IdentityManager.getIdentityId() ?: ""
                         val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
                         DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
                         NetworkService.startServer()
@@ -185,22 +184,6 @@ class MainActivity : FragmentActivity() {
 
             MallaTheme(colorScheme = effectiveScheme, fontScale = AccessibilitySettings.fontScale.value) {
                 // Registro premium (sin teléfono)
-                if (showRegistration) {
-                    RegistrationScreen(
-                        onRegistrationComplete = { id ->
-                            showRegistration = false
-                            // Marcar que ya no es primer lanzamiento y activar tutorial
-                            try {
-                                getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
-                                    ?.edit()?.putBoolean("first_launch", false)?.apply()
-                                getSharedPreferences("tutorial", Context.MODE_PRIVATE)
-                                    ?.edit()?.putBoolean("shown", false)?.apply()
-                            } catch (_: Exception) {}
-                            showTutorial = true
-                            Toast.makeText(context, "ID creado: $id", Toast.LENGTH_LONG).show()
-                        }
-                    )
-                } else {
                     AnimatedContent(
                         targetState = appState,
                         transitionSpec = {
@@ -224,9 +207,6 @@ class MainActivity : FragmentActivity() {
                                             } catch (_: Exception) {}
                                         }
                                     )
-                                } else if (showVerification) {
-                                BackHandler { showVerification = false }
-                                VerificationScreen(onBack = { showVerification = false })
                             } else if (showQrScanner) {
                                     BackHandler { showQrScanner = false }
                                     QrScanScreen(
@@ -251,7 +231,6 @@ class MainActivity : FragmentActivity() {
                                     ContactProfileScreen(contactName = selectedContact!!, onBack = { selectedContact = null })
                                 } else {
                                     MainApp(
-                                        onVerifyClick = { showVerification = true },
                                         isMeshMode = !isOnline,
                                         currentConversationId = currentConversationId,
                                         onConversationChanged = { convId -> currentConversationId = convId },
@@ -270,7 +249,6 @@ class MainActivity : FragmentActivity() {
                             }
                         }
                     }
-                }
             }
         }
     }

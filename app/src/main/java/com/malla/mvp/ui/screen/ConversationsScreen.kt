@@ -343,7 +343,7 @@ fun ConversationsScreen(
                                 // Intentar conexión directa (IP encriptada en el código)
                                 try {
                                     val extra = inviteCode.trim().substring(8)
-                                    val myUserId = IdentityManager.getUserId(context) ?: ""
+                                    val myUserId = IdentityManager.getIdentityId() ?: ""
                                     val ip = DhtWrapper.decryptIp(extra, myUserId)
                                     if (ip.isNotBlank()) {
                                         com.malla.mvp.network.NetworkService.connectToPeer(ip)
