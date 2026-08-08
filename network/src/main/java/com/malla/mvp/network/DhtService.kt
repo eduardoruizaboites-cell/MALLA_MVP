@@ -55,11 +55,10 @@ object DhtService {
      * Busca un userId en la DHT. Envía FIND a todas las semillas y espera la primera respuesta positiva.
      * Retorna la dirección "ip:port" o null si no se encuentra o hay timeout.
      */
-    suspend fun find(userId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun lookup(userId: String): String? = withContext(Dispatchers.IO) {
         try {
             val request = "FIND|$userId"
             val data = request.toByteArray()
-            // Enviar a cada semilla
             for (seed in seedNodes) {
                 try {
                     val packet = DatagramPacket(data, data.size, seed.address, seed.port)
@@ -67,7 +66,6 @@ object DhtService {
                 } catch (_: Exception) {}
             }
 
-            // Esperar respuestas durante 5 segundos
             val responseBuffer = ByteArray(1024)
             val deadline = System.currentTimeMillis() + 5000L
             while (System.currentTimeMillis() < deadline) {
@@ -89,7 +87,7 @@ object DhtService {
                 }
             }
         } catch (e: Exception) {
-            LogBuffer.add("DHT", "Error en find: ${e.message}")
+            LogBuffer.add("DHT", "Error en lookup: ${e.message}")
         }
         null
     }
