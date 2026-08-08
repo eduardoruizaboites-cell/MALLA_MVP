@@ -70,3 +70,33 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 - **Causa:** En `DiscoveryService.kt` se reutilizaba una única instancia de `ResolveListener` (`resolveListener`) para cada servicio encontrado. Android no permite que un mismo listener sea usado en múltiples resoluciones simultáneas.
 - **Efecto:** Al escanear servicios mDNS, el segundo `resolveService` lanzaba `IllegalArgumentException: listener already in use`.
 - **Solución:** Crear una instancia anónima nueva de `ResolveListener` cada vez que se llama a `resolveService`, en lugar de reutilizar el objeto `resolveListener` predefinido.
+
+## Sesión 22 – Corrección de errores críticos y ajustes finales
+
+### Errores corregidos
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `Room cannot verify the data integrity` | Se añadió `ContactEntity` sin incrementar la versión de la BD | Incrementada versión a 12 en `AppDatabase.kt` |
+| `listener already in use` (mDNS) | Se reutilizaba una única instancia de `ResolveListener` para múltiples resoluciones | Se crea un listener anónimo nuevo por cada llamada a `resolveService` |
+| `NoSuchMethodError: getZumbidoReceived` (ChatScreen) | `MallaEventBus` no contenía el campo `zumbidoReceived` | Añadido `val zumbidoReceived = MutableSharedFlow<MeshMessage>(...)` en `MallaEventBus` |
+| Auto-detección de IP local en "Cerca de ti" | El filtro de IP no comparaba solo la IP sin puerto, y había código duplicado | Filtro corregido para extraer solo la IP y comparar con `DhtService.getLocalAddress()` |
+
+### Estado actual del proyecto
+- ✅ Mensajería E2EE con Double Ratchet + X3DH
+- ✅ Registro premium (ID biométrico + GPS)
+- ✅ Flujo de contactos por código/QR con IP encriptada
+- ✅ DHT global integrada
+- ✅ Proximidad BLE + Wi‑Fi Direct + mDNS
+- ✅ Panel de usuario cercano con acciones (enviar solicitud, ocultar, bloquear)
+- ✅ Envío de invitaciones por BLE (característica `0000abcd-0002-...`)
+- ✅ Recepción y diálogo de invitación (IncomingRequestDialog)
+- ✅ Confirmación biométrica al aceptar solicitud
+- ✅ Guardado de contacto en Room (ContactDao)
+- ✅ Notificación de aceptación al emisor vía BLE
+- ✅ Pantalla de contactos (ContactsScreen)
+- ✅ Compilación exitosa, app funcional
+
+### Próximos pasos
+- Pruebas con dos dispositivos reales (descubrimiento, invitación, chat)
+- Ajustes finales de UI premium
+- Preparación para release
