@@ -26,6 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.StoryEntity
 import com.malla.mvp.ui.components.ConversationCard
@@ -52,8 +53,6 @@ fun ConversationsScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showIpDialog by remember { mutableStateOf(false) }
-    var showPhoneDialog by remember { mutableStateOf(false) }
-    var showCodeDialog by remember { mutableStateOf(false) }
     var showCodeInput by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -275,28 +274,34 @@ fun ConversationsScreen(
         if (showAddContactDialog) {
             AlertDialog(
                 onDismissRequest = { showAddContactDialog = false },
-                title = { Text("Agregar usuario", style = MaterialTheme.typography.titleMedium) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.PersonAdd, null, tint = Color(0xFF4CE6FF), modifier = Modifier.size(28.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Agregar usuario", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    }
+                },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { showAddContactDialog = false; showCodeDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Tag, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Ingresar código de 8 dígitos")
+                            Text("Código de invitación (12 dígitos)")
                         }
                         TextButton(onClick = { showAddContactDialog = false; onNavigateToQrScanner() }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Escanear QR")
                         }
-                        TextButton(onClick = { showAddContactDialog = false; showPhoneDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { showAddContactDialog = false }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Phone, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Buscar por número de teléfono")
+                            Text("Buscar contacto")
                         }
                         TextButton(onClick = { showAddContactDialog = false; showIpDialog = true }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Link, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Conectar por IP")
+                            Text("Conexión directa")
                         }
                     }
                 },
@@ -309,7 +314,7 @@ fun ConversationsScreen(
             var ipAddress by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { showIpDialog = false },
-                title = { Text("Conectar por IP") },
+                title = { Text("Conexión directa") },
                 text = {
                     Column {
                         Text("Ingresa la IP del otro dispositivo (se muestra en la pestaña Pulso)")

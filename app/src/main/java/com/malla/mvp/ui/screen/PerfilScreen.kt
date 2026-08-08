@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.ui.components.QrCodeDisplay
 import com.malla.mvp.core.crypto.InviteCodeGenerator
 import kotlinx.coroutines.Dispatchers
@@ -130,7 +131,10 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
 
     fun generateCodeAfterAuth() {
         performAfterBiometricAuth {
-            inviteCode = InviteCodeGenerator.generate()
+            val myUserId = IdentityManager.getUserId(context) ?: "unknown"
+                                val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
+                                val encryptedIp = DhtWrapper.encryptIp(myIp, myUserId)
+                                inviteCode = InviteCodeGenerator.generate()
         }
     }
 
@@ -256,13 +260,13 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
                     Text("Código 24h", style = MaterialTheme.typography.bodyMedium, color = Color.White)
                     if (inviteCode != null && InviteCodeGenerator.isValid(inviteCode)) {
                         Spacer(Modifier.height(8.dp))
-                        Text(inviteCode!!.code.chunked(4).joinToString("-"), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF4CE6FF), textAlign = TextAlign.Center)
+                        Text(inviteCode!!.fullCode.chunked(4).joinToString("-"), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF4CE6FF), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.Center) {
                             IconButton(onClick = {
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, "¡Hola! Hablemos por Malla. Mi código de invitación es: ${inviteCode!!.code}")
+                                    putExtra(Intent.EXTRA_TEXT, "¡Hola! Hablemos por Malla. Mi código de invitación es: ${inviteCode!!.fullCode}")
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Compartir código"))
