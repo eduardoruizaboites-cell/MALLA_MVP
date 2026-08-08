@@ -31,7 +31,7 @@ object ProximityEngine {
             // mDNS
             DiscoveryService.onPeerResolved = { address ->
                 val parts = address.split(":")
-                val token = "mdns_${parts.getOrNull(0) ?: ""}" // token simplificado
+                val token = "mdns_${parts.getOrNull(0) ?: ""}"
                 addOrUpdate(token, parts.getOrNull(0) ?: "Desconocido", 0, SignalType.MDNS, 3)
             }
             DiscoveryService.start(context)
@@ -57,6 +57,15 @@ object ProximityEngine {
     fun stopAdvertising() {
         BleManager.stopProximityAdvertising()
         advertising = false
+    }
+
+    fun hideUser(token: String) {
+        _nearbyUsers.value = _nearbyUsers.value.filter { it.token != token }
+    }
+
+    fun blockUser(token: String) {
+        _nearbyUsers.value = _nearbyUsers.value.filter { it.token != token }
+        // En el futuro se guardará en persistencia
     }
 
     private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int) {

@@ -35,6 +35,9 @@ import com.malla.mvp.ui.components.ConversationCard
 import kotlinx.coroutines.launch
 import java.util.UUID
 import com.malla.mvp.ui.components.NearbySection
+import com.malla.mvp.core.model.NearbyUser
+import com.malla.mvp.ui.components.NearbyPanel
+import com.malla.mvp.network.ProximityEngine
 
 @Composable
 fun ConversationsScreen(
@@ -56,6 +59,7 @@ fun ConversationsScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showCodeDialog by remember { mutableStateOf(false) }
+    var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(conversationDao) {
@@ -222,7 +226,7 @@ fun ConversationsScreen(
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(vertical = 4.dp)) {
-                item { NearbySection(onConnectClick = { user -> Toast.makeText(context, "Conectar con ${user.displayName}", Toast.LENGTH_SHORT).show() }) }
+                item { NearbySection(onConnectClick = { user -> selectedNearbyUser = user }) }
                     items(tabFiltered, key = { it.id }) { conversation ->
                         val avatarBitmap: Bitmap? = if (conversation.id == "sim_alicia") IdentityManager.loadAvatar(context) else null
                         ConversationCard(
@@ -365,4 +369,22 @@ fun ConversationsScreen(
         }
     }
     } // cierre del if/else
+    if (selectedNearbyUser != null) {
+        NearbyPanel(
+            user = selectedNearbyUser!!,
+            onDismiss = { selectedNearbyUser = null },
+            onSendRequest = { user ->
+                Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
+                selectedNearbyUser = null
+            },
+            onHide = { user ->
+                ProximityEngine.hideUser(user.token)
+                selectedNearbyUser = null
+            },
+            onBlock = { user ->
+                ProximityEngine.blockUser(user.token)
+                selectedNearbyUser = null
+            }
+        )
+    }
 }
