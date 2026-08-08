@@ -384,7 +384,7 @@ fun ConversationsScreen(
             onDismiss = { selectedNearbyUser = null },
             onSendRequest = { user ->
                 scope.launch {
-                    InvitationManager.sendInvitation(context, user.token, user.displayName, user.avatarSeed)
+                    InvitationManager.sendInvitation(context, user)
                 }
                 selectedNearbyUser = null
             },

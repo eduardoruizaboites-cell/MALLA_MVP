@@ -25,6 +25,7 @@ object BleManager {
     private const val TAG = "BleManager"
     private val serviceUuid = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
     private val ipCharacteristicUuid = UUID.fromString("0000abcd-0001-1000-8000-00805f9b34fb")
+    private val invitationCharacteristicUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
     private var adapter: BluetoothAdapter? = null
     private var scanner: BluetoothLeScanner? = null
     private var advertiser: BluetoothLeAdvertiser? = null
@@ -39,7 +40,7 @@ object BleManager {
     val foundBluetoothDevices: StateFlow<List<BluetoothDevice>> = _foundBluetoothDevices
 
     // ---------- Nuevo: callbacks para ProximityEngine ----------
-    private var proximityScanCallback: ((token: String, name: String, seed: Int, strength: Int) -> Unit)? = null
+    private var proximityScanCallback: ((token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit)? = null
     private var isProximityScanning = false
     private var isProximityAdvertising = false
 
@@ -178,7 +179,7 @@ object BleManager {
     }
 
     // ---------- Nuevo: escaneo con callback ----------
-    fun startScanningWithCallback(callback: (token: String, name: String, seed: Int, strength: Int) -> Unit) {
+    fun startScanningWithCallback(callback: (token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         if (adapter == null || !adapter!!.isEnabled) return
         if (scanner == null) {
             scanner = adapter?.bluetoothLeScanner
@@ -205,7 +206,7 @@ object BleManager {
         proximityScanCallback = null
     }
 
-    fun startScanning(context: Context, callback: (token: String, name: String, seed: Int, strength: Int) -> Unit) {
+    fun startScanning(context: Context, callback: (token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         appContext = context.applicationContext
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         adapter = btManager.adapter
@@ -231,7 +232,7 @@ object BleManager {
                         else -> 0
                     }
                 } ?: 0
-                proximityScanCallback?.invoke(token, name, seed, strength)
+                proximityScanCallback?.invoke(token, name, seed, strength, result.device)
             }
         }
 
@@ -366,4 +367,42 @@ object BleManager {
             LogBuffer.add("BLE", "Fallo advertising: $errorMsg")
         }
     }
+    suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            val context = appContext ?: run { continuation.resume(false); return@suspendCancellableCoroutine }
+            var gatt: BluetoothGatt? = null
+            val callback = object : BluetoothGattCallback() {
+                override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+                    if (newState == BluetoothProfile.STATE_CONNECTED) {
+                        gatt?.discoverServices()
+                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                        if (!continuation.isCompleted) continuation.resume(false)
+                        gatt?.close()
+                    }
+                }
+                override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        val service = gatt?.getService(serviceUuid)
+                        val characteristic = service?.getCharacteristic(characteristicUuid)
+                        if (characteristic != null) {
+                            characteristic.value = data
+                            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                            gatt?.writeCharacteristic(characteristic)
+                        } else { gatt?.disconnect() }
+                    } else { gatt?.disconnect() }
+                }
+                override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        LogBuffer.add("BLE", "Datos escritos en característica de invitación")
+                        continuation.resume(true)
+                    } else { continuation.resume(false) }
+                    gatt?.disconnect()
+                }
+            }
+            try {
+                gatt = device.connectGatt(context, false, callback)
+            } catch (e: SecurityException) {
+                continuation.resume(false)
+            }
+        }
 }

@@ -23,8 +23,8 @@ object ProximityEngine {
         discoveryJob = scope.launch {
             LogBuffer.add("PROX", "ProximityEngine iniciado")
             // BLE scanning
-            BleManager.startScanningWithCallback { token, name, seed, strength ->
-                addOrUpdate(token, name, seed, SignalType.BLE, strength)
+            BleManager.startScanningWithCallback { token, name, seed, strength, device ->
+                addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
             }
             // Wi‑Fi Direct (en modo descubrimiento)
             WifiDirectManager.start(context)
@@ -68,13 +68,13 @@ object ProximityEngine {
         // En el futuro se guardará en persistencia
     }
 
-    private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int) {
+    private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
         val current = _nearbyUsers.value.toMutableList()
         val idx = current.indexOfFirst { it.token == token }
         if (idx != -1) {
             current[idx] = current[idx].copy(displayName = name, signalStrength = strength)
         } else {
-            current.add(NearbyUser(token, name, seed, type, strength))
+            current.add(NearbyUser(token, name, seed, type, strength, bluetoothDevice = device))
         }
         _nearbyUsers.value = current
     }

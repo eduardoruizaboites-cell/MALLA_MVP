@@ -1,5 +1,7 @@
 package com.malla.mvp.core.model
 
+import android.bluetooth.BluetoothDevice
+
 enum class SignalType { BLE, WIFI_DIRECT, MDNS }
 
 data class NearbyUser(
@@ -7,6 +9,7 @@ data class NearbyUser(
     val displayName: String,
     val avatarSeed: Int,
     val signalType: SignalType,
-    val signalStrength: Int = 0, // 0–3
-    val publicKeyFingerprint: String? = null
+    val signalStrength: Int = 0,
+    val publicKeyFingerprint: String? = null,
+    val bluetoothDevice: BluetoothDevice? = null   // solo para BLE
 )
