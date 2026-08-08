@@ -30,10 +30,12 @@ object ProximityEngine {
             WifiDirectManager.start(context)
             // mDNS
             DiscoveryService.onPeerResolved = { address ->
-                val parts = address.split(":")
-                val token = "mdns_${parts.getOrNull(0) ?: ""}"
-                addOrUpdate(token, parts.getOrNull(0) ?: "Desconocido", 0, SignalType.MDNS, 3)
-            }
+                    val localIp = DhtService.getLocalAddress() ?: "127.0.0.1"
+                    val remoteIp = address.substringBefore(":")
+                    if (remoteIp != localIp && remoteIp != "127.0.0.1") {
+                        addOrUpdate("mdns_$remoteIp", remoteIp, 0, SignalType.MDNS, 3)
+                    }
+                }
             DiscoveryService.start(context)
         }
     }

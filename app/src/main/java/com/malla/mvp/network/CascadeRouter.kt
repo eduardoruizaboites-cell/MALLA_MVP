@@ -54,7 +54,20 @@ object CascadeRouter {
                     }
                 }
 
-                // 3. SMS
+                // 3. Mesh (DHT routing)
+                if (!ConnectivityMonitor.isOnline.value) {
+                    try {
+                        val sent = DhtService.routeMessage(contactId, content)
+                        if (sent) {
+                            LogBuffer.add(TAG, "Enviado por Mesh a $contactId")
+                            return@launch
+                        }
+                    } catch (e: Exception) {
+                        LogBuffer.add(TAG, "Mesh falló: ${e.message}")
+                    }
+                }
+
+                // 4. SMS
                 val phone = getContactPhone(contactId)
                 if (phone.isNotBlank()) {
                     try {

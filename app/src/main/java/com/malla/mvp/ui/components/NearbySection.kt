@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,16 +79,26 @@ fun NearbySection(onConnectClick: (NearbyUser) -> Unit) {
 fun RadarAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "radar")
     val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0.2f,
+        initialValue = 0.4f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500),
-            repeatMode = RepeatMode.Restart
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse
         ),
         label = "radarAlpha"
     )
-    Canvas(modifier = Modifier.size(24.dp), onDraw = {
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "radarScale"
+    )
+    Canvas(modifier = Modifier.size(28.dp).graphicsLayer(scaleX = scale, scaleY = scale), onDraw = {
         drawCircle(color = Color(0xFF00E5FF).copy(alpha = alpha), radius = size.minDimension / 2)
+        drawCircle(color = Color(0xFF00E5FF).copy(alpha = alpha * 0.3f), radius = size.minDimension / 2 + 6.dp.toPx())
     })
 }
 
@@ -95,6 +107,7 @@ fun NearbyUserCard(user: NearbyUser, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFF30363D)),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.width(140.dp)
     ) {

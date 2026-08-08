@@ -37,4 +37,6 @@ object MallaEventBus {
     // ── UI ────────────────────────────────────────────────────────
     /** Solicitud de mostrar un Toast desde cualquier módulo */
     val showToast = MutableSharedFlow<String>(extraBufferCapacity = 3)
+    /** Zumbido recibido */
+    val zumbidoReceived = MutableSharedFlow<MeshMessage>(extraBufferCapacity = 10)
 }

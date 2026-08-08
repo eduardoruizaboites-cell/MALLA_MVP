@@ -119,5 +119,32 @@ object DhtService {
         // Procesa respuestas PONG y otras (no críticas para el funcionamiento básico)
     }
 
+    suspend fun routeMessage(targetUserId: String, message: String): Boolean {
+        var bestIp: String? = null
+        for (seed in seedNodes) {
+            try {
+                val request = "FIND|$targetUserId"
+                val data = request.toByteArray()
+                val packet = DatagramPacket(data, data.size, seed.address, seed.port)
+                socket?.send(packet)
+                val responseBuffer = ByteArray(1024)
+                val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
+                socket?.soTimeout = 2000
+                socket?.receive(responsePacket)
+                val response = String(responsePacket.data, 0, responsePacket.length)
+                if (response.startsWith("FOUND|")) {
+                    bestIp = response.split("|").getOrNull(2)
+                    break
+                }
+            } catch (e: Exception) {}
+        }
+        if (bestIp != null) {
+            val packet = DatagramPacket(message.toByteArray(), message.length, InetSocketAddress(bestIp!!, DHT_PORT).address, DHT_PORT)
+            socket?.send(packet)
+            return true
+        }
+        return false
+    }
+
     private fun generateNodeId(): String = (1..20).map { Random.nextInt(16).toString(16) }.joinToString("")
 }

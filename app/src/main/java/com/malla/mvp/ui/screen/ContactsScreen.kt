@@ -3,6 +3,7 @@ package com.malla.mvp.ui.screen
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -62,6 +63,7 @@ fun ContactsScreen(onBack: () -> Unit, onChatClicked: (contactId: String, contac
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { },
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFF30363D)),
                         shape = MaterialTheme.shapes.medium
                     ) {
                         Row(
