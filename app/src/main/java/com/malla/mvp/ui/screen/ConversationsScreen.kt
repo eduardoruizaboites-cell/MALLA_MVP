@@ -35,6 +35,7 @@ import com.malla.mvp.ui.components.ConversationCard
 import kotlinx.coroutines.launch
 import java.util.UUID
 import com.malla.mvp.ui.components.NearbySection
+import com.malla.mvp.ui.screen.ContactsScreen
 import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.ui.components.NearbyPanel
@@ -65,6 +66,7 @@ fun ConversationsScreen(
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showCodeDialog by remember { mutableStateOf(false) }
     var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
+    var showContacts by remember { mutableStateOf(false) }
     var acceptanceMessage by remember { mutableStateOf<String?>(null) }
     var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
     val scope = rememberCoroutineScope()
