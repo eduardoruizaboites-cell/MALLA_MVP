@@ -36,8 +36,11 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import com.malla.mvp.ui.components.NearbySection
 import com.malla.mvp.core.model.NearbyUser
+import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.ui.components.NearbyPanel
+import com.malla.mvp.ui.components.IncomingRequestDialog
 import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.network.InvitationManager
 
 @Composable
 fun ConversationsScreen(
@@ -60,7 +63,13 @@ fun ConversationsScreen(
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showCodeDialog by remember { mutableStateOf(false) }
     var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
+    var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        InvitationManager.incomingInvitation.collect { inv ->
+            incomingInvitation = inv
+        }
+    }
 
     LaunchedEffect(conversationDao) {
         conversationDao?.getAllVisibleConversations()?.collect { list ->
@@ -374,7 +383,9 @@ fun ConversationsScreen(
             user = selectedNearbyUser!!,
             onDismiss = { selectedNearbyUser = null },
             onSendRequest = { user ->
-                Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                    InvitationManager.sendInvitation(context, user.token, user.displayName, user.avatarSeed)
+                }
                 selectedNearbyUser = null
             },
             onHide = { user ->
@@ -384,6 +395,20 @@ fun ConversationsScreen(
             onBlock = { user ->
                 ProximityEngine.blockUser(user.token)
                 selectedNearbyUser = null
+            }
+        )
+    }
+
+    // Diálogo de invitación entrante
+    if (incomingInvitation != null) {
+        IncomingRequestDialog(
+            invitation = incomingInvitation!!,
+            onAccept = { inv ->
+                Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
+                incomingInvitation = null
+            },
+            onReject = { inv ->
+                incomingInvitation = null
             }
         )
     }
