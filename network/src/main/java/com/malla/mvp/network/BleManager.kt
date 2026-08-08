@@ -41,6 +41,7 @@ object BleManager {
 
     // ---------- Nuevo: callbacks para ProximityEngine ----------
     private var proximityScanCallback: ((token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit)? = null
+    private var acceptanceCallback: ((acceptorName: String, acceptorAvatarSeed: Int) -> Unit)? = null
     private var isProximityScanning = false
     private var isProximityAdvertising = false
 
@@ -111,6 +112,23 @@ object BleManager {
     }
 
     // ---------- Nuevo: advertising con datos personalizados ----------
+    fun startAdvertisingWithPayload(payload: String) {
+        if (adapter == null || !adapter!!.isEnabled) return
+        if (advertiser == null) advertiser = adapter!!.bluetoothLeAdvertiser
+        val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            .setConnectable(false)
+            .build()
+        val data = AdvertiseData.Builder()
+            .addServiceData(ParcelUuid(serviceUuid), payload.toByteArray(Charsets.UTF_8))
+            .build()
+        try {
+            advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
+            isProximityAdvertising = true
+        } catch (e: SecurityException) {}
+    }
+
     fun startAdvertisingWithData(token: String, displayName: String, avatarSeed: Int) {
         if (adapter == null || !adapter!!.isEnabled) {
             LogBuffer.add("BLE", "No se puede iniciar advertising: Bluetooth no disponible")
@@ -233,6 +251,12 @@ object BleManager {
                     }
                 } ?: 0
                 proximityScanCallback?.invoke(token, name, seed, strength, result.device)
+                // Comprobar si es un anuncio de aceptación
+                if (parts.size >= 4 && parts[0] == "ACCEPT") {
+                    val acceptorName = parts[2]
+                    val acceptorAvatarSeed = parts[3].toIntOrNull() ?: 0
+                    acceptanceCallback?.invoke(acceptorName, acceptorAvatarSeed)
+                }
             }
         }
 
@@ -367,6 +391,10 @@ object BleManager {
             LogBuffer.add("BLE", "Fallo advertising: $errorMsg")
         }
     }
+    fun setAcceptanceCallback(callback: ((acceptorName: String, acceptorAvatarSeed: Int) -> Unit)?) {
+        acceptanceCallback = callback
+    }
+
     suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =
         suspendCancellableCoroutine { continuation ->
             val context = appContext ?: run { continuation.resume(false); return@suspendCancellableCoroutine }

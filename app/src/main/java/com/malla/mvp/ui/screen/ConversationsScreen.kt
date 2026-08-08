@@ -65,11 +65,17 @@ fun ConversationsScreen(
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showCodeDialog by remember { mutableStateOf(false) }
     var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
+    var acceptanceMessage by remember { mutableStateOf<String?>(null) }
     var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         InvitationManager.incomingInvitation.collect { inv ->
             incomingInvitation = inv
+        }
+    }
+    LaunchedEffect(Unit) {
+        InvitationManager.acceptanceReceived.collect { (name, seed) ->
+            acceptanceMessage = "${name} aceptó tu solicitud"
         }
     }
 
@@ -402,6 +408,19 @@ fun ConversationsScreen(
     }
 
     // Diálogo de invitación entrante
+    if (acceptanceMessage != null) {
+        AlertDialog(
+            onDismissRequest = { acceptanceMessage = null },
+            title = { Text("Solicitud aceptada") },
+            text = { Text(acceptanceMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = { acceptanceMessage = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     if (incomingInvitation != null) {
         IncomingRequestDialog(
             invitation = incomingInvitation!!,

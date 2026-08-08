@@ -10,10 +10,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import android.bluetooth.BluetoothAdapter
 import java.util.UUID
 
 object InvitationManager {
     private val _incomingInvitation = MutableSharedFlow<ContactInvitation>(replay = 0)
+    private val _acceptanceReceived = MutableSharedFlow<Pair<String,Int>>(replay = 0)
+    val acceptanceReceived = _acceptanceReceived.asSharedFlow()
     val incomingInvitation = _incomingInvitation.asSharedFlow()
     private val invitationCharUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
 
@@ -36,6 +39,7 @@ object InvitationManager {
             put("senderPublicKey", invitation.senderPublicKey)
             put("timestamp", invitation.timestamp)
             put("nonce", invitation.nonce)
+            put("senderDeviceAddress", BleManager.getAdapter()?.address ?: "")
         }.toString()
 
         if (user.bluetoothDevice != null) {
@@ -58,6 +62,21 @@ object InvitationManager {
                 Toast.makeText(context, "Solicitud enviada a ${user.displayName} (sin BLE)", Toast.LENGTH_SHORT).show()
             }
         }
+        // Escuchar anuncio de aceptación
+        BleManager.setAcceptanceCallback { acceptorName, acceptorAvatarSeed ->
+            _acceptanceReceived.tryEmit(Pair(acceptorName, acceptorAvatarSeed))
+            BleManager.setAcceptanceCallback(null) // dejar de escuchar
+        }
+    }
+
+    suspend fun sendAcceptance(context: Context, invitation: ContactInvitation) {
+        val myName = IdentityManager.getUserName(context)
+        val myAvatarSeed = 0 // se puede calcular
+        val payload = "ACCEPT|${invitation.senderUserId}|$myName|$myAvatarSeed"
+        BleManager.startAdvertisingWithPayload(payload)
+        // Detener el anuncio tras 30 segundos
+        kotlinx.coroutines.delay(30_000)
+        BleManager.stopProximityAdvertising()
     }
 
     fun receiveInvitation(invitation: ContactInvitation) {
