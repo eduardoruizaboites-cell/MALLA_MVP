@@ -34,6 +34,7 @@ import com.malla.mvp.data.entity.StoryEntity
 import com.malla.mvp.ui.components.ConversationCard
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.malla.mvp.ui.components.NearbySection
 
 @Composable
 fun ConversationsScreen(
@@ -221,6 +222,7 @@ fun ConversationsScreen(
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(vertical = 4.dp)) {
+                item { NearbySection(onConnectClick = { user -> Toast.makeText(context, "Conectar con ${user.displayName}", Toast.LENGTH_SHORT).show() }) }
                     items(tabFiltered, key = { it.id }) { conversation ->
                         val avatarBitmap: Bitmap? = if (conversation.id == "sim_alicia") IdentityManager.loadAvatar(context) else null
                         ConversationCard(

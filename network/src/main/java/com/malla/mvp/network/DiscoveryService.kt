@@ -33,7 +33,7 @@ object DiscoveryService {
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "MALLA_${IdentityManager.deviceId}"
             serviceType = SERVICE_TYPE
-            port = NetworkService.DEFAULT_PORT
+            port = 8888
             // La IP se asigna automáticamente al registrarse
         }
         nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)

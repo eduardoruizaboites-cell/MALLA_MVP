@@ -22,15 +22,27 @@ object ProximityEngine {
         appContext = context.applicationContext
         discoveryJob = scope.launch {
             LogBuffer.add("PROX", "ProximityEngine iniciado")
+            // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength ->
                 addOrUpdate(token, name, seed, SignalType.BLE, strength)
             }
+            // Wi‑Fi Direct (en modo descubrimiento)
+            WifiDirectManager.start(context)
+            // mDNS
+            DiscoveryService.onPeerResolved = { address ->
+                val parts = address.split(":")
+                val token = "mdns_${parts.getOrNull(0) ?: ""}" // token simplificado
+                addOrUpdate(token, parts.getOrNull(0) ?: "Desconocido", 0, SignalType.MDNS, 3)
+            }
+            DiscoveryService.start(context)
         }
     }
 
     fun stop() {
         discoveryJob?.cancel()
         BleManager.stopProximityScanning()
+        WifiDirectManager.stop()
+        DiscoveryService.stop()
         _nearbyUsers.value = emptyList()
     }
 
