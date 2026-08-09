@@ -55,6 +55,7 @@ import com.malla.mvp.ui.components.MainTopBar
 import com.malla.mvp.ui.components.StickerPickerDialog
 import com.malla.mvp.ui.components.StickerFullScreenDialog
 import com.malla.mvp.ui.components.SplashScreen
+import com.malla.mvp.ui.screen.RegistrationScreen
 import com.malla.mvp.ui.components.StickerState
 import com.malla.mvp.ui.components.ConnectivityStatusBar
 import com.malla.mvp.ui.components.TutorialOverlay
@@ -74,40 +75,40 @@ enum class AppState { Splash, Main }
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            val requiredPermissions = arrayOf(
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.BLUETOOTH_SCAN,
-                android.Manifest.permission.BLUETOOTH_CONNECT,
-                android.Manifest.permission.BLUETOOTH_ADVERTISE,
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-                android.Manifest.permission.POST_NOTIFICATIONS,
-                android.Manifest.permission.READ_CONTACTS,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-            val ungranted = requiredPermissions.filter {
-                checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            }.toTypedArray()
-            if (ungranted.isNotEmpty()) requestPermissions(ungranted, 1001)
-        RadioManager.enableBluetooth(this)
-        RadioManager.enableWifi(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(Intent(this, MeshChatService::class.java))
-                } else {
-                    startService(Intent(this, MeshChatService::class.java))
-                }
-            }
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(Intent(this, MeshChatService::class.java))
-            } else {
-                startService(Intent(this, MeshChatService::class.java))
-            }
-        }
-        }
+//         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+//             val requiredPermissions = arrayOf(
+//                 android.Manifest.permission.ACCESS_FINE_LOCATION,
+//                 android.Manifest.permission.BLUETOOTH_SCAN,
+//                 android.Manifest.permission.BLUETOOTH_CONNECT,
+//                 android.Manifest.permission.BLUETOOTH_ADVERTISE,
+//                 android.Manifest.permission.CAMERA,
+//                 android.Manifest.permission.RECORD_AUDIO,
+//                 android.Manifest.permission.POST_NOTIFICATIONS,
+//                 android.Manifest.permission.READ_CONTACTS,
+//                 android.Manifest.permission.READ_EXTERNAL_STORAGE
+//             )
+//             val ungranted = requiredPermissions.filter {
+//                 checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+//             }.toTypedArray()
+//             if (ungranted.isNotEmpty()) requestPermissions(ungranted, 1001)
+//         RadioManager.enableBluetooth(this)
+//         RadioManager.enableWifi(this)
+//         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+//                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                     startForegroundService(Intent(this, MeshChatService::class.java))
+//                 } else {
+//                     startService(Intent(this, MeshChatService::class.java))
+//                 }
+//             }
+//         } else {
+//             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                 startForegroundService(Intent(this, MeshChatService::class.java))
+//             } else {
+//                 startService(Intent(this, MeshChatService::class.java))
+//             }
+//         }
+//         }
         ConnectivityMonitor.start(application)
         DeviceStateMonitor.start(this)
         IdentityManager.init(this)
@@ -129,7 +130,7 @@ class MainActivity : FragmentActivity() {
             val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
             var showQrScanner by remember { mutableStateOf(false) }
-            var showRegistration by remember { mutableStateOf(false) }
+            var showRegistration by remember { mutableStateOf(!IdentityManager.isRegistrationComplete(context)) }
             var currentConversationId by remember { mutableStateOf<String?>(null) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
@@ -197,7 +198,9 @@ class MainActivity : FragmentActivity() {
                                 appState = AppState.Main
                             }
                             AppState.Main -> {
-                                if (showTutorial) {
+                                if (showRegistration) {
+                                    RegistrationScreen(onComplete = { showRegistration = false })
+                                } else if (showTutorial) {
                                     TutorialOverlay(
                                         onDismiss = {
                                             showTutorial = false

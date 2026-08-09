@@ -38,4 +38,13 @@ object ConnectivityMonitor {
         _isOnline.value = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ?: false
         LogBuffer.add("NET", if (_isOnline.value) "Estado inicial: ONLINE" else "Estado inicial: MESH")
     }
+
+    enum class ConnectionQuality { HD, SD, OFFLINE }
+
+    fun getConnectionQuality(contactId: String): ConnectionQuality {
+        if (isOnline.value) return ConnectionQuality.HD
+        if (BleManager.foundBluetoothDevices.value.any { it.address == contactId }) return ConnectionQuality.SD
+        return ConnectionQuality.OFFLINE
+    }
+
 }

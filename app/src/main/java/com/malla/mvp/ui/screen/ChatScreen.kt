@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,6 +75,7 @@ import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.ui.components.GalleryPickerPanel
 import com.malla.mvp.ui.components.ComposingBubble
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.ui.components.ChatInputBar
 import com.malla.mvp.viewmodel.MeshChatViewModel
 import androidx.compose.ui.geometry.Size
@@ -198,7 +201,19 @@ fun ChatScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(contactName, color = Color.White) },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(contactName, color = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            val isOnline = ConnectivityMonitor.isOnline.collectAsState().value
+                            Canvas(modifier = Modifier.size(12.dp)) {
+                                drawCircle(
+                                    color = if (isOnline) Color(0xFF2ECC71) else Color(0xFFF1C40F),
+                                    radius = size.minDimension / 2
+                                )
+                            }
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
@@ -679,40 +694,6 @@ fun formatSeconds(seconds: Int): String {
     val min = seconds / 60
     val sec = seconds % 60
     return "%02d:%02d".format(min, sec)
-
-@Composable
-fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
-    val scale = remember { Animatable(0.5f) }
-    val alpha = remember { Animatable(1f) }
-    LaunchedEffect(Unit) {
-        scale.animateTo(1f, tween(300))
-        delay(1200)
-        alpha.animateTo(0f, tween(600))
-        onDismiss()
-    }
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .graphicsLayer {
-                    scaleX = scale.value
-                    scaleY = scale.value
-                    this.alpha = alpha.value
-                }
-                .background(colorScheme.primary.copy(alpha = 0.15f), CircleShape)
-                .border(2.dp, colorScheme.primary, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("📳", fontSize = 36.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Zumbido", color = colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-        }
-    }
-}
-
-
 }
 
 @Composable
@@ -767,4 +748,3 @@ fun AttachmentOptionPremium(icon: ImageVector, label: String, color: Color, onCl
     }
     LaunchedEffect(Unit) { scale.animateTo(1f, spring()) }
 }
-

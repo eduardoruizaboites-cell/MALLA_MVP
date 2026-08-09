@@ -107,7 +107,7 @@ fun NearbyUserCard(user: NearbyUser, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFF30363D)),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.width(140.dp)
     ) {

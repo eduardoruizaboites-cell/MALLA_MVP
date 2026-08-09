@@ -100,3 +100,27 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 - Pruebas con dos dispositivos reales (descubrimiento, invitación, chat)
 - Ajustes finales de UI premium
 - Preparación para release
+
+## Sesión 23 – Flujo de registro completo y ajustes visuales profesionales
+
+### Logros
+- **Flujo de registro restaurado y mejorado:**
+  1. Splash de bienvenida (logo MALLA).
+  2. Explicación de permisos y solicitud mediante `ActivityResultContracts`.
+  3. Explicación de biométricos con botón para proceder.
+  4. Solicitud de huella/rostro mediante `BiometricPrompt`.
+  5. Animación profesional de generación de ID (anillos expansivos, iconos Material de huella/GPS, progreso circular).
+  6. Pantalla de nombre de usuario (obligatorio, validado).
+  7. Pantalla de confirmación con vista previa del perfil.
+  8. Tutorial (solo en primer inicio).
+  9. Pantalla principal.
+- **Identidad:** el ID se genera sin el prefijo "MALLA‑" y se muestra con formato `XXXX‑XXXX‑XXXX`.
+- **Permisos:** los permisos de Bluetooth ya no se piden en el flujo inicial, sino bajo demanda; la verificación de permisos esenciales es automática con reintento.
+- **Interfaz de chat:** el indicador de conectividad ahora es un punto de color (verde HD / naranja mesh).
+- **Ajustes visuales:** animación de ID profesional sin emojis, usando `Canvas` y `Icon` de Material.
+
+### Errores corregidos
+- `Unresolved reference: ContextCompat` solucionado usando `context.checkSelfPermission`.
+- Eliminada la solicitud automática de permisos en `MainActivity` que interfería con el flujo de registro.
+- Corregida la estructura de llaves en `MainActivity` tras limpieza del bloque de permisos.
+- `Return` faltante en `IdentityManager.getIdentityId()`.

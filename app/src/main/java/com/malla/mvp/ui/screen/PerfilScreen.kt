@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.ui.components.QrCodeDisplay
 import com.malla.mvp.core.crypto.InviteCodeGenerator
@@ -60,6 +61,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
     var nameVisible by remember { mutableStateOf(prefs.getBoolean("name_visible", true)) }
     var statusVisible by remember { mutableStateOf(prefs.getBoolean("status_visible", true)) }
     var lastSeenVisible by remember { mutableStateOf(prefs.getBoolean("last_seen_visible", true)) }
+    var meshVisible by remember { mutableStateOf(prefs.getBoolean("mesh_visible", true)) }
     var readReceipts by remember { mutableStateOf(prefs.getBoolean("read_receipts", true)) }
     var messagePermission by remember { mutableStateOf(prefs.getString("message_permission", "todos") ?: "todos") }
 
@@ -194,6 +196,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
                 SwitchRow("Mostrar estado", statusVisible) { statusVisible = it; prefs.edit().putBoolean("status_visible", it).apply() }
                 SwitchRow("Última conexión", lastSeenVisible) { lastSeenVisible = it; prefs.edit().putBoolean("last_seen_visible", it).apply() }
                 SwitchRow("Confirmación de lectura", readReceipts) { readReceipts = it; prefs.edit().putBoolean("read_receipts", it).apply() }
+                SwitchRow("Visible en Mesh Cercano", meshVisible) { meshVisible = it; prefs.edit().putBoolean("mesh_visible", it).apply(); if (it) ProximityEngine.startAdvertising(IdentityManager.getUserName(context), 0) else ProximityEngine.stopAdvertising() }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Quién puede enviarme mensajes", color = Color.White, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(4.dp))

@@ -84,7 +84,8 @@ object IdentityManager {
 
     fun getIdentityId(): String {
         val pubKey = getPublicKeyBase64()
-        return if (pubKey != null) "MALLA-${pubKey.take(12)}" else "MALLA-$deviceId"
+        val code = pubKey?.take(12)?.chunked(3)?.joinToString("-") ?: deviceId.chunked(3).joinToString("-")
+        return code
     }
 
     fun getPrivateKey(): PrivateKey {
@@ -146,4 +147,14 @@ object IdentityManager {
         val file = File(context.filesDir, BANNER_FILE)
         return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
     }
+
+    fun isRegistrationComplete(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("identity", Context.MODE_PRIVATE)
+        return prefs.getBoolean("registration_complete", false)
+    }
+
+    fun setRegistrationComplete(context: Context, complete: Boolean) {
+        context.getSharedPreferences("identity", Context.MODE_PRIVATE).edit().putBoolean("registration_complete", complete).apply()
+    }
+
 }
