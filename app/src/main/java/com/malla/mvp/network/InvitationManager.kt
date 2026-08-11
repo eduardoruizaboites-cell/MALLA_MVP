@@ -51,15 +51,15 @@ object InvitationManager {
                 )
                 withContext(Dispatchers.Main) {
                     if (success) {
-                        Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
+                        withContext(Dispatchers.Main) { Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show() }
                     } else {
-                        Toast.makeText(context, "Error al enviar solicitud", Toast.LENGTH_SHORT).show()
+                        withContext(Dispatchers.Main) { Toast.makeText(context, "Error al enviar solicitud", Toast.LENGTH_SHORT).show() }
                     }
                 }
             }
         } else {
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Solicitud enviada a ${user.displayName} (sin BLE)", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) { Toast.makeText(context, "Solicitud enviada a ${user.displayName} (sin BLE)", Toast.LENGTH_SHORT).show() }
             }
         }
         // Escuchar anuncio de aceptación

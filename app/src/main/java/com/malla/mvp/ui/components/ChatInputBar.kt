@@ -48,6 +48,7 @@ import java.io.File
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ChatInputBar(
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
     voiceRecorder: VoiceRecorder,
     onSendText: (String) -> Unit,
     onSendVoice: (File) -> Unit,

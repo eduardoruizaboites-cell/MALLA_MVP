@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -123,7 +124,12 @@ fun ChatScreen(
     var zumbidoCooldown by remember { mutableStateOf(false) }
     val pendingMediaUris = remember { mutableStateListOf<Uri>() }
     var captionText by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        delay(300)
+        focusRequester.requestFocus()
+    }
     val coroutineScope = rememberCoroutineScope()
     val colorScheme = LocalColorScheme.current
     val shakeOffset = remember { Animatable(0f) }
@@ -375,7 +381,7 @@ fun ChatScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
                     }
-                    ChatInputBar(
+                    ChatInputBar(focusRequester = focusRequester,
                         voiceRecorder = voiceRecorder,
                         onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
                         onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },

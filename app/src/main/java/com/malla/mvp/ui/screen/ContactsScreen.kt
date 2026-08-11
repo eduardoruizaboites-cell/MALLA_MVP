@@ -31,6 +31,7 @@ fun ContactsScreen(onBack: () -> Unit, onChatClicked: (contactId: String, contac
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var contacts by remember { mutableStateOf<List<ContactEntity>>(emptyList()) }
+    var contactToDelete by remember { mutableStateOf<ContactEntity?>(null) }
 
     LaunchedEffect(Unit) {
         val db = AppDatabase.getInstance(context)
@@ -102,13 +103,7 @@ fun ContactsScreen(onBack: () -> Unit, onChatClicked: (contactId: String, contac
                             }) {
                                 Icon(Icons.Default.Chat, contentDescription = "Abrir chat", tint = Color(0xFF00E5FF))
                             }
-                            IconButton(onClick = {
-                                scope.launch {
-                                    val db = AppDatabase.getInstance(context)
-                                    db?.contactDao()?.delete(contact)
-                                    Toast.makeText(context, "Contacto eliminado", Toast.LENGTH_SHORT).show()
-                                }
-                            }) {
+                            IconButton(onClick = { contactToDelete = contact }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color(0xFFE74C3C))
                             }
                         }
@@ -116,5 +111,29 @@ fun ContactsScreen(onBack: () -> Unit, onChatClicked: (contactId: String, contac
                 }
             }
         }
+    }
+
+    if (contactToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { contactToDelete = null },
+            title = { Text("Eliminar contacto") },
+            text = { Text("¿Estás seguro de eliminar a ${contactToDelete?.displayName}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        val db = AppDatabase.getInstance(context)
+                        db?.contactDao()?.delete(contactToDelete!!)
+                        Toast.makeText(context, "Contacto eliminado", Toast.LENGTH_SHORT).show()
+                    }
+                    contactToDelete = null
+                }) { Text("Eliminar", color = Color(0xFFE74C3C)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { contactToDelete = null }) { Text("Cancelar") }
+            },
+            containerColor = Color(0xFF161B22),
+            titleContentColor = Color(0xFFE6EDF3),
+            textContentColor = Color(0xFF8B949E)
+        )
     }
 }
