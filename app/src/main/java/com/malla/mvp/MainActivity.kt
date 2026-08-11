@@ -131,12 +131,13 @@ class MainActivity : FragmentActivity() {
 
         val database = AppDatabase.getInstance(application)
 
+                val conversationIdFromNotification = intent?.getStringExtra("conversation_id")
         setContent {
             val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
             var showQrScanner by remember { mutableStateOf(false) }
             var showRegistration by remember { mutableStateOf(!IdentityManager.isRegistrationComplete(context)) }
-            var currentConversationId by remember { mutableStateOf<String?>(null) }
+            var currentConversationId by remember { mutableStateOf(conversationIdFromNotification) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }

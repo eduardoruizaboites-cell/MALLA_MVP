@@ -1,5 +1,6 @@
 package com.malla.mvp.network
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.network.ReconnectManager
 
 import com.malla.mvp.crypto.CryptoEngine
 import kotlinx.coroutines.*
@@ -186,6 +187,11 @@ object NetworkService {
             clients.remove(clientId)
             _connectedClientsCount.value = clients.size
             Log.d(TAG, "[NS:TCP] Cliente desconectado: $clientId (total: ${clients.size})")
+            // Programar reconexión si se esperaba una clave pública
+            val pubKey = expectedPeerPublicKey
+            if (pubKey != null) {
+                ReconnectManager.scheduleReconnect(socket.inetAddress.hostAddress ?: "", pubKey)
+            }
         }
     }
 }
