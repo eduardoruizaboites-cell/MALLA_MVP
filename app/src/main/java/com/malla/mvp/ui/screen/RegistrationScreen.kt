@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.util.BiometricAuthHelper
+import com.malla.mvp.ui.components.PermissionRedirectDialog
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.RepeatMode
@@ -87,6 +88,8 @@ fun RegistrationScreen(onComplete: () -> Unit) {
 @Composable
 fun PermissionsExplanation(onContinue: () -> Unit) {
     val context = LocalContext.current
+    val activity = context as? android.app.Activity ?: return
+    var showRedirectDialog by remember { mutableStateOf(false) }
     val essentialPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.CAMERA,
@@ -95,11 +98,8 @@ fun PermissionsExplanation(onContinue: () -> Unit) {
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        // No verificamos aquí, lo hará el LaunchedEffect
-    }
+    ) { /* verificación en LaunchedEffect */ }
 
-    // Verificar continuamente si los permisos ya fueron concedidos
     LaunchedEffect(Unit) {
         while (true) {
             val allGranted = essentialPermissions.all {
@@ -108,6 +108,14 @@ fun PermissionsExplanation(onContinue: () -> Unit) {
             if (allGranted) {
                 onContinue()
                 break
+            }
+            // Verificar si algún permiso está denegado permanentemente
+            val permanentlyDenied = essentialPermissions.any {
+                !activity.shouldShowRequestPermissionRationale(it) &&
+                androidx.core.content.ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (permanentlyDenied) {
+                showRedirectDialog = true
             }
             delay(500)
         }
@@ -143,6 +151,10 @@ fun PermissionsExplanation(onContinue: () -> Unit) {
                     Text("Continuar", color = Color(0xFF0D1117), fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        if (showRedirectDialog) {
+            PermissionRedirectDialog(onDismiss = { showRedirectDialog = false })
         }
     }
 }

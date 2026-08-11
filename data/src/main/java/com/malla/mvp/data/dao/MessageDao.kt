@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface MessageDao {
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     fun getMessagesForConversation(conversationId: String): Flow<List<MessageEntity>>
+    
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     suspend fun getMessagesForConversationOnce(conversationId: String): List<MessageEntity>
 
@@ -31,4 +32,7 @@ interface MessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(messages: List<MessageEntity>)
+
+    @Query("DELETE FROM messages WHERE timestamp < :threshold")
+    suspend fun deleteMessagesOlderThan(threshold: Long)
 }

@@ -46,6 +46,9 @@ import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.util.RadioManager
 import com.malla.mvp.service.MeshChatService
 import com.malla.mvp.network.MeshMessageHandler
+import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.util.NotificationHelper
+import com.malla.mvp.service.CacheCleanerWorker
 import com.malla.mvp.core.engine.DeviceStateMonitor
 import com.malla.mvp.core.engine.LogBuffer
 
@@ -112,6 +115,8 @@ class MainActivity : FragmentActivity() {
         ConnectivityMonitor.start(application)
         DeviceStateMonitor.start(this)
         IdentityManager.init(this)
+        CacheCleanerWorker.schedule(this)
+        NotificationHelper.createChannel(this)
         DhtWrapper.init(this)
         insertSampleStories()
 
@@ -140,6 +145,7 @@ class MainActivity : FragmentActivity() {
             var callType by remember { mutableStateOf("voice") }
             var showTutorial by remember { mutableStateOf(false) }
             val flashlight = remember { FlashlightTransport(context) }
+    LaunchedEffect(Unit) { ProximityEngine.start(context) }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
 

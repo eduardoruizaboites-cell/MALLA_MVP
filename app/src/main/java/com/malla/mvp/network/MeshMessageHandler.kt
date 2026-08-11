@@ -6,6 +6,7 @@ import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.MessageEntity
 import com.malla.mvp.events.MallaEventBus
+import com.malla.mvp.util.NotificationHelper
 import kotlinx.coroutines.*
 import java.util.UUID
 
@@ -86,6 +87,13 @@ object MeshMessageHandler {
 
                     // ── Emitir al bus de eventos ──────────────────
                     MallaEventBus.messageReceived.emit(meshMsg)
+                    // Mostrar notificación local con PendingIntent
+                    NotificationHelper.showMessageNotification(
+                        appContext,
+                        conversationId,
+                        "MALLA",
+                        meshMsg.content.take(100)
+                    )
 
                     Log.d(TAG, "[MMH:MSG] Mensaje guardado de ${meshMsg.senderId}: ${meshMsg.content.take(30)}...")
                 } catch (e: Exception) {

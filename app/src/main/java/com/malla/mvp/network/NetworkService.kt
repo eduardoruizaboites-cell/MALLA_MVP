@@ -11,6 +11,7 @@ import javax.crypto.SecretKey
 import android.util.Log
 
 object NetworkService {
+    private var expectedPeerPublicKey: String? = null
     private const val TAG = "NetworkService"
     const val DEFAULT_PORT = 8888
 
@@ -56,7 +57,9 @@ object NetworkService {
         _connectedClientsCount.value = 0
     }
 
-    fun connectToPeer(address: String) {
+    fun connectToPeer(address: String, expectedPublicKeyBase64: String? = null) {
+        val expectedKey = expectedPublicKeyBase64
+        expectedPeerPublicKey = expectedPublicKeyBase64
         Log.d(TAG, "[NS:TCP] Intentando conectar a $address:$DEFAULT_PORT")
         serverScope.launch {
             try {
@@ -113,9 +116,15 @@ object NetworkService {
                 output?.writeUTF(localPublicKeyBase64)
                 output?.flush()
                 val peerPubKeyBase64 = input?.readUTF() ?: throw Exception("No se recibió clave pública")
+                // Verificar identidad si se esperaba una clave concreta
+                if (expectedPeerPublicKey != null && peerPubKeyBase64 != expectedPeerPublicKey) {
+                    Log.e(TAG, "[NS:HS] Clave pública no coincide con la esperada para $clientId. Desconectando.")
+                    socket.close()
+                    return
+                }
                 val peerPublicKey = CryptoEngine.base64ToPublicKey(peerPubKeyBase64)
                 secretKey = CryptoEngine.deriveSharedSecret(localKeyPair.private, peerPublicKey)
-                Log.d(TAG, "[NS:HS] Handshake completado con $clientId")
+                Log.d(TAG, "[NS:HS] Handshake completado con $clientId (autenticado)")
             LogBuffer.add("NS", "Handshake ECDH OK: ${clientId}")
                 _connectedClientsCount.value = clients.size
 
