@@ -12,6 +12,7 @@ import com.malla.mvp.R
 
 object NotificationHelper {
     private const val CHANNEL_ID = "malla_messages"
+    private const val GROUP_KEY = "malla_messages_group"
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -44,8 +45,27 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setGroup(GROUP_KEY)
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(conversationId.hashCode(), builder.build())
+        val uniqueId = System.currentTimeMillis().toInt()
+        manager.notify(uniqueId, builder.build())
+
+        // Resumen del grupo
+        val summaryBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setContentTitle("MALLA")
+            .setContentText("Tienes mensajes nuevos")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+        manager.notify(GROUP_KEY.hashCode(), summaryBuilder.build())
+    }
+
+    fun cancelNotifications(context: Context, conversationId: String) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancelAll()
     }
 }

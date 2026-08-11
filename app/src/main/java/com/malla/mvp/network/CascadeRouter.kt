@@ -41,7 +41,7 @@ object CascadeRouter {
                     }
                 }
 
-                // 2. TCP directo
+                // 2. TCP directo (esperar hasta 3s si no hay clientes)
                 if (NetworkService.connectedClientsCount.value > 0) {
                     try {
                         NetworkService.sendMessage(
@@ -51,6 +51,24 @@ object CascadeRouter {
                         return@launch
                     } catch (e: Exception) {
                         LogBuffer.add(TAG, "TCP falló: ${e.message}")
+                    }
+                } else {
+                    // Reintentar hasta 3 segundos
+                    var retries = 0
+                    while (retries < 6 && NetworkService.connectedClientsCount.value == 0) {
+                        delay(500)
+                        retries++
+                    }
+                    if (NetworkService.connectedClientsCount.value > 0) {
+                        try {
+                            NetworkService.sendMessage(
+                                MeshMessage(content = content, senderId = "self", type = type)
+                            )
+                            LogBuffer.add(TAG, "Enviado por TCP (tras espera) a $contactId")
+                            return@launch
+                        } catch (e: Exception) {
+                            LogBuffer.add(TAG, "TCP falló tras espera: ${e.message}")
+                        }
                     }
                 }
 

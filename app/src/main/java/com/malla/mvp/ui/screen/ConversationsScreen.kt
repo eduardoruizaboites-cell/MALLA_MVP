@@ -33,6 +33,7 @@ import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.StoryEntity
 import com.malla.mvp.ui.components.ConversationCard
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.UUID
 import com.malla.mvp.ui.components.NearbySection
 import com.malla.mvp.ui.screen.ContactsScreen
@@ -372,9 +373,22 @@ fun ConversationsScreen(
                                     val ip = DhtWrapper.decryptIp(extra, myUserId)
                                     if (ip.isNotBlank()) {
                                         com.malla.mvp.network.NetworkService.connectToPeer(ip)
-                                        Toast.makeText(context, "Conectando a $ip", Toast.LENGTH_SHORT).show()
+                                        // Reintentar si falla
+                                        var retries = 0
+                                        while (retries < 5 && com.malla.mvp.network.NetworkService.connectedClientsCount.value == 0) {
+                                            delay(1000)
+                                            retries++
+                                            try { com.malla.mvp.network.NetworkService.connectToPeer(ip) } catch (_: Exception) {}
+                                        }
+                                        if (com.malla.mvp.network.NetworkService.connectedClientsCount.value > 0) {
+                                            Toast.makeText(context, "Conectado a $ip", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "No se pudo conectar. Verifica que el otro dispositivo esté en la misma red.", Toast.LENGTH_LONG).show()
+                                        }
                                     }
-                                } catch (e: Exception) {}
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Error al conectar. Código inválido o dispositivo no disponible.", Toast.LENGTH_LONG).show()
+                                }
                                 onChatClicked(convId, "Invitación " + inviteCode.trim().take(12))
                                 Toast.makeText(context, "Código aceptado", Toast.LENGTH_SHORT).show()
                             }
