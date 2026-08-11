@@ -13,11 +13,14 @@ object DiscoveryService {
     private const val SERVICE_TYPE = "_malla._tcp"
     private var nsdManager: NsdManager? = null
     private var registeredService: NsdServiceInfo? = null
+    private var isRegistered = false
 
     fun start(context: Context) {
+        if (isRegistered) return
         nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
         // Registrar nuestro servicio
         registerService(context)
+        isRegistered = true
         // Descubrir otros servicios
         nsdManager?.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         Log.d(TAG, "NSD iniciado (registro + descubrimiento)")
@@ -26,6 +29,7 @@ object DiscoveryService {
     fun stop() {
         nsdManager?.unregisterService(registrationListener)
         nsdManager?.stopServiceDiscovery(discoveryListener)
+        isRegistered = false
         Log.d(TAG, "NSD detenido")
     }
 

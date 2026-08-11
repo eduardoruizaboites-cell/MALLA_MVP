@@ -47,7 +47,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.malla.mvp.ui.components.EmojiReactionPicker
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -447,8 +446,7 @@ fun ChatScreen(
                         AttachmentOptionPremium(icon = Icons.Default.InsertDriveFile, label = "Documento", color = Color(0xFF6C63FF), onClick = { /* TODO */ })
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        AttachmentOptionPremium(icon = Icons.Default.CameraAlt, label = "Cámara", color = Color(0xFFFF6B6B), onClick = { showAttachmentPanel = false; val intent = CameraContract.createIntent(context, "photo"); cameraLauncher.launch(intent) })
-                        Spacer(modifier = Modifier.height(16.dp))
+
                         AttachmentOptionPremium(icon = Icons.Default.LocationOn, label = "Ubicación", color = Color(0xFF4CAF50), onClick = {
                             showAttachmentPanel = false
                             val loc = getBestLocation(context)
@@ -481,12 +479,7 @@ fun ChatScreen(
                         }
                         Text("Galería", style = MaterialTheme.typography.labelSmall, color = Color.White)
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconButton(onClick = { /* TODO: cámara */ }) {
-                            Icon(Icons.Filled.CameraAlt, "Cámara", tint = Color(0xFF4CE6FF))
-                        }
-                        Text("Cámara", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                    }
+
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(onClick = { /* TODO: documento */ }) {
                             Icon(Icons.Filled.InsertDriveFile, "Documento", tint = Color(0xFF4CE6FF))
@@ -610,9 +603,8 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
         ?: contrastingTextColor(baseColor)
     val bubbleOpacity by ChatSettings.bubbleOpacity.collectAsState()
     val fontSize by ChatSettings.fontSize.collectAsState()
-    val reactionContext = LocalContext.current
-    var showReactionPicker by remember { mutableStateOf(false) }
-    var reactionEmoji by remember { mutableStateOf(msg.reaction) }
+    val emojiCount = msg.content.codePointCount(0, msg.content.length)
+    val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && emojiCount <= 4
 
     // Animación Apple-style
     val scaleAnim = if (animate) {
@@ -661,7 +653,7 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
                             Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
-                    if (msg.content.isNotBlank()) {
+                    if (msg.content.isNotBlank() && msg.content != "Imagen" && msg.mediaUri == null) {
                         Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
                     }
                     Text(
@@ -672,27 +664,8 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
                 }
             }
         }
-        if (showReactionPicker) {
-            EmojiReactionPicker(
-                onEmojiSelected = { emoji ->
-                    reactionEmoji = emoji
-                    showReactionPicker = false
-                    kotlinx.coroutines.MainScope().launch {
-                        val db = com.malla.mvp.data.AppDatabase.getInstance(reactionContext)
-                        db?.messageDao()?.updateReaction(msg.id, emoji)
-                    }
-                },
-                onDismiss = { showReactionPicker = false }
-            )
-        }
-        if (reactionEmoji != null) {
-            Text(
-                text = reactionEmoji!!,
-                fontSize = 16.sp,
-                modifier = Modifier.offset(y = (-8).dp).align(if (isOwn) Alignment.BottomEnd else Alignment.BottomStart)
-            )
-        }
     }
+    } // cierre else onlyEmojis
 }
 
 
@@ -756,6 +729,7 @@ fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
             }
         }
     }
+    } // cierre else onlyEmojis
 }
 
 

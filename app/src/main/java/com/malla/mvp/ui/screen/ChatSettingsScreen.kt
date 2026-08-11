@@ -29,7 +29,7 @@ import com.malla.mvp.ui.settings.AccessibilitySettings
 import com.malla.mvp.ui.settings.BubbleStyle
 import com.malla.mvp.ui.settings.ChatSettings
 import com.malla.mvp.ui.components.BubbleShapes
-import com.malla.mvp.ui.components.ColorWheelPicker
+import com.malla.mvp.ui.components.AdvancedColorPicker
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -162,7 +162,7 @@ fun ChatSettingsScreen(onBack: () -> Unit) {
 
             // Color de burbujas propias
             SectionCard(title = "Color de burbujas propias") {
-                ColorWheelPicker(
+                AdvancedColorPicker(
                     currentColor = ownBubbleColor,
                     onColorSelected = { color -> AccessibilitySettings.ownBubbleColor.value = color; AccessibilitySettings.save(context) }
                 )
@@ -171,7 +171,7 @@ fun ChatSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
 
             SectionCard(title = "Color de burbujas del contacto") {
-                ColorWheelPicker(
+                AdvancedColorPicker(
                     currentColor = otherBubbleColor,
                     onColorSelected = { color -> AccessibilitySettings.otherBubbleColor.value = color; AccessibilitySettings.save(context) }
                 )
