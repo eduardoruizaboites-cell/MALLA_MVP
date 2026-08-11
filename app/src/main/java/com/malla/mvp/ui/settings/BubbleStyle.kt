@@ -5,5 +5,6 @@ enum class BubbleStyle(val label: String) {
     ROUNDED("Redondeado"),
     COMIC("Cómic"),
     PIXEL("Pixelado"),
-    COLA("Con cola")     // nuevo estilo con pico/cola
+    WHATSAPP("WhatsApp"),
+    COLA("Con cola")
 }

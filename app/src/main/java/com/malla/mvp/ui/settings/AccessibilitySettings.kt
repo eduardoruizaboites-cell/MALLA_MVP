@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 object AccessibilitySettings {
-    val bubbleStyle = MutableStateFlow(BubbleStyle.MODERN)
+    val bubbleStyle = MutableStateFlow(BubbleStyle.WHATSAPP)
     private const val PREFS_NAME = "accessibility"
     private const val KEY_FONT_SCALE = "font_scale"
     private const val KEY_HIGH_CONTRAST = "high_contrast"
@@ -23,7 +23,7 @@ object AccessibilitySettings {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         fontScale.value = prefs.getFloat(KEY_FONT_SCALE, 1.0f)
         highContrast.value = prefs.getBoolean(KEY_HIGH_CONTRAST, false)
-        val styleName = prefs.getString("bubble_style", BubbleStyle.MODERN.name) ?: BubbleStyle.MODERN.name
+        val styleName = prefs.getString("bubble_style", BubbleStyle.WHATSAPP.name) ?: BubbleStyle.WHATSAPP.name
         bubbleStyle.value = BubbleStyle.valueOf(styleName)
 
         val ownColorLong = prefs.getLong(KEY_OWN_BUBBLE_COLOR, -1L)

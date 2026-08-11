@@ -47,6 +47,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.malla.mvp.ui.components.EmojiReactionPicker
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -609,6 +610,9 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
         ?: contrastingTextColor(baseColor)
     val bubbleOpacity by ChatSettings.bubbleOpacity.collectAsState()
     val fontSize by ChatSettings.fontSize.collectAsState()
+    val reactionContext = LocalContext.current
+    var showReactionPicker by remember { mutableStateOf(false) }
+    var reactionEmoji by remember { mutableStateOf(msg.reaction) }
 
     // Animación Apple-style
     val scaleAnim = if (animate) {
@@ -667,6 +671,26 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
                     )
                 }
             }
+        }
+        if (showReactionPicker) {
+            EmojiReactionPicker(
+                onEmojiSelected = { emoji ->
+                    reactionEmoji = emoji
+                    showReactionPicker = false
+                    kotlinx.coroutines.MainScope().launch {
+                        val db = com.malla.mvp.data.AppDatabase.getInstance(reactionContext)
+                        db?.messageDao()?.updateReaction(msg.id, emoji)
+                    }
+                },
+                onDismiss = { showReactionPicker = false }
+            )
+        }
+        if (reactionEmoji != null) {
+            Text(
+                text = reactionEmoji!!,
+                fontSize = 16.sp,
+                modifier = Modifier.offset(y = (-8).dp).align(if (isOwn) Alignment.BottomEnd else Alignment.BottomStart)
+            )
         }
     }
 }

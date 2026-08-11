@@ -111,12 +111,67 @@ object BubbleShapes {
             return Outline.Generic(path)
         }
     }
+    
+    val WhatsAppOwn = object : Shape {
+        override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+            val path = Path().apply {
+                val w = size.width
+                val h = size.height
+                val d = density.density * 4f
+                val tailW = 8f * d
+                val tailH = 8f * d
+                val corner = 16f * d
+                // Iniciar en esquina superior izquierda
+                moveTo(corner, 0f)
+                lineTo(w - corner, 0f)
+                cubicTo(w - 4f * d, 0f, w, 4f * d, w, corner)
+                lineTo(w, h - tailH - corner)
+                // Cola hacia la derecha
+                lineTo(w, h - tailH)
+                lineTo(w - tailW, h)
+                lineTo(w - tailW - 4f * d, h - tailH)
+                cubicTo(w - 8f * d, h, 8f * d, h, 0f, h - corner)
+                lineTo(0f, corner)
+                cubicTo(0f, 4f * d, 4f * d, 0f, corner, 0f)
+                close()
+            }
+            return Outline.Generic(path)
+        }
+    }
+
+    val WhatsAppOther = object : Shape {
+        override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+            val path = Path().apply {
+                val w = size.width
+                val h = size.height
+                val d = density.density * 4f
+                val tailW = 8f * d
+                val tailH = 8f * d
+                val corner = 16f * d
+                moveTo(w - corner, 0f)
+                lineTo(corner, 0f)
+                cubicTo(4f * d, 0f, 0f, 4f * d, 0f, corner)
+                lineTo(0f, h - tailH - corner)
+                // Cola hacia la izquierda
+                lineTo(0f, h - tailH)
+                lineTo(tailW, h)
+                lineTo(tailW + 4f * d, h - tailH)
+                cubicTo(8f * d, h, w - 8f * d, h, w, h - corner)
+                lineTo(w, corner)
+                cubicTo(w, 4f * d, w - 4f * d, 0f, w - corner, 0f)
+                close()
+            }
+            return Outline.Generic(path)
+        }
+    }
+
     fun getShape(style: com.malla.mvp.ui.settings.BubbleStyle, isOwn: Boolean): Shape {
         return when (style) {
             com.malla.mvp.ui.settings.BubbleStyle.MODERN -> if (isOwn) ModernOwn else ModernOther
             com.malla.mvp.ui.settings.BubbleStyle.ROUNDED -> Rounded
             com.malla.mvp.ui.settings.BubbleStyle.COMIC -> if (isOwn) ComicOwn else ComicOther
             com.malla.mvp.ui.settings.BubbleStyle.PIXEL -> Pixel
+            com.malla.mvp.ui.settings.BubbleStyle.WHATSAPP -> if (isOwn) WhatsAppOwn else WhatsAppOther
             com.malla.mvp.ui.settings.BubbleStyle.COLA -> if (isOwn) ColaOwn else ColaOther
         }
     }

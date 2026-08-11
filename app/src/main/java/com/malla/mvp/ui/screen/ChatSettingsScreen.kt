@@ -29,6 +29,7 @@ import com.malla.mvp.ui.settings.AccessibilitySettings
 import com.malla.mvp.ui.settings.BubbleStyle
 import com.malla.mvp.ui.settings.ChatSettings
 import com.malla.mvp.ui.components.BubbleShapes
+import com.malla.mvp.ui.components.ColorWheelPicker
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,8 +162,7 @@ fun ChatSettingsScreen(onBack: () -> Unit) {
 
             // Color de burbujas propias
             SectionCard(title = "Color de burbujas propias") {
-                ColorPickerRow(
-                    colors = listOf(null to "Tema", Color(0xFF00E5FF) to "Cyan", Color(0xFF4CAF50) to "Verde", Color(0xFFFF7043) to "Naranja", Color(0xFF9575CD) to "Morado", Color(0xFF78909C) to "Gris"),
+                ColorWheelPicker(
                     currentColor = ownBubbleColor,
                     onColorSelected = { color -> AccessibilitySettings.ownBubbleColor.value = color; AccessibilitySettings.save(context) }
                 )
@@ -171,8 +171,7 @@ fun ChatSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
 
             SectionCard(title = "Color de burbujas del contacto") {
-                ColorPickerRow(
-                    colors = listOf(null to "Tema", Color(0xFF00E5FF) to "Cyan", Color(0xFF4CAF50) to "Verde", Color(0xFFFF7043) to "Naranja", Color(0xFF9575CD) to "Morado", Color(0xFF78909C) to "Gris"),
+                ColorWheelPicker(
                     currentColor = otherBubbleColor,
                     onColorSelected = { color -> AccessibilitySettings.otherBubbleColor.value = color; AccessibilitySettings.save(context) }
                 )
@@ -259,6 +258,7 @@ fun styleDescription(style: BubbleStyle): String = when (style) {
     BubbleStyle.COMIC -> "Divertido y expresivo"
     BubbleStyle.PIXEL -> "Estilo retro pixelado"
     BubbleStyle.COLA -> "Con cola de burbuja"
+        BubbleStyle.WHATSAPP -> "Estilo WhatsApp"
 }
 
 
