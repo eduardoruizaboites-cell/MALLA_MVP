@@ -226,7 +226,7 @@ fun ColorPickerRow(colors: List<Pair<Color?, String>>, currentColor: Color?, onC
 @Composable
 fun BubbleStyleSelectorWithPreview(currentStyle: BubbleStyle, onStyleSelected: (BubbleStyle) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        BubbleStyle.values().forEach { style ->
+        BubbleStyle.entries.forEach { style ->
             val isSelected = currentStyle == style
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { onStyleSelected(style) },
@@ -253,12 +253,20 @@ fun BubbleStyleSelectorWithPreview(currentStyle: BubbleStyle, onStyleSelected: (
 }
 
 fun styleDescription(style: BubbleStyle): String = when (style) {
-    BubbleStyle.MODERN -> "Suave y moderno"
-    BubbleStyle.ROUNDED -> "Clásico redondeado"
-    BubbleStyle.COMIC -> "Divertido y expresivo"
-    BubbleStyle.PIXEL -> "Estilo retro pixelado"
-    BubbleStyle.COLA -> "Con cola de burbuja"
-        BubbleStyle.WHATSAPP -> "Estilo WhatsApp"
+    BubbleStyle.CLASSIC -> "Texto plano, sin burbuja"
+    BubbleStyle.MSN_CARD -> "Tarjeta cuadrada con bordes"
+    BubbleStyle.AIM_COMIC -> "Globo de cómic con cola"
+    BubbleStyle.SKYPE_FULL -> "Bloque ancho, sin curvas"
+    BubbleStyle.WHATSAPP -> "Burbuja con cola asimétrica"
+    BubbleStyle.INSTAGRAM -> "Píldora redondeada sin cola"
+    BubbleStyle.GLASS -> "Efecto vidrio translúcido"
+    BubbleStyle.CUSTOM -> "Estilo personalizado"
+    BubbleStyle.MATERIAL_YOU -> "Asimétrico 3 esquinas curvas"
+    BubbleStyle.GRADIENT -> "Fondo con gradiente dinámico"
+    BubbleStyle.RETRO -> "Degradado metálico 3D (MSN style)"
+    BubbleStyle.CHAT_HEAD -> "Burbuja flotante circular"
+    BubbleStyle.EPHEMERAL -> "Plano y efímero (Snapchat)"
+    BubbleStyle.PIXEL -> "Pixelado / Terminal retro"
 }
 
 

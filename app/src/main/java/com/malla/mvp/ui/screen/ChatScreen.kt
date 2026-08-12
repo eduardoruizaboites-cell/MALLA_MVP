@@ -64,6 +64,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,11 +125,11 @@ fun ChatScreen(
     var zumbidoCooldown by remember { mutableStateOf(false) }
     val pendingMediaUris = remember { mutableStateListOf<Uri>() }
     var captionText by remember { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
         delay(300)
-        focusRequester.requestFocus()
+        keyboardController?.show()
     }
     val coroutineScope = rememberCoroutineScope()
     val colorScheme = LocalColorScheme.current
@@ -356,7 +357,7 @@ fun ChatScreen(
                                         // Enviar primera imagen con caption, las demás sin texto
                                         pendingMediaUris.forEachIndexed { index, uri ->
                                             val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
-                                            vm.sendMessage(textToSend, mediaUri = uri.toString())
+                                            vm.sendMessage(if (textToSend == "Imagen") "" else textToSend, mediaUri = uri.toString())
                                         }
                                         pendingMediaUris.clear()
                                         captionText = ""
@@ -381,7 +382,7 @@ fun ChatScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
                     }
-                    ChatInputBar(focusRequester = focusRequester,
+                    ChatInputBar(
                         voiceRecorder = voiceRecorder,
                         onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
                         onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
@@ -619,53 +620,60 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        Surface(
-            shape = BubbleShapes.getShape(bubbleStyle, isOwn),
-            shadowElevation = 4.dp,
-            modifier = Modifier
-                .widthIn(min = 100.dp, max = 270.dp)
-                .graphicsLayer {
-                    scaleX = scaleAnim; scaleY = scaleAnim
-                    transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
-                }
-                .alpha(bubbleOpacity),
-            color = Color.Transparent
-        ) {
-            Box(
-                modifier = Modifier.background(
-                    brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
-                    shape = BubbleShapes.getShape(bubbleStyle, isOwn)
-                )
+        if (onlyEmojis) {
+            Text(
+                text = msg.content,
+                    fontSize = 28.sp,
+                modifier = Modifier.padding(4.dp)
+            )
+        } else {
+            Surface(
+                shape = BubbleShapes.getShape(bubbleStyle, isOwn),
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .widthIn(min = 100.dp, max = 270.dp)
+                    .graphicsLayer {
+                        scaleX = scaleAnim; scaleY = scaleAnim
+                        transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
+                    }
+                    .alpha(bubbleOpacity),
+                color = Color.Transparent
             ) {
-                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    val media = msg.mediaUri
-                    if (media != null) {
-                        val uri = Uri.parse(media)
-                        if (media.endsWith(".3gp") || media.endsWith(".m4a") || media.contains("voice_")) {
-                            AudioBubblePlayer(filePath = media, modifier = Modifier.fillMaxWidth())
-                            Spacer(modifier = Modifier.height(4.dp))
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).clip(RoundedCornerShape(12.dp)).clickable { onImageClick(uri) }
-                            ) {
-                                AsyncImage(model = uri, contentDescription = "Imagen enviada", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
-                    }
-                    if (msg.content.isNotBlank() && msg.content != "Imagen" && msg.mediaUri == null) {
-                        Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
-                    }
-                    Text(
-                        text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
-                        color = textColor.copy(alpha = 0.5f),
-                        fontSize = 10.sp
+                Box(
+                    modifier = Modifier.background(
+                        brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
+                        shape = BubbleShapes.getShape(bubbleStyle, isOwn)
                     )
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)) {
+                        val media = msg.mediaUri
+                        if (media != null) {
+                            val uri = Uri.parse(media)
+                            if (media.endsWith(".3gp") || media.endsWith(".m4a") || media.contains("voice_")) {
+                                AudioBubblePlayer(filePath = media, modifier = Modifier.fillMaxWidth())
+                                Spacer(modifier = Modifier.height(4.dp))
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp).clip(RoundedCornerShape(12.dp)).clickable { onImageClick(uri) }
+                                ) {
+                                    AsyncImage(model = uri, contentDescription = "Imagen enviada", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                        if (msg.content.isNotBlank() && msg.content != "Imagen" && msg.mediaUri == null) {
+                            Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+                        }
+                        Text(
+                            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+                            color = textColor.copy(alpha = 0.5f),
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
         }
     }
-    } // cierre else onlyEmojis
 }
 
 
@@ -678,6 +686,23 @@ fun Color.lighten(factor: Float = 0.1f): Color {
     )
 }
 
+
+
+fun String.isOnlyEmojis(): Boolean {
+    if (this.isBlank()) return false
+    val cleaned = this.replace(Regex("[\\s\\u200D\\uFE0F]"), "")
+    if (cleaned.isEmpty()) return false
+    var i = 0
+    while (i < cleaned.length) {
+        val cp = cleaned.codePointAt(i)
+        val isEmoji = (cp in 0x1F600..0x1F64F) || (cp in 0x1F300..0x1F5FF) || (cp in 0x1F680..0x1F6FF) ||
+                      (cp in 0x2600..0x26FF) || (cp in 0x2700..0x27BF) || (cp in 0x1F900..0x1F9FF) ||
+                      (cp in 0x1FA00..0x1FA6F) || (cp in 0x1FA70..0x1FAFF)
+        if (!isEmoji) return false
+        i += Character.charCount(cp)
+    }
+    return true
+}
 
 fun getBestLocation(context: Context): Location? {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
@@ -729,7 +754,6 @@ fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
             }
         }
     }
-    } // cierre else onlyEmojis
 }
 
 
