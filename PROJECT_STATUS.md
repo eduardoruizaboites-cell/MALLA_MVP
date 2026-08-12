@@ -142,3 +142,12 @@ VERIFICADO EN: solo compilación (entorno cloud)
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real con dos dispositivos; los otros pendientes de la sesión 27 (documentos, imágenes completas)
 ──────────────────────────────
+
+── ENTRADA — 2026-08-11 20:45 UTC ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Revertidos los cambios del indicador de escribiendo (MallaEventBus, MeshChatViewModel, MessageReceiver, ChatScreen) al checkpoint-20260811-sesion27 para eliminar crash por NoSuchMethodError.
+¿ERA UN FIX DE ERROR?: ERROR: java.lang.NoSuchMethodError: getTypingIndicatorReceived() al abrir chat → SOLUCIÓN APLICADA: revertir los archivos al último estado estable → ¿FUNCIONÓ?: sí, compilación exitosa. El APK ahora no contiene la referencia rota.
+VERIFICADO EN: solo compilación
+IDEAS DE MEJORA QUE SURGIERON: reintentar el indicador de escribiendo más adelante, con prueba de instalación limpia primero.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: reinstalar APK limpio en dispositivo; todas las pendientes anteriores (documentos, imágenes completas, DHT, etc.)
+──────────────────────────────

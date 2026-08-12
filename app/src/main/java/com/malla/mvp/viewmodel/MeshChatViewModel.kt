@@ -49,12 +49,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
-    private val _isContactTyping = MutableStateFlow(false)
-    val isContactTyping: StateFlow<Boolean> = _isContactTyping.asStateFlow()
-
-    private var typingTimeoutJob: Job? = null
-
-
     fun loadConversation(convId: String) {
         if (_conversationId.value == convId) return
         _conversationId.value = convId
@@ -62,24 +56,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         refreshMessages(convId)
         loadPolls(convId)
         initEncryption(convId)
-        startTypingListener(convId)
-    }
-
-    private fun startTypingListener(convId: String) {
-        viewModelScope.launch {
-            MallaEventBus.typingIndicatorReceived.collect { (senderId, isTyping) ->
-                if (senderId == convId) {
-                    _isContactTyping.value = isTyping
-                    typingTimeoutJob?.cancel()
-                    if (isTyping) {
-                        typingTimeoutJob = launch {
-                            delay(3000)
-                            _isContactTyping.value = false
-                        }
-                    }
-                }
-            }
-        }
     }
 
     
@@ -167,26 +143,13 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun sendTypingIndicator(isTyping: Boolean) {
-        val convId = _conversationId.value ?: return
-        if (convId == "self_chat") return
-        viewModelScope.launch {
-            NetworkService.sendMessage(
-                MeshMessage(content = if (isTyping) "1" else "0", senderId = "self", type = "typing")
-            )
-        }
-    }
-
     fun sendMessage(
         text: String,
         quotedMessageId: String? = null,
         quotedMessageContent: String? = null,
         expireAt: Long? = null,
         viewOnce: Boolean = false,
-        mediaUri: String? = null,
-        fileName: String? = null,
-        mimeType: String? = null,
-        fileSize: Long? = null
+        mediaUri: String? = null
     ) {
         val convId = _conversationId.value ?: return
         viewModelScope.launch {
@@ -209,10 +172,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 viewOnce = viewOnce,
                 quotedMessageId = quotedMessageId,
                 quotedMessageContent = quotedMessageContent,
-                encrypted = encryptionEnabled,
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize
+                encrypted = encryptionEnabled
             )
             db?.messageDao()?.insertMessage(msg)
             if (convId != "self_chat") {

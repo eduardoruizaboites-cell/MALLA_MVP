@@ -105,10 +105,6 @@ object MessageReceiver {
             if (meshMsg.type == "zumbido") {
                 MallaEventBus.zumbidoReceived.emit(meshMsg)
             }
-            if (meshMsg.type == "typing") {
-                val isTyping = meshMsg.content == "1"
-                MallaEventBus.typingIndicatorReceived.emit(Pair(meshMsg.senderId, isTyping))
-            }
             LogBuffer.add(TAG, "Mensaje guardado de ${meshMsg.senderId}")
         } catch (e: Exception) {
             Log.e(TAG, "Error: ${e.message}", e)
