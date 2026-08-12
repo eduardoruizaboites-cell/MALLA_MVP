@@ -124,3 +124,21 @@ La app alcanzó un estado estable y altamente funcional. El flujo de agregar usu
 - Eliminada la solicitud automática de permisos en `MainActivity` que interfería con el flujo de registro.
 - Corregida la estructura de llaves en `MainActivity` tras limpieza del bloque de permisos.
 - `Return` faltante en `IdentityManager.getIdentityId()`.
+
+── ENTRADA — 2026-08-11 18:20 UTC ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Ajustes visuales en ChatScreen.kt — emojis sin burbuja forzados a 28sp, altura máxima de imagen reducida a 120.dp, padding vertical de burbuja reducido a 2.dp.
+¿ERA UN FIX DE ERROR?: no era fix de error, sino mejora de UI pedida por el usuario (tamaño de emojis, imágenes y burbujas estilo WhatsApp).
+VERIFICADO EN: solo compilación (entorno cloud)
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: pruebas reales de los nuevos tamaños; warnings de KSP y deprecated sin resolver.
+──────────────────────────────
+
+── ENTRADA — 2026-08-11 19:45 UTC ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Implementado indicador de "escribiendo..." que se transmite por la red. Se agregó typingIndicatorReceived al MallaEventBus, lógica de envío/recepción en MeshChatViewModel y MessageReceiver, y TypingIndicator en ChatScreen.
+¿ERA UN FIX DE ERROR?: sí, el indicador solo se mostraba localmente y no se transmitía al otro usuario. SOLUCIÓN APLICADA: mensaje MeshMessage con type="typing" enviado por TCP, recibido por MessageReceiver y propagado al ViewModel vía MallaEventBus, con timeout de 3 segundos. ¿FUNCIONÓ?: sí, compila correctamente; pendiente prueba en dispositivo real.
+VERIFICADO EN: solo compilación (entorno cloud)
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real con dos dispositivos; los otros pendientes de la sesión 27 (documentos, imágenes completas)
+──────────────────────────────

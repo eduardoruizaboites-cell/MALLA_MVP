@@ -28,6 +28,7 @@ object MallaEventBus {
     val zumbidoReceived = MutableSharedFlow<MeshMessage>(extraBufferCapacity = 5)
     /** Se detectó un intento de replay (mensaje duplicado) */
     val replayAttackDetected = MutableSharedFlow<String>(extraBufferCapacity = 5)
+    val typingIndicatorReceived = MutableSharedFlow<Pair<String, Boolean>>(extraBufferCapacity = 2)
 
     // ── Hardware ──────────────────────────────────────────────────
     /** Nivel de batería actual (0-100) */

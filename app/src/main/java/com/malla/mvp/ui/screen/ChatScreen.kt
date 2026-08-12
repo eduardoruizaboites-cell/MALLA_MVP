@@ -56,6 +56,7 @@ import com.malla.mvp.ui.settings.ChatSettings
 import androidx.compose.ui.graphics.Brush
 import com.malla.mvp.ui.components.BubbleShapes
 import com.malla.mvp.ui.settings.AccessibilitySettings
+import com.malla.mvp.ui.components.TypingIndicator
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -151,6 +152,8 @@ fun ChatScreen(
     }
 
     var typingText by remember { mutableStateOf("") }
+    val isContactTyping by vm.isContactTyping.collectAsState()
+    val convId by vm.conversationId.collectAsState()
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -261,6 +264,11 @@ fun ChatScreen(
                 ) {
                     items(messages) { msg ->
                         MessageBubbleV2(msg = msg, animate = vm.isMessageNew(msg.timestamp), onImageClick = { uri -> fullScreenImageUri = uri })
+                    }
+                    if (isContactTyping && convId != null) {
+                        item {
+                            TypingIndicator(contactName = contactName, contactId = convId!!)
+                        }
                     }
                 }
 
@@ -384,15 +392,18 @@ fun ChatScreen(
                     }
                     ChatInputBar(
                         voiceRecorder = voiceRecorder,
-                        onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
-                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
+                        onSendText = { msg -> vm.sendMessage(msg); typingText = ""; vm.sendTypingIndicator(false) },
+                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = ""; vm.sendTypingIndicator(false) },
                         onSendZumbido = { vm.sendZumbido() },
                         onCameraClick = {
                             val intent = CameraContract.createIntent(context, "photo")
                             cameraLauncher.launch(intent)
                         },
                         onAttachmentClick = { showAttachmentPanel = true },
-                        onTextChanged = { newText -> typingText = newText }
+                        onTextChanged = { newText ->
+                        typingText = newText
+                        vm.sendTypingIndicator(newText.isNotEmpty())
+                    }
                     )
                 }
                 // Panel de emojis
