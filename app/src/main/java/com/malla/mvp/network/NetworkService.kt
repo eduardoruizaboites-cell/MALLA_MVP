@@ -1,21 +1,25 @@
 package com.malla.mvp.network
-import com.malla.mvp.core.engine.LogBuffer
-import com.malla.mvp.network.ReconnectManager
 
+import android.util.Log
+import com.malla.mvp.App
+import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.crypto.CryptoEngine
+import com.malla.mvp.events.MallaEventBus
+import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.*
-import java.net.*
-import java.security.*
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.NetworkInterface
+import java.security.PublicKey
 import javax.crypto.SecretKey
-import android.util.Log
 
 object NetworkService {
-    private var expectedPeerPublicKey: String? = null
     private const val TAG = "NetworkService"
     const val DEFAULT_PORT = 8888
 
+    // Flujos internos (opcional, para compatibilidad)
     private val _messages = MutableSharedFlow<MeshMessage>(replay = 10)
     val messages: SharedFlow<MeshMessage> = _messages.asSharedFlow()
 
@@ -25,9 +29,18 @@ object NetworkService {
     private var isServerRunning = false
     private val serverJob = Job()
     private val serverScope = CoroutineScope(Dispatchers.IO + serverJob)
+
+    // Mapa de clientes: contactId -> ClientHandler
     private val clients = mutableMapOf<String, ClientHandler>()
+    private val clientsBySocket = mutableMapOf<Socket, ClientHandler>()
+
+    // Clave efímera local para ECDH (se regenera en cada arranque)
     private val localKeyPair = CryptoEngine.generateKeyPair()
-    val localPublicKeyBase64 = CryptoEngine.publicKeyToBase64(localKeyPair.public)
+    private val localPublicKeyBase64 = CryptoEngine.publicKeyToBase64(localKeyPair.public)
+
+    // Datos de identidad local (se obtienen al iniciar)
+    private fun getLocalUserId(): String = IdentityManager.getIdentityId()
+    private fun getLocalDisplayName(): String = IdentityManager.getUserName(App.context)
 
     fun startServer() {
         if (isServerRunning) return
@@ -38,10 +51,15 @@ object NetworkService {
                 Log.d(TAG, "[NS:TCP] Servidor iniciado en puerto $DEFAULT_PORT")
                 while (isActive) {
                     val clientSocket = serverSocket.accept()
-                    val handler = ClientHandler(clientSocket)
-                    clients[handler.clientId] = handler
+                    val handler = ClientHandler(
+                        socket = clientSocket,
+                        expectedContactId = null,
+                        expectedPublicKeyBase64 = null,
+                        localUserId = getLocalUserId(),
+                        localDisplayName = getLocalDisplayName()
+                    )
                     handler.start()
-                    Log.d(TAG, "[NS:TCP] Nuevo cliente: ${handler.clientId} (total: ${clients.size})")
+                    Log.d(TAG, "[NS:TCP] Nueva conexión entrante")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "[NS:ERR] Error en servidor: ${e.message}", e)
@@ -55,31 +73,44 @@ object NetworkService {
         serverJob.cancel()
         clients.values.forEach { it.disconnect() }
         clients.clear()
+        clientsBySocket.clear()
         _connectedClientsCount.value = 0
     }
 
-    fun connectToPeer(address: String, expectedPublicKeyBase64: String? = null) {
-        val expectedKey = expectedPublicKeyBase64
-        expectedPeerPublicKey = expectedPublicKeyBase64
+    fun connectToPeer(address: String, expectedContactId: String? = null, expectedPublicKeyBase64: String? = null) {
         Log.d(TAG, "[NS:TCP] Intentando conectar a $address:$DEFAULT_PORT")
         serverScope.launch {
             try {
                 val socket = Socket(address, DEFAULT_PORT)
-                val handler = ClientHandler(socket)
-                clients[handler.clientId] = handler
+                val handler = ClientHandler(
+                    socket = socket,
+                    expectedContactId = expectedContactId,
+                    expectedPublicKeyBase64 = expectedPublicKeyBase64,
+                    localUserId = getLocalUserId(),
+                    localDisplayName = getLocalDisplayName()
+                )
                 handler.start()
-                Log.d(TAG, "[NS:TCP] Conectado a $address (total: ${clients.size})")
+                Log.d(TAG, "[NS:TCP] Conectado a $address")
             } catch (e: Exception) {
                 Log.e(TAG, "[NS:ERR] Error conectando a $address: ${e.message}", e)
             }
         }
     }
 
-    fun sendMessage(message: MeshMessage) {
-        Log.d(TAG, "[NS:MSG] Enviando mensaje tipo=${message.type} a ${clients.size} clientes")
-        serverScope.launch {
+    suspend fun sendMessageToContact(contactId: String?, message: MeshMessage) {
+        if (contactId == null) {
+            // Broadcast
             clients.values.forEach { it.send(message) }
+        } else {
+            clients[contactId]?.let { it.send(message) } ?: run {
+                Log.w(TAG, "[NS:MSG] No hay conexión activa para contactId=$contactId")
+            }
         }
+    }
+
+    // Compatibilidad con llamadas anteriores (se puede eliminar después)
+    suspend fun sendMessage(message: MeshMessage) {
+        sendMessageToContact(null, message)
     }
 
     fun getLocalIpAddress(): String {
@@ -101,40 +132,79 @@ object NetworkService {
         return "Desconocida"
     }
 
-    class ClientHandler(private val socket: Socket) {
-        val clientId = "${socket.inetAddress.hostAddress}:${socket.port}"
+    class ClientHandler(
+        private val socket: Socket,
+        private val expectedContactId: String?,
+        private val expectedPublicKeyBase64: String?,
+        private val localUserId: String,
+        private val localDisplayName: String
+    ) {
         private var input: DataInputStream? = null
         private var output: DataOutputStream? = null
         private var secretKey: SecretKey? = null
         private var running = false
+        var contactId: String? = null
+        var displayName: String? = null
+        var publicKeyBase64: String? = null
 
         fun start() {
             running = true
-            try {
-                input = DataInputStream(socket.getInputStream())
-                output = DataOutputStream(socket.getOutputStream())
+            val handler = this  // Capturar instancia para usar dentro de la corrutina
+            serverScope.launch {
+                try {
+                    input = DataInputStream(socket.getInputStream())
+                    output = DataOutputStream(socket.getOutputStream())
 
-                output?.writeUTF(localPublicKeyBase64)
-                output?.flush()
-                val peerPubKeyBase64 = input?.readUTF() ?: throw Exception("No se recibió clave pública")
-                // Verificar identidad si se esperaba una clave concreta
-                if (expectedPeerPublicKey != null && peerPubKeyBase64 != expectedPeerPublicKey) {
-                    Log.e(TAG, "[NS:HS] Clave pública no coincide con la esperada para $clientId. Desconectando.")
-                    socket.close()
-                    return
-                }
-                val peerPublicKey = CryptoEngine.base64ToPublicKey(peerPubKeyBase64)
-                secretKey = CryptoEngine.deriveSharedSecret(localKeyPair.private, peerPublicKey)
-                Log.d(TAG, "[NS:HS] Handshake completado con $clientId (autenticado)")
-            LogBuffer.add("NS", "Handshake ECDH OK: ${clientId}")
-                _connectedClientsCount.value = clients.size
+                    // 1. Enviar nuestra clave pública y datos de identidad
+                    val identityPayload = "$localPublicKeyBase64|$localUserId|$localDisplayName"
+                    output?.writeUTF(identityPayload)
+                    output?.flush()
 
-                serverScope.launch {
+                    // 2. Recibir datos del peer
+                    val peerPayload = input?.readUTF() ?: throw Exception("No se recibió identidad")
+                    val parts = peerPayload.split("|")
+                    if (parts.size < 3) throw Exception("Payload de identidad incompleto")
+                    val peerPubKeyBase64 = parts[0]
+                    val peerUserId = parts[1]
+                    val peerDisplayName = parts[2]
+
+                    // 3. Verificar clave pública si se esperaba una concreta
+                    if (expectedPublicKeyBase64 != null && peerPubKeyBase64 != expectedPublicKeyBase64) {
+                        Log.e(TAG, "[NS:HS] Clave pública no coincide para $peerUserId. Desconectando.")
+                        socket.close()
+                        return@launch
+                    }
+
+                    // 4. Verificar contactId esperado (si se especificó)
+                    if (expectedContactId != null && peerUserId != expectedContactId) {
+                        Log.e(TAG, "[NS:HS] UserId no coincide con el esperado ($peerUserId != $expectedContactId). Desconectando.")
+                        socket.close()
+                        return@launch
+                    }
+
+                    // 5. Derivar secreto compartido
+                    val peerPublicKey = CryptoEngine.base64ToPublicKey(peerPubKeyBase64)
+                    secretKey = CryptoEngine.deriveSharedSecret(localKeyPair.private, peerPublicKey)
+
+                    // 6. Guardar datos del peer
+                    handler.contactId = peerUserId
+                    handler.displayName = peerDisplayName
+                    handler.publicKeyBase64 = peerPubKeyBase64
+
+                    // 7. Registrar cliente en el mapa global
+                    clients[peerUserId] = handler
+                    clientsBySocket[socket] = handler
+                    _connectedClientsCount.value = clients.size
+
+                    Log.d(TAG, "[NS:HS] Handshake completado con $peerUserId ($peerDisplayName)")
+                    LogBuffer.add("NS", "Handshake ECDH OK: $peerUserId")
+
+                    // 8. Escuchar mensajes entrantes
                     listenForMessages()
+                } catch (e: Exception) {
+                    Log.e(TAG, "[NS:ERR] Handshake fallido: ${e.message}", e)
+                    disconnect()
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "[NS:ERR] Handshake fallido con $clientId: ${e.message}", e)
-                disconnect()
             }
         }
 
@@ -152,17 +222,20 @@ object NetworkService {
                     val text = parts.getOrElse(3) { decrypted }
                     val message = MeshMessage(
                         content = text,
-                        senderId = clientId,
+                        senderId = contactId ?: "unknown",
                         type = type,
                         quotedMessageId = quoteId,
                         quotedMessageContent = quoteContent
                     )
-                    Log.d(TAG, "[NS:MSG] Mensaje recibido de $clientId (tipo=$type, ${encrypted.size} bytes)")
-            LogBuffer.add("NS", "Mensaje recibido: tipo=${type}")
+                    Log.d(TAG, "[NS:MSG] Mensaje recibido de $contactId (tipo=$type, ${encrypted.size} bytes)")
+                    LogBuffer.add("NS", "Mensaje recibido: tipo=${type} de $contactId")
+                    // Emitir al bus global para que el ViewModel lo procese
+                    MallaEventBus.messageReceived.tryEmit(message)
+                    // También al flujo local para compatibilidad
                     _messages.emit(message)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[NS:ERR] Error recibiendo mensaje de $clientId: ${e.message}", e)
+                Log.e(TAG, "[NS:ERR] Error recibiendo mensaje de $contactId: ${e.message}", e)
             } finally {
                 disconnect()
             }
@@ -175,23 +248,22 @@ object NetworkService {
                 output?.writeInt(encrypted.size)
                 output?.write(encrypted)
                 output?.flush()
-                Log.d(TAG, "[NS:MSG] Mensaje enviado a $clientId (${encrypted.size} bytes cifrados)")
+                Log.d(TAG, "[NS:MSG] Mensaje enviado a $contactId (${encrypted.size} bytes cifrados)")
             } catch (e: Exception) {
-                Log.e(TAG, "[NS:ERR] Error enviando mensaje a $clientId: ${e.message}", e)
+                Log.e(TAG, "[NS:ERR] Error enviando mensaje a $contactId: ${e.message}", e)
             }
         }
 
         fun disconnect() {
             running = false
             try { socket.close() } catch (_: Exception) {}
-            clients.remove(clientId)
-            _connectedClientsCount.value = clients.size
-            Log.d(TAG, "[NS:TCP] Cliente desconectado: $clientId (total: ${clients.size})")
-            // Programar reconexión si se esperaba una clave pública
-            val pubKey = expectedPeerPublicKey
-            if (pubKey != null) {
-                ReconnectManager.scheduleReconnect(socket.inetAddress.hostAddress ?: "", pubKey)
+            val id = contactId
+            if (id != null) {
+                clients.remove(id)
+                clientsBySocket.remove(socket)
             }
+            _connectedClientsCount.value = clients.size
+            Log.d(TAG, "[NS:TCP] Cliente desconectado: ${id ?: "desconocido"} (total: ${clients.size})")
         }
     }
 }

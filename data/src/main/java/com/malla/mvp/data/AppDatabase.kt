@@ -32,7 +32,7 @@ import java.io.File
         ContactEntity::class,
         PollVoteEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

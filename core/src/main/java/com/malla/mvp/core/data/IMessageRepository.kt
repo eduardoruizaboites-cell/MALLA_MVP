@@ -12,7 +12,10 @@ data class MessageData(
     val expireAt: Long? = null,
     val viewOnce: Boolean = false,
     val transport: String? = null,
-    val reaction: String? = null
+    val reaction: String? = null,
+    val fileName: String? = null,
+    val mimeType: String? = null,
+    val fileSize: Long? = null,
 )
 
 interface IMessageRepository {

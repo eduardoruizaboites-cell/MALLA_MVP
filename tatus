@@ -1,0 +1,10 @@
+[33m7c4c43dd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/chat-yo[m[33m)[m fix: revertir indicador de escribiendo por NoSuchMethodError - vuelta a checkpoint sesion27
+[33m62a3987e[m[33m ([m[1;33mtag: [m[1;33mcheckpoint-20260811-typing-indicator[m[33m)[m feat: indicador de escribiendo transmitido por red - typingIndicator en MallaEventBus, envío/recepción TCP con timeout de 3s
+[33me074a06c[m[33m ([m[1;33mtag: [m[1;33mcheckpoint-20260811-sesion27[m[33m)[m fix: ajustes visuales - emojis grandes sin burbuja (28sp), imágenes más compactas (120dp), burbujas reducidas (padding vertical 2dp) y limpieza de llave huérfana
+[33mc6f261b6[m[33m ([m[1;31morigin/feature/chat-yo[m[33m)[m fix: eliminar icono de cámara y texto 'Imagen', emojis grandes sin burbuja - Eliminadas opciones de cámara de paneles de adjuntos premium y básico. - Texto 'Imagen' ya no se muestra bajo las fotos enviadas. - Función isOnlyEmojis añadida. - Emojis sin burbuja: mensajes de solo emojis (máx 4) se muestran grandes y sin fondo. - Corrección de llaves en MessageBubbleV2.
+[33m0fc91123[m feat: verificación de contactos, llamadas WebRTC y reacciones a mensajes
+[33m38fa8061[m[33m ([m[1;33mtag: [m[1;33mcheckpoint-20260811-sesion26[m[33m)[m fix: mejoras de UX y estabilidad pre‑prueba
+[33m2c971783[m feat: mejoras críticas de comunicación y notificaciones pre‑prueba
+[33md8059061[m feat: Sesión 25 completa – autenticación, reconexión, notificaciones, caché, permisos
+[33mbf2f47e0[m[33m ([m[1;33mtag: [m[1;33mcheckpoint-20260811-sesion25[m[33m)[m feat: autenticación de peers, reconexión TCP, notificaciones con PendingIntent, limpieza de caché y manejo de permisos
+[33m87c309c1[m[33m ([m[1;33mtag: [m[1;33mcheckpoint-20260811-registro-completo[m[33m)[m feat: flujo de registro completo, animación profesional y ajustes visuales

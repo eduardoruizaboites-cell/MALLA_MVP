@@ -17,7 +17,10 @@ object MessageMapper {
             mediaUri = entity.mediaUri,
             expireAt = entity.expireAt,
             viewOnce = entity.viewOnce,
-            reaction = entity.reaction
+            reaction = entity.reaction,
+            fileName = entity.fileName,
+            mimeType = entity.mimeType,
+            fileSize = entity.fileSize
         )
     }
 
@@ -31,7 +34,10 @@ object MessageMapper {
             mediaUri = data.mediaUri,
             expireAt = data.expireAt,
             viewOnce = data.viewOnce,
-            reaction = data.reaction
+            reaction = data.reaction,
+            fileName = data.fileName,
+            mimeType = data.mimeType,
+            fileSize = data.fileSize
         )
     }
 }

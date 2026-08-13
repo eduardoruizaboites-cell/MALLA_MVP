@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
-import javax.crypto.SecretKey
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.crypto.CryptoEngine
 import com.malla.mvp.crypto.SessionCipher
@@ -21,6 +20,7 @@ import com.malla.mvp.network.NetworkService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.UUID
+import javax.crypto.SecretKey
 
 class MeshChatViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -49,6 +49,17 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
+    init {
+        // Observar mensajes entrantes del bus global
+        viewModelScope.launch {
+            MallaEventBus.messageReceived.collect { msg ->
+                if (msg.senderId != "self") {  // Evitar procesar mensajes propios (se guardan localmente al enviar)
+                    handleIncomingMessage(msg)
+                }
+            }
+        }
+    }
+
     fun loadConversation(convId: String) {
         if (_conversationId.value == convId) return
         _conversationId.value = convId
@@ -58,7 +69,6 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         initEncryption(convId)
     }
 
-    
     private fun initEncryption(convId: String) {
         viewModelScope.launch {
             if (encryptionEnabled || convId == "self_chat") return@launch
@@ -86,15 +96,15 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     val database = db ?: return@launch
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
                     _messages.value = msgs.filter { it.conversationId == convId }.map { msg ->
-                if (msg.encrypted && sessionKey != null) {
-                    try {
-                        val decryptedContent = SessionCipher.decrypt(msg.content, sessionKey!!)
-                        msg.copy(content = decryptedContent)
-                    } catch (e: Exception) {
-                        msg
-                    }
-                } else msg
-            }.map { MessageMapper.toMessageData(it) }
+                        if (msg.encrypted && sessionKey != null) {
+                            try {
+                                val decryptedContent = SessionCipher.decrypt(msg.content, sessionKey!!)
+                                msg.copy(content = decryptedContent)
+                            } catch (e: Exception) {
+                                msg
+                            }
+                        } else msg
+                    }.map { MessageMapper.toMessageData(it) }
                     if (msgs.isNotEmpty()) {
                         lastMessageTimestamp = msgs.maxOf { it.timestamp }
                     }
@@ -118,6 +128,46 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private suspend fun handleIncomingMessage(msg: MeshMessage) {
+        val convId = msg.senderId  // El senderId ahora es el contactId real
+        if (convId == _conversationId.value) {
+            // Mensaje para la conversación actual
+            val msgEntity = MessageEntity(
+                id = UUID.randomUUID().toString(),
+                conversationId = convId,
+                content = msg.content,
+                timestamp = System.currentTimeMillis(),
+                isOwn = false,
+                quotedMessageId = msg.quotedMessageId,
+                quotedMessageContent = msg.quotedMessageContent
+            )
+            db?.messageDao()?.insertMessage(msgEntity)
+            refreshMessages(convId)
+        } else {
+            // Si no es la conversación actual, asegurar que exista la conversación
+            val conversationDao = db?.conversationDao()
+            val existing = conversationDao?.getConversationById(convId)
+            if (existing == null) {
+                val newConv = com.malla.mvp.data.entity.ConversationEntity(
+                    id = convId,
+                    title = convId,  // Temporal; se actualizará cuando se obtenga el nombre
+                    timestamp = System.currentTimeMillis()
+                )
+                conversationDao?.insertConversation(newConv)
+            }
+            val msgEntity = MessageEntity(
+                id = UUID.randomUUID().toString(),
+                conversationId = convId,
+                content = msg.content,
+                timestamp = System.currentTimeMillis(),
+                isOwn = false,
+                quotedMessageId = msg.quotedMessageId,
+                quotedMessageContent = msg.quotedMessageContent
+            )
+            db?.messageDao()?.insertMessage(msgEntity)
+        }
+    }
+
     fun updateInputText(text: String) {
         _inputText.value = text
     }
@@ -136,9 +186,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
             )
             if (convId != "self_chat") {
-                NetworkService.sendMessage(
-                    MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
-                )
+                NetworkService.sendMessageToContact(convId, MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido"))
             }
         }
     }
@@ -176,15 +224,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             )
             db?.messageDao()?.insertMessage(msg)
             if (convId != "self_chat") {
-                NetworkService.sendMessage(
-                    MeshMessage(
-                        content = msg.content,
-                        senderId = "self",
-                        timestamp = System.currentTimeMillis(),
-                        quotedMessageId = quotedMessageId,
-                        quotedMessageContent = quotedMessageContent
-                    )
-                )
+                // Enviar dirigido al contactId correcto (convId)
+                NetworkService.sendMessageToContact(convId, MeshMessage(
+                    content = finalContent,
+                    senderId = IdentityManager.getIdentityId(),
+                    timestamp = System.currentTimeMillis(),
+                    quotedMessageId = quotedMessageId,
+                    quotedMessageContent = quotedMessageContent
+                ))
             }
             _inputText.value = ""
             refreshMessages(convId)

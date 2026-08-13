@@ -1,13 +1,17 @@
 package com.malla.mvp
+import androidx.fragment.app.FragmentActivity
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
 import android.widget.Toast
-import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -47,11 +51,11 @@ import com.malla.mvp.util.RadioManager
 import com.malla.mvp.service.MeshChatService
 import com.malla.mvp.network.MeshMessageHandler
 import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.network.BleManager
 import com.malla.mvp.util.NotificationHelper
 import com.malla.mvp.service.CacheCleanerWorker
 import com.malla.mvp.core.engine.DeviceStateMonitor
 import com.malla.mvp.core.engine.LogBuffer
-
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.ui.components.MainTopBar
@@ -76,49 +80,56 @@ import java.util.UUID
 enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
+    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-//             val requiredPermissions = arrayOf(
-//                 android.Manifest.permission.ACCESS_FINE_LOCATION,
-//                 android.Manifest.permission.BLUETOOTH_SCAN,
-//                 android.Manifest.permission.BLUETOOTH_CONNECT,
-//                 android.Manifest.permission.BLUETOOTH_ADVERTISE,
-//                 android.Manifest.permission.CAMERA,
-//                 android.Manifest.permission.RECORD_AUDIO,
-//                 android.Manifest.permission.POST_NOTIFICATIONS,
-//                 android.Manifest.permission.READ_CONTACTS,
-//                 android.Manifest.permission.READ_EXTERNAL_STORAGE
-//             )
-//             val ungranted = requiredPermissions.filter {
-//                 checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-//             }.toTypedArray()
-//             if (ungranted.isNotEmpty()) requestPermissions(ungranted, 1001)
-//         RadioManager.enableBluetooth(this)
-//         RadioManager.enableWifi(this)
-//         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-//                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                     startForegroundService(Intent(this, MeshChatService::class.java))
-//                 } else {
-//                     startService(Intent(this, MeshChatService::class.java))
-//                 }
-//             }
-//         } else {
-//             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                 startForegroundService(Intent(this, MeshChatService::class.java))
-//             } else {
-//                 startService(Intent(this, MeshChatService::class.java))
-//             }
-//         }
-//         }
+
+        // Inicializar identidad antes de cualquier operación criptográfica
+        IdentityManager.init(this)
+
+        // Iniciar componentes base
         ConnectivityMonitor.start(application)
         DeviceStateMonitor.start(this)
-        IdentityManager.init(this)
         CacheCleanerWorker.schedule(this)
         NotificationHelper.createChannel(this)
         DhtWrapper.init(this)
         insertSampleStories()
+
+        // Iniciar servidor TCP siempre (para comunicación directa)
+        NetworkService.startServer()
+        LogBuffer.add("MAIN", "NetworkService iniciado")
+
+        // Configurar lanzador de permisos
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { grants ->
+            val allGranted = grants.values.all { it }
+            if (allGranted) {
+                LogBuffer.add("MAIN", "Permisos concedidos, iniciando descubrimiento")
+                ProximityEngine.start(this)
+                BleManager.start(this)
+                Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permisos necesarios para descubrir dispositivos",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        // Solicitar permisos críticos según versión de Android
+        val requiredPermissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        }
+        permissionLauncher.launch(requiredPermissions.toTypedArray())
 
         val appThemeState = AppThemeState.create(this)
 
@@ -130,8 +141,8 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) { true }
 
         val database = AppDatabase.getInstance(application)
+        val conversationIdFromNotification = intent?.getStringExtra("conversation_id")
 
-                val conversationIdFromNotification = intent?.getStringExtra("conversation_id")
         setContent {
             val context = LocalContext.current
             var appState by remember { mutableStateOf(AppState.Splash) }
@@ -140,37 +151,32 @@ class MainActivity : FragmentActivity() {
             var currentConversationId by remember { mutableStateOf(conversationIdFromNotification) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
-    var showChatSettings by remember { mutableStateOf(false) }
+            var showChatSettings by remember { mutableStateOf(false) }
             var showCall by remember { mutableStateOf(false) }
             var callContact by remember { mutableStateOf("") }
             var callType by remember { mutableStateOf("voice") }
             var showTutorial by remember { mutableStateOf(false) }
             val flashlight = remember { FlashlightTransport(context) }
-    LaunchedEffect(Unit) { ProximityEngine.start(context) }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
-
             val isOnline by ConnectivityMonitor.isOnline.collectAsState()
             val meshToastShown = remember { mutableStateOf(false) }
+
             LaunchedEffect(isOnline) {
-                try {
-                    if (!isOnline) {
-                        if (!meshToastShown.value) {
-                            android.widget.Toast.makeText(context, "Modo Mesh activado – Tema OLED para ahorro de batería", android.widget.Toast.LENGTH_LONG).show()
-                            meshToastShown.value = true
-                        }
-                        LogBuffer.add("MAIN", "Iniciando servicio mesh")
-                        // DHT inicio gestionado por DhtWrapper
-                        // Publicar nuestra presencia en DHT
-                        val myUserId = IdentityManager.getIdentityId() ?: ""
-                        val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
-                        DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
-                        NetworkService.startServer()
-                        LogBuffer.add("MAIN", "NetworkService iniciado")
-                        LogBuffer.add("MAIN", "MeshMessageHandler iniciado")
+                if (!isOnline) {
+                    if (!meshToastShown.value) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Modo Mesh activado – Tema OLED para ahorro de batería",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        meshToastShown.value = true
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("MallaMesh", "Error gestionando mesh (ignorado)", e)
+                    LogBuffer.add("MAIN", "Sin internet – usando comunicaciones locales")
+                    // Publicar presencia en DHT
+                    val myUserId = IdentityManager.getIdentityId() ?: ""
+                    val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
+                    DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
                 }
             }
 
@@ -182,83 +188,95 @@ class MainActivity : FragmentActivity() {
                     val tutorialShown = try {
                         tutorialPrefs?.getBoolean("shown", false) ?: false
                     } catch (e: Exception) { false }
-                    if (!tutorialShown) {
-                        if (!isFirstLaunch) {
+                    if (!tutorialShown && !isFirstLaunch) {
                         showTutorial = true
-                        }
                     }
                 }
             }
 
             MallaTheme(colorScheme = effectiveScheme, fontScale = AccessibilitySettings.fontScale.value) {
-                // Registro premium (sin teléfono)
-                    AnimatedContent(
-                        targetState = appState,
-                        transitionSpec = {
-                            (slideInHorizontally { width -> width } + fadeIn(tween(300))) togetherWith
-                                    (slideOutHorizontally { width -> -width } + fadeOut(tween(300)))
-                        },
-                        label = "app_state_transition"
-                    ) { state ->
-                        when (state) {
-                            AppState.Splash -> SplashScreen {
-                                appState = AppState.Main
-                            }
-                            AppState.Main -> {
-                                if (showRegistration) {
-                                    RegistrationScreen(onComplete = { showRegistration = false })
-                                } else if (showTutorial) {
-                                    TutorialOverlay(
-                                        onDismiss = {
-                                            showTutorial = false
-                                            try {
-                                                getSharedPreferences("tutorial", Context.MODE_PRIVATE)
-                                                    ?.edit()?.putBoolean("shown", true)?.apply()
-                                            } catch (_: Exception) {}
-                                        }
-                                    )
+                AnimatedContent(
+                    targetState = appState,
+                    transitionSpec = {
+                        (slideInHorizontally { width -> width } + fadeIn(tween(300))) togetherWith
+                                (slideOutHorizontally { width -> -width } + fadeOut(tween(300)))
+                    },
+                    label = "app_state_transition"
+                ) { state ->
+                    when (state) {
+                        AppState.Splash -> SplashScreen {
+                            appState = AppState.Main
+                        }
+                        AppState.Main -> {
+                            if (showRegistration) {
+                                RegistrationScreen(onComplete = { showRegistration = false })
+                            } else if (showTutorial) {
+                                TutorialOverlay(
+                                    onDismiss = {
+                                        showTutorial = false
+                                        try {
+                                            getSharedPreferences("tutorial", Context.MODE_PRIVATE)
+                                                ?.edit()?.putBoolean("shown", true)?.apply()
+                                        } catch (_: Exception) {}
+                                    }
+                                )
                             } else if (showQrScanner) {
-                                    BackHandler { showQrScanner = false }
-                                    QrScanScreen(
-                                        onQrScanned = { ip ->
-                                            showQrScanner = false
-                                            connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
-                                        },
-                                        onBack = { showQrScanner = false }
-                                    )
-                                } else if (showChatSettings) {
-                                    BackHandler { showChatSettings = false }
-                                    ChatSettingsScreen(onBack = { showChatSettings = false })
-                                } else if (showSettings) {
-                                    BackHandler { showSettings = false }
-                                    SettingsScreenWrapper(
-                                        currentScheme = effectiveScheme,
-                                        onSchemeSelected = { scheme -> appThemeState.selectScheme(scheme) },
-                                        onBack = { showSettings = false }
-                                    )
-                                } else if (selectedContact != null) {
-                                    BackHandler { selectedContact = null }
-                                    ContactProfileScreen(contactName = selectedContact!!, onBack = { selectedContact = null })
-                                } else {
-                                    MainApp(
-                                        isMeshMode = !isOnline,
-                                        currentConversationId = currentConversationId,
-                                        onConversationChanged = { convId -> currentConversationId = convId },
-                                        onSettingsClick = { showSettings = true },
-                                        onChatSettingsClick = { showChatSettings = true },
-                                        onProfileClicked = { contactName -> selectedContact = contactName },
-                                        onNavigateToQrScanner = { showQrScanner = true },
-                                        onConnectToPeer = { ip ->
-                                            connectToPeerAndCreateConversation(ip) { convId -> currentConversationId = convId }
-                                        },
-                                        onVoiceCallClick = { showCall = true; callContact = "Contacto"; callType = "voice" },
-                                        onVideoCallClick = { showCall = true; callContact = "Contacto"; callType = "video" },
-                                        db = database
-                                    )
-                                }
+                                BackHandler { showQrScanner = false }
+                                QrScanScreen(
+                                    onQrScanned = { ip ->
+                                        showQrScanner = false
+                                        connectToPeerAndCreateConversation(ip) { convId ->
+                                            currentConversationId = convId
+                                        }
+                                    },
+                                    onBack = { showQrScanner = false }
+                                )
+                            } else if (showChatSettings) {
+                                BackHandler { showChatSettings = false }
+                                ChatSettingsScreen(onBack = { showChatSettings = false })
+                            } else if (showSettings) {
+                                BackHandler { showSettings = false }
+                                SettingsScreenWrapper(
+                                    currentScheme = effectiveScheme,
+                                    onSchemeSelected = { scheme -> appThemeState.selectScheme(scheme) },
+                                    onBack = { showSettings = false }
+                                )
+                            } else if (selectedContact != null) {
+                                BackHandler { selectedContact = null }
+                                ContactProfileScreen(
+                                    contactName = selectedContact!!,
+                                    onBack = { selectedContact = null }
+                                )
+                            } else {
+                                MainApp(
+                                    isMeshMode = !isOnline,
+                                    currentConversationId = currentConversationId,
+                                    onConversationChanged = { convId -> currentConversationId = convId },
+                                    onSettingsClick = { showSettings = true },
+                                    onChatSettingsClick = { showChatSettings = true },
+                                    onProfileClicked = { contactName -> selectedContact = contactName },
+                                    onNavigateToQrScanner = { showQrScanner = true },
+                                    onConnectToPeer = { ip ->
+                                        connectToPeerAndCreateConversation(ip) { convId ->
+                                            currentConversationId = convId
+                                        }
+                                    },
+                                    onVoiceCallClick = {
+                                        showCall = true
+                                        callContact = "Contacto"
+                                        callType = "voice"
+                                    },
+                                    onVideoCallClick = {
+                                        showCall = true
+                                        callContact = "Contacto"
+                                        callType = "video"
+                                    },
+                                    db = database
+                                )
                             }
                         }
                     }
+                }
             }
         }
     }
@@ -267,8 +285,22 @@ class MainActivity : FragmentActivity() {
         MainScope().launch {
             val db = AppDatabase.getInstance(application) ?: return@launch
             val storyDao = db.storyDao()
-            storyDao.insertStory(com.malla.mvp.data.entity.StoryEntity(id = "story1", userId = "sim_alicia", imageUri = "#FF5733", timestamp = System.currentTimeMillis() - 3600000))
-            storyDao.insertStory(com.malla.mvp.data.entity.StoryEntity(id = "story2", userId = "sim_carlos", imageUri = "#33FF57", timestamp = System.currentTimeMillis() - 7200000))
+            storyDao.insertStory(
+                com.malla.mvp.data.entity.StoryEntity(
+                    id = "story1",
+                    userId = "sim_alicia",
+                    imageUri = "#FF5733",
+                    timestamp = System.currentTimeMillis() - 3600000
+                )
+            )
+            storyDao.insertStory(
+                com.malla.mvp.data.entity.StoryEntity(
+                    id = "story2",
+                    userId = "sim_carlos",
+                    imageUri = "#33FF57",
+                    timestamp = System.currentTimeMillis() - 7200000
+                )
+            )
         }
     }
 
@@ -278,7 +310,11 @@ class MainActivity : FragmentActivity() {
         } catch (_: Exception) {}
         val db = AppDatabase.getInstance(application)
         val conversationId = UUID.randomUUID().toString()
-        val conv = ConversationEntity(id = conversationId, title = "Peer ${ip.take(8)}", timestamp = System.currentTimeMillis())
+        val conv = ConversationEntity(
+            id = conversationId,
+            title = "Peer ${ip.take(8)}",
+            timestamp = System.currentTimeMillis()
+        )
         MainScope().launch {
             try {
                 db?.conversationDao()?.insertConversation(conv)
@@ -289,6 +325,7 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
     override fun onDestroy() {
         RadioManager.restoreStates(this)
         super.onDestroy()
@@ -306,8 +343,15 @@ fun SettingsScreenWrapper(
         topBar = {
             TopAppBar(
                 title = { Text("Ajustes") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface, titleContentColor = MaterialTheme.colorScheme.onSurface)
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -371,7 +415,15 @@ fun MainApp(
     }
     val onProfileClick = { selectedTab = 2 }
     Scaffold(
-        topBar = { MainTopBar(onSettingsClick = onSettingsClick, onChatSettingsClick = onChatSettingsClick, onProfileClick = onProfileClick, isOnline = !isMeshMode, showEncryption = currentConversationId != null) },
+        topBar = {
+            MainTopBar(
+                onSettingsClick = onSettingsClick,
+                onChatSettingsClick = onChatSettingsClick,
+                onProfileClick = onProfileClick,
+                isOnline = !isMeshMode,
+                showEncryption = currentConversationId != null
+            )
+        },
         bottomBar = {
             NavigationBar(
                 modifier = Modifier.height(56.dp),
@@ -424,10 +476,16 @@ fun MainApp(
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
                 0 -> ConversationsScreen(
-                    onChatClicked = { convId, name -> currentContactName = name; onConversationChanged(convId) },
+                    onChatClicked = { convId, name ->
+                        currentContactName = name
+                        onConversationChanged(convId)
+                    },
                     onProfileClicked = onProfileClicked
                 )
-                1 -> PulsoScreen(onNavigateToQrScanner = onNavigateToQrScanner, onConnectToPeer = onConnectToPeer)
+                1 -> PulsoScreen(
+                    onNavigateToQrScanner = onNavigateToQrScanner,
+                    onConnectToPeer = onConnectToPeer
+                )
                 2 -> PerfilScreen(onVerifyClick = onVerifyClick)
             }
         }
