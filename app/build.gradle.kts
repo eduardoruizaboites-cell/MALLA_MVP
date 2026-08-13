@@ -13,6 +13,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "SIGNAL_SERVER_URL", "\"ws://10.0.2.2:8080\"")
     }
 
     buildTypes {
@@ -30,6 +31,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
@@ -63,6 +65,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.2")
     implementation("com.google.zxing:android-integration:3.3.0")
     implementation("io.getstream:stream-webrtc-android:1.1.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

@@ -30,6 +30,13 @@ object MessageReceiver {
             }
         }
 
+        // Mensajes globales WebRTC
+        scope.launch {
+            WebRtcDataManager.incomingMessages.collect { meshMsg ->
+                process(context, meshMsg)
+            }
+        }
+
         // Mensajes SMS entrantes
         scope.launch {
             Injector.smsTransport.incomingMessages.collect { raw ->

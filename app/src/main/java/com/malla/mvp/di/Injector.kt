@@ -77,6 +77,10 @@ object Injector {
         }
         this.networkService = networkService
 
+        // Iniciar transporte global (WebRTC DataChannel)
+        GlobalTransport.start()
+        this.networkService = GlobalTransport
+
         // Repositorio de mensajes (Room)
         val messageRepo = object : IMessageRepository {
             private val fallbackMessages = MutableStateFlow<List<MessageData>>(emptyList())
