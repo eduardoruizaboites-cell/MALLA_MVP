@@ -24,84 +24,59 @@ object CascadeRouter {
     fun sendMessage(contactId: String, content: String, type: String = "chat") {
         scope.launch {
             try {
-                // 1. Internet
+                // 1. Internet global (DHT)
                 if (ConnectivityMonitor.isOnline.value) {
-                    try {
-                        Injector.networkService.sendMeshMessage(
-                            com.malla.mvp.core.network.MeshMessage(
-                                senderId = IdentityManager.getIdentityId(),
-                                content = content,
-                                type = if (type == "zumbido") 4 else 0
-                            )
-                        )
-                        LogBuffer.add(TAG, "Enviado por Internet a $contactId")
-                        return@launch
-                    } catch (e: Exception) {
-                        LogBuffer.add(TAG, "Internet falló: ${e.message}")
-                    }
-                }
-
-                // 2. TCP directo (esperar hasta 3s si no hay clientes)
-                if (NetworkService.connectedClientsCount.value > 0) {
-                    try {
-                        NetworkService.sendMessage(
-                            MeshMessage(content = content, senderId = "self", type = type)
-                        )
-                        LogBuffer.add(TAG, "Enviado por TCP a $contactId")
-                        return@launch
-                    } catch (e: Exception) {
-                        LogBuffer.add(TAG, "TCP falló: ${e.message}")
-                    }
-                } else {
-                    // Reintentar hasta 3 segundos
-                    var retries = 0
-                    while (retries < 6 && NetworkService.connectedClientsCount.value == 0) {
-                        delay(500)
-                        retries++
-                    }
-                    if (NetworkService.connectedClientsCount.value > 0) {
+                    val address = DhtService.lookup(contactId)
+                    if (address != null) {
+                        val parts = address.split(":")
+                        val ip = parts[0]
+                        val port = parts.getOrElse(1) { NetworkService.DEFAULT_PORT.toString() }.toIntOrNull() ?: NetworkService.DEFAULT_PORT
                         try {
-                            NetworkService.sendMessage(
-                                MeshMessage(content = content, senderId = "self", type = type)
-                            )
-                            LogBuffer.add(TAG, "Enviado por TCP (tras espera) a $contactId")
-                            return@launch
+                            NetworkService.connectToPeer(ip, contactId)
+                            // Esperar un poco a que se establezca la conexión
+                            var retries = 0
+                            while (retries < 10 && NetworkService.connectedClientsCount.value == 0) {
+                                delay(500)
+                                retries++
+                            }
+                            if (NetworkService.connectedClientsCount.value > 0) {
+                                NetworkService.sendMessageToContact(contactId, MeshMessage(content = content, senderId = "self", type = type))
+                                LogBuffer.add(TAG, "Enviado por Internet/DHT a $contactId")
+                                return@launch
+                            }
                         } catch (e: Exception) {
-                            LogBuffer.add(TAG, "TCP falló tras espera: ${e.message}")
+                            LogBuffer.add(TAG, "Internet/DHT falló: ${e.message}")
                         }
+                    } else {
+                        LogBuffer.add(TAG, "No se encontró dirección para $contactId en DHT")
                     }
                 }
 
-                // 3. Mesh (DHT routing)
-                if (!ConnectivityMonitor.isOnline.value) {
-                    try {
-                        val sent = DhtService.routeMessage(contactId, content)
-                        if (sent) {
-                            LogBuffer.add(TAG, "Enviado por Mesh a $contactId")
-                            return@launch
-                        }
-                    } catch (e: Exception) {
-                        LogBuffer.add(TAG, "Mesh falló: ${e.message}")
-                    }
+                // 2. TCP directo (red local)
+                if (NetworkService.connectedClientsCount.value > 0) {
+                    NetworkService.sendMessageToContact(contactId, MeshMessage(content = content, senderId = "self", type = type))
+                    LogBuffer.add(TAG, "Enviado por TCP local a $contactId")
+                    return@launch
                 }
+
+                // 3. Mesh local (BLE/NSD) – esto ya se maneja en ProximityEngine
+                //    No es necesario duplicar aquí.
 
                 // 4. SMS
                 val phone = getContactPhone(contactId)
                 if (phone.isNotBlank()) {
                     try {
                         Injector.smsTransport.sendSms(phone, content)
-                        LogBuffer.add(TAG, "Enviado por SMS a $contactId ($phone)")
+                        LogBuffer.add(TAG, "Enviado por SMS a $contactId")
                         return@launch
                     } catch (e: Exception) {
                         LogBuffer.add(TAG, "SMS falló: ${e.message}")
                     }
                 }
 
-                // 4. Mesh (pendiente por ahora)
-                LogBuffer.add(TAG, "Mesh no disponible, guardando pendiente")
-
                 // 5. Guardar pendiente
                 savePendingMessage(contactId, content)
+                LogBuffer.add(TAG, "Mensaje guardado como pendiente para $contactId")
             } catch (e: Exception) {
                 LogBuffer.add(TAG, "Error en cascada: ${e.message}")
                 try {
