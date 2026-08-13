@@ -1,5 +1,4 @@
 package com.malla.mvp.service
-import com.malla.mvp.R
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -11,6 +10,11 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.malla.mvp.MainActivity
+import com.malla.mvp.R
+import com.malla.mvp.network.NetworkService
+import com.malla.mvp.network.MessageReceiver
+import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.identity.IdentityManager
 
 class MeshChatService : Service() {
     override fun onCreate() {
@@ -29,9 +33,26 @@ class MeshChatService : Service() {
             .setOngoing(true)
             .build()
         startForeground(1, notification)
+
+        // Iniciar componentes de red
+        IdentityManager.init(this)
+        NetworkService.startServer()
+        MessageReceiver.start(this)
+        ProximityEngine.start(this)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        MessageReceiver.stop()
+        ProximityEngine.stop()
+        NetworkService.stopServer()
+        super.onDestroy()
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

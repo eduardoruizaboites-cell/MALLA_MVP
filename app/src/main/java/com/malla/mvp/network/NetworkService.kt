@@ -33,6 +33,7 @@ object NetworkService {
     // Mapa de clientes: contactId -> ClientHandler
     private val clients = mutableMapOf<String, ClientHandler>()
     private val clientsBySocket = mutableMapOf<Socket, ClientHandler>()
+    private val pendingMessages = mutableMapOf<String, MutableList<MeshMessage>>()
 
     // Clave efímera local para ECDH (se regenera en cada arranque)
     private val localKeyPair = CryptoEngine.generateKeyPair()
@@ -102,10 +103,25 @@ object NetworkService {
             // Broadcast
             clients.values.forEach { it.send(message) }
         } else {
-            clients[contactId]?.let { it.send(message) } ?: run {
-                Log.w(TAG, "[NS:MSG] No hay conexión activa para contactId=$contactId")
+            val handler = clients[contactId]
+            if (handler != null) {
+                handler.send(message)
+            } else {
+                // Encolar mensaje pendiente
+                val queue = pendingMessages.getOrPut(contactId) { mutableListOf() }
+                queue.add(message)
+                Log.w(TAG, "[NS:MSG] Contacto $contactId no conectado. Mensaje encolado (${queue.size} pendientes)")
             }
         }
+    }
+
+    // Llamar al registrar un nuevo cliente para enviar pendientes
+    private fun flushPendingMessages(contactId: String, handler: ClientHandler) {
+        val queue = pendingMessages.remove(contactId) ?: return
+        for (msg in queue) {
+            serverScope.launch { handler.send(msg) }
+        }
+        Log.d(TAG, "[NS:MSG] Enviados ${queue.size} mensajes pendientes a $contactId")
     }
 
     // Compatibilidad con llamadas anteriores (se puede eliminar después)
@@ -194,6 +210,7 @@ object NetworkService {
                     // 7. Registrar cliente en el mapa global
                     clients[peerUserId] = handler
                     clientsBySocket[socket] = handler
+                    flushPendingMessages(peerUserId, handler)
                     _connectedClientsCount.value = clients.size
 
                     Log.d(TAG, "[NS:HS] Handshake completado con $peerUserId ($peerDisplayName)")
@@ -230,7 +247,6 @@ object NetworkService {
                     Log.d(TAG, "[NS:MSG] Mensaje recibido de $contactId (tipo=$type, ${encrypted.size} bytes)")
                     LogBuffer.add("NS", "Mensaje recibido: tipo=${type} de $contactId")
                     // Emitir al bus global para que el ViewModel lo procese
-                    MallaEventBus.messageReceived.tryEmit(message)
                     // También al flujo local para compatibilidad
                     _messages.emit(message)
                 }

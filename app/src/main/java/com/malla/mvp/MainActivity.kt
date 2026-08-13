@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
 import android.widget.Toast
+import android.bluetooth.BluetoothAdapter
+import android.net.wifi.WifiManager
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -106,21 +109,24 @@ class MainActivity : FragmentActivity() {
         ) { grants ->
             val allGranted = grants.values.all { it }
             if (allGranted) {
-                LogBuffer.add("MAIN", "Permisos concedidos, iniciando descubrimiento")
+                LogBuffer.add("MAIN", "Permisos concedidos, habilitando radio y descubrimiento")
+                enableRadio()
                 ProximityEngine.start(this)
                 BleManager.start(this)
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(
-                    this,
-                    "Permisos necesarios para descubrir dispositivos",
-                    Toast.LENGTH_LONG
-                ).show()
+                // No redirigir al usuario, solo informar
+                Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()
             }
         }
 
-        // Solicitar permisos críticos según versión de Android
-        val requiredPermissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        // Solicitar todos los permisos necesarios para el funcionamiento completo
+        val requiredPermissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_CONTACTS
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
             requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
@@ -128,8 +134,19 @@ class MainActivity : FragmentActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requiredPermissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
         permissionLauncher.launch(requiredPermissions.toTypedArray())
+        // Iniciar servicio foreground para mantener la comunicación viva
+        val serviceIntent = Intent(this, MeshChatService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
 
         val appThemeState = AppThemeState.create(this)
 
@@ -278,6 +295,39 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun enableRadio() {
+        try {
+            val btAdapter = BluetoothAdapter.getDefaultAdapter()
+            if (btAdapter != null && !btAdapter.isEnabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        btAdapter.enable()
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    btAdapter.enable()
+                }
+            }
+        } catch (e: Exception) {
+            LogBuffer.add("MAIN", "No se pudo habilitar Bluetooth: ${e.message}")
+        }
+
+        try {
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            if (!wifiManager.isWifiEnabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // En Android 10+ no se puede habilitar WiFi programáticamente; abrir panel rápido
+                    startActivity(Intent(Settings.Panel.ACTION_WIFI))
+                } else {
+                    @Suppress("DEPRECATION")
+                    wifiManager.isWifiEnabled = true
+                }
+            }
+        } catch (e: Exception) {
+            LogBuffer.add("MAIN", "No se pudo habilitar WiFi: ${e.message}")
         }
     }
 

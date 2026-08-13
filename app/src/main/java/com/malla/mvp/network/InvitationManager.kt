@@ -24,6 +24,7 @@ object InvitationManager {
         val myId = IdentityManager.getIdentityId()
         val myName = IdentityManager.getUserName(context)
         val myPubKey = IdentityManager.getPublicKeyBase64() ?: ""
+        val myIp = DhtService.getLocalAddress() ?: ""
         val invitation = ContactInvitation(
             senderUserId = myId,
             senderDisplayName = myName,
@@ -40,6 +41,7 @@ object InvitationManager {
             put("timestamp", invitation.timestamp)
             put("nonce", invitation.nonce)
             put("senderDeviceAddress", BleManager.getAdapter()?.address ?: "")
+            put("senderLocalIp", myIp)
         }.toString()
 
         if (user.bluetoothDevice != null) {
@@ -51,30 +53,23 @@ object InvitationManager {
                 )
                 withContext(Dispatchers.Main) {
                     if (success) {
-                        withContext(Dispatchers.Main) { Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show() }
+                        Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
                     } else {
-                        withContext(Dispatchers.Main) { Toast.makeText(context, "Error al enviar solicitud", Toast.LENGTH_SHORT).show() }
+                        Toast.makeText(context, "Error al enviar solicitud", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         } else {
-            withContext(Dispatchers.Main) {
-                withContext(Dispatchers.Main) { Toast.makeText(context, "Solicitud enviada a ${user.displayName} (sin BLE)", Toast.LENGTH_SHORT).show() }
-            }
-        }
-        // Escuchar anuncio de aceptación
-        BleManager.setAcceptanceCallback { acceptorName, acceptorAvatarSeed ->
-            _acceptanceReceived.tryEmit(Pair(acceptorName, acceptorAvatarSeed))
-            BleManager.setAcceptanceCallback(null) // dejar de escuchar
+            Toast.makeText(context, "Solicitud enviada a ${user.displayName} (sin BLE)", Toast.LENGTH_SHORT).show()
         }
     }
 
     suspend fun sendAcceptance(context: Context, invitation: ContactInvitation) {
         val myName = IdentityManager.getUserName(context)
-        val myAvatarSeed = 0 // se puede calcular
-        val payload = "ACCEPT|${invitation.senderUserId}|$myName|$myAvatarSeed"
+        val myAvatarSeed = 0
+        val myIp = DhtService.getLocalAddress() ?: ""
+        val payload = "ACCEPT|${invitation.senderUserId}|$myName|$myAvatarSeed|$myIp"
         BleManager.startAdvertisingWithPayload(payload)
-        // Detener el anuncio tras 30 segundos
         kotlinx.coroutines.delay(30_000)
         BleManager.stopProximityAdvertising()
     }
