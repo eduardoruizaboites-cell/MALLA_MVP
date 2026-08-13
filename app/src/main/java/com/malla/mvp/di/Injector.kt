@@ -162,15 +162,6 @@ object Injector {
         }
         messageBridge.start()
         MessageReceiver.start(context)
-        messageBridge.onIncomingMessage = { msg ->
-            val meshMsg = com.malla.mvp.network.MeshMessage(
-                content = msg.content,
-                senderId = msg.senderId,
-                timestamp = msg.timestamp,
-                type = "chat"
-            )
-            MessageReceiver.process(context, meshMsg)
-        }
 
         // Inicializar Premium y perfil del dispositivo
         PremiumManager.init()
