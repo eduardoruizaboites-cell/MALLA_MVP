@@ -235,9 +235,19 @@ fun BubbleStyleSelectorWithPreview(currentStyle: BubbleStyle, onStyleSelected: (
                 border = if (isSelected) BorderStroke(1.dp, Color(0xFF4CE6FF)) else null
             ) {
                 Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                        Surface(color = Color(0xFF1A3B4A), shape = BubbleShapes.getShape(style, true), shadowElevation = 1.dp) {
-                            Spacer(modifier = Modifier.size(30.dp))
+                    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                        Surface(
+                            color = Color(0xFF1A3B4A),
+                            shape = BubbleShapes.getShape(style, true),
+                            shadowElevation = 1.dp,
+                            modifier = Modifier.padding(4.dp)
+                        ) {
+                            Text(
+                                "Hola",
+                                modifier = Modifier.padding(6.dp),
+                                color = Color.White,
+                                fontSize = 10.sp
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))

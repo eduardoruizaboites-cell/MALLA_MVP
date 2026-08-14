@@ -105,6 +105,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Path
+import com.malla.mvp.ui.settings.BubbleStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -675,7 +677,6 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
     val emojiCount = msg.content.codePointCount(0, msg.content.length)
     val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && emojiCount <= 4
 
-    // Animación Apple-style
     val scaleAnim = if (animate) {
         val anim = remember { Animatable(0.85f) }
         LaunchedEffect(msg.id) {
@@ -691,52 +692,46 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
         if (onlyEmojis) {
             Text(
                 text = msg.content,
-                    fontSize = 28.sp,
+                fontSize = 28.sp,
                 modifier = Modifier.padding(4.dp)
             )
         } else {
-            Surface(
-                shape = BubbleShapes.getShape(bubbleStyle, isOwn),
-                shadowElevation = 4.dp,
-                modifier = Modifier
-                    .widthIn(min = 100.dp, max = 270.dp)
-                    .graphicsLayer {
-                        scaleX = scaleAnim; scaleY = scaleAnim
-                        transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
-                    }
-                    .alpha(bubbleOpacity),
-                color = Color.Transparent
-            ) {
-                Box(
-                    modifier = Modifier.background(
-                        brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
-                        shape = BubbleShapes.getShape(bubbleStyle, isOwn)
-                    )
+            if (bubbleStyle == BubbleStyle.AIM_COMIC) {
+                ComicBubble(
+                    isOwn = isOwn,
+                    baseColor = baseColor,
+                    textColor = textColor,
+                    bubbleOpacity = bubbleOpacity,
+                    scaleAnim = scaleAnim,
+                    msg = msg,
+                    onImageClick = onImageClick,
+                    fontSize = fontSize
+                )
+            } else {
+                val shape = BubbleShapes.getShape(bubbleStyle, isOwn)
+                val horizontalPadding = if (bubbleStyle == BubbleStyle.WHATSAPP) 12.dp else 10.dp
+                val verticalPadding = if (bubbleStyle == BubbleStyle.WHATSAPP) 6.dp else 4.dp
+                Surface(
+                    shape = shape,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .widthIn(min = 100.dp, max = 270.dp)
+                        .graphicsLayer {
+                            scaleX = scaleAnim; scaleY = scaleAnim
+                            transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
+                        }
+                        .alpha(bubbleOpacity),
+                    color = Color.Transparent
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)) {
-                        val media = msg.mediaUri
-                        if (media != null) {
-                            val uri = Uri.parse(media)
-                            if (media.endsWith(".3gp") || media.endsWith(".m4a") || media.contains("voice_")) {
-                                AudioBubblePlayer(filePath = media, modifier = Modifier.fillMaxWidth())
-                                Spacer(modifier = Modifier.height(4.dp))
-                            } else {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp).clip(RoundedCornerShape(12.dp)).clickable { onImageClick(uri) }
-                                ) {
-                                    AsyncImage(model = uri, contentDescription = "Imagen enviada", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-                        }
-                        if (msg.content.isNotBlank() && msg.content != "Imagen") {
-                            Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
-                        }
-                        Text(
-                            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
-                            color = textColor.copy(alpha = 0.5f),
-                            fontSize = 10.sp
-                        )
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
+                                shape = shape
+                            )
+                            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+                    ) {
+                        BubbleContent(msg, textColor, fontSize, onImageClick)
                     }
                 }
             }
@@ -744,6 +739,97 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
     }
 }
 
+@Composable
+private fun BubbleContent(
+    msg: MessageData,
+    textColor: Color,
+    fontSize: Float,
+    onImageClick: (Uri) -> Unit
+) {
+    Column(modifier = Modifier) {
+        val media = msg.mediaUri
+        if (media != null) {
+            val uri = Uri.parse(media)
+            if (media.endsWith(".3gp") || media.endsWith(".m4a") || media.contains("voice_")) {
+                AudioBubblePlayer(filePath = media, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onImageClick(uri) }
+                ) {
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = "Imagen enviada",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+        if (msg.content.isNotBlank() && msg.content != "Imagen") {
+            Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+        }
+        Text(
+            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+            color = textColor.copy(alpha = 0.5f),
+            fontSize = 10.sp
+        )
+    }
+}
+
+@Composable
+private fun ComicBubble(
+    isOwn: Boolean,
+    baseColor: Color,
+    textColor: Color,
+    bubbleOpacity: Float,
+    scaleAnim: Float,
+    msg: MessageData,
+    onImageClick: (Uri) -> Unit,
+    fontSize: Float
+) {
+    Box(
+        modifier = Modifier
+            .widthIn(max = 290.dp)
+            .graphicsLayer {
+                scaleX = scaleAnim
+                scaleY = scaleAnim
+                transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
+            }
+            .alpha(bubbleOpacity)
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val points = 16
+            val outerRadius = size.minDimension / 2
+            val innerRadius = outerRadius * 0.78f
+            val center = Offset(size.width / 2, size.height / 2)
+            val path = Path().apply {
+                for (i in 0 until points) {
+                    val angle = 2.0 * Math.PI * i / points - Math.PI / 2
+                    val radius = if (i % 2 == 0) outerRadius else innerRadius
+                    val x = center.x + (Math.cos(angle) * radius).toFloat()
+                    val y = center.y + (Math.sin(angle) * radius).toFloat()
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
+            }
+            drawPath(path, baseColor.copy(alpha = 0.9f))
+        }
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = baseColor.lighten(0.15f),
+            shadowElevation = 4.dp,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            BubbleContent(msg, textColor, fontSize, onImageClick)
+        }
+    }
+}
 
 fun Color.lighten(factor: Float = 0.1f): Color {
     return Color(
@@ -753,8 +839,6 @@ fun Color.lighten(factor: Float = 0.1f): Color {
         alpha = alpha
     )
 }
-
-
 
 fun String.isOnlyEmojis(): Boolean {
     if (this.isBlank()) return false
