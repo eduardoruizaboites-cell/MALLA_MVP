@@ -368,6 +368,7 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
             requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
+        permissionLauncher.launch(requiredPermissions.toTypedArray())
     }
 
     private fun insertSampleStories() {
