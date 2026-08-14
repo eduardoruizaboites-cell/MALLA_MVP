@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +27,15 @@ import androidx.compose.ui.unit.sp
 import com.malla.mvp.ui.settings.*
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
+
+val rainbowColors = listOf(
+    Color(0xFFFF3B30), Color(0xFFFF9500), Color(0xFFFFCC00), Color(0xFF34C759),
+    Color(0xFF00C7BE), Color(0xFF007AFF), Color(0xFF5856D6), Color(0xFFAF52DE),
+    Color(0xFFFF2D55), Color(0xFFA2845E), Color(0xFF8E8E93), Color(0xFF1A3B4A),
+    Color(0xFF4CD964), Color(0xFFFFD60A), Color(0xFFFF8C00), Color(0xFF32ADE6),
+    Color(0xFF5E5CE6), Color(0xFFBF5AF2), Color(0xFFFF375F), Color(0xFF64D2FF),
+    Color(0xFF30D158), Color(0xFF66D4CF), Color(0xFF0A84FF), Color(0xFFBF5AF2)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,86 +65,57 @@ fun ChatCustomizationDialog(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            ExpandableSection(title = "Color de burbujas propias") {
-                AdvancedColorPicker(
-                    currentColor = prefs.ownBubbleColor?.let { Color(it) },
-                    onColorSelected = { color ->
+            // Sección: Burbujas propias (burbuja + texto)
+            ExpandableSection(title = "Burbujas propias") {
+                Text("Color de burbuja", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                ColorPalettePicker(
+                    current = prefs.ownBubbleColor?.let { Color(it) },
+                    colors = rainbowColors,
+                    onSelected = { color ->
                         prefs = prefs.copy(ownBubbleColor = color?.toArgb())
                         ConversationPreferences.save(context, conversationId, prefs)
                     }
                 )
-            }
-
-            ExpandableSection(title = "Color de burbujas del contacto") {
-                AdvancedColorPicker(
-                    currentColor = prefs.otherBubbleColor?.let { Color(it) },
-                    onColorSelected = { color ->
-                        prefs = prefs.copy(otherBubbleColor = color?.toArgb())
-                        ConversationPreferences.save(context, conversationId, prefs)
-                    }
-                )
-            }
-
-            ExpandableSection(title = "Color de texto propio") {
-                AdvancedColorPicker(
-                    currentColor = prefs.ownTextColor?.let { Color(it) },
-                    onColorSelected = { color ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Color de texto", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                ColorPalettePicker(
+                    current = prefs.ownTextColor?.let { Color(it) },
+                    colors = rainbowColors,
+                    onSelected = { color ->
                         prefs = prefs.copy(ownTextColor = color?.toArgb())
                         ConversationPreferences.save(context, conversationId, prefs)
                     }
                 )
             }
 
-            ExpandableSection(title = "Color de texto del contacto") {
-                AdvancedColorPicker(
-                    currentColor = prefs.otherTextColor?.let { Color(it) },
-                    onColorSelected = { color ->
+            // Sección: Burbujas del contacto (burbuja + texto)
+            ExpandableSection(title = "Burbujas del contacto") {
+                Text("Color de burbuja", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                ColorPalettePicker(
+                    current = prefs.otherBubbleColor?.let { Color(it) },
+                    colors = rainbowColors,
+                    onSelected = { color ->
+                        prefs = prefs.copy(otherBubbleColor = color?.toArgb())
+                        ConversationPreferences.save(context, conversationId, prefs)
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Color de texto", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                ColorPalettePicker(
+                    current = prefs.otherTextColor?.let { Color(it) },
+                    colors = rainbowColors,
+                    onSelected = { color ->
                         prefs = prefs.copy(otherTextColor = color?.toArgb())
                         ConversationPreferences.save(context, conversationId, prefs)
                     }
                 )
             }
 
-            ExpandableSection(title = "Estilo de burbuja") {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(BubbleStyle.values().toList()) { style ->
-                        val isSelected = style.name == prefs.bubbleStyle
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isSelected) Color(0xFF4CE6FF).copy(alpha = 0.15f)
-                                    else Color.White.copy(alpha = 0.05f)
-                                )
-                                .clickable {
-                                    prefs = prefs.copy(bubbleStyle = style.name)
-                                    ConversationPreferences.save(context, conversationId, prefs)
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Surface(
-                                color = Color(0xFF1A3B4A),
-                                shape = BubbleShapes.getShape(style, true),
-                                shadowElevation = 2.dp,
-                                modifier = Modifier.size(width = 80.dp, height = 44.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text("Hola", color = Color.White, fontSize = 10.sp)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                style.label,
-                                color = if (isSelected) Color.White else Color.LightGray,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            }
-
+            // Tamaño del texto
             ExpandableSection(title = "Tamaño del texto") {
                 Slider(
                     value = prefs.fontSize,
@@ -160,6 +138,7 @@ fun ChatCustomizationDialog(
                 )
             }
 
+            // Transparencia
             ExpandableSection(title = "Transparencia de burbujas") {
                 Slider(
                     value = prefs.bubbleOpacity,
@@ -181,6 +160,7 @@ fun ChatCustomizationDialog(
                 )
             }
 
+            // Sonido entrante
             ExpandableSection(title = "Sonido de mensaje entrante") {
                 SoundSelector(
                     current = prefs.incomingSound,
@@ -191,6 +171,7 @@ fun ChatCustomizationDialog(
                 )
             }
 
+            // Sonido saliente
             ExpandableSection(title = "Sonido de mensaje saliente") {
                 SoundSelector(
                     current = prefs.outgoingSound,
@@ -201,48 +182,16 @@ fun ChatCustomizationDialog(
                 )
             }
 
+            // Color de fondo
             ExpandableSection(title = "Color de fondo del chat") {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    item {
-                        val isDefault = prefs.chatBackgroundColor == null
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF0A1118))
-                                .border(
-                                    width = if (isDefault) 3.dp else 0.dp,
-                                    color = if (isDefault) Color(0xFF4CE6FF) else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable {
-                                    prefs = prefs.copy(chatBackgroundColor = null)
-                                    ConversationPreferences.save(context, conversationId, prefs)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Def", color = Color.White, fontSize = 12.sp)
-                        }
+                ColorPalettePicker(
+                    current = prefs.chatBackgroundColor?.let { Color(it) },
+                    colors = listOf(Color(0xFF0A1118), Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460), Color(0xFF533483), Color(0xFF111111), Color(0xFF202124)) + rainbowColors,
+                    onSelected = { color ->
+                        prefs = prefs.copy(chatBackgroundColor = color?.toArgb())
+                        ConversationPreferences.save(context, conversationId, prefs)
                     }
-                    items(listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460), Color(0xFF533483), Color(0xFF111111))) { color ->
-                        val isSelected = prefs.chatBackgroundColor == color.toArgb()
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) Color(0xFF4CE6FF) else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable {
-                                    prefs = prefs.copy(chatBackgroundColor = color.toArgb())
-                                    ConversationPreferences.save(context, conversationId, prefs)
-                                }
-                        )
-                    }
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -259,12 +208,59 @@ fun ChatCustomizationDialog(
 }
 
 @Composable
+private fun ColorPalettePicker(
+    current: Color?,
+    colors: List<Color>,
+    onSelected: (Color?) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        colors.chunked(6).forEach { rowColors ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                rowColors.forEach { color ->
+                    val isSelected = current == color
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(
+                                width = if (isSelected) 3.dp else 0.dp,
+                                color = if (isSelected) Color.White else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .clickable { onSelected(color) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Seleccionado",
+                                tint = if (color.luminance() > 0.5f) Color.Black else Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Tema automático",
+            color = Color(0xFF00E5FF),
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.clickable { onSelected(null) }
+        )
+    }
+}
+
+@Composable
 private fun SoundSelector(current: String, onSelected: (String) -> Unit) {
-    val sounds = listOf(
-        "system" to "Sistema",
-        "zumbido" to "Zumbido",
-        "none" to "Silencio"
-    )
+    val sounds = listOf("system" to "Sistema", "zumbido" to "Zumbido", "none" to "Silencio")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         sounds.forEach { (value, label) ->
             val isSelected = current == value
@@ -322,3 +318,5 @@ private fun ExpandableSection(title: String, content: @Composable ColumnScope.()
         }
     }
 }
+
+private fun Color.luminance(): Float = 0.2126f * red + 0.7152f * green + 0.0722f * blue

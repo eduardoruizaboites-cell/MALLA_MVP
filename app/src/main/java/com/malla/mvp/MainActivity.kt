@@ -78,11 +78,13 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
+import androidx.compose.runtime.mutableStateOf
 
 enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private val showPermissionExplanationState = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,9 +116,12 @@ class MainActivity : FragmentActivity() {
                 BleManager.start(this)
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
-                // No redirigir al usuario, solo informar
                 Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()
             }
+            showPermissionExplanationState.value = false
+            try {
+                getSharedPreferences("malla_prefs", Context.MODE_PRIVATE).edit().putBoolean("permission_explanation_shown", true).apply()
+            } catch (_: Exception) {}
         }
 
         // Solicitar todos los permisos necesarios para el funcionamiento completo
@@ -152,6 +157,10 @@ class MainActivity : FragmentActivity() {
         val prefs = try {
             getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
         } catch (e: Exception) { null }
+        val permissionExplanationShown = try {
+            prefs?.getBoolean("permission_explanation_shown", false) ?: false
+        } catch (e: Exception) { false }
+        
         val isFirstLaunch = try {
             prefs?.getBoolean("first_launch", true) ?: true
         } catch (e: Exception) { true }
@@ -172,7 +181,7 @@ class MainActivity : FragmentActivity() {
             var callContact by remember { mutableStateOf("") }
             var callType by remember { mutableStateOf("voice") }
             var showTutorial by remember { mutableStateOf(false) }
-            var showPermissionExplanation by remember { mutableStateOf(true) }
+            var showPermissionExplanation by showPermissionExplanationState
             val flashlight = remember { FlashlightTransport(context) }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
@@ -357,7 +366,6 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
             requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
-        permissionLauncher.launch(requiredPermissions.toTypedArray())
     }
 
     private fun insertSampleStories() {

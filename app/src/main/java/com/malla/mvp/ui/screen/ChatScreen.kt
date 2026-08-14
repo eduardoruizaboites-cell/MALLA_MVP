@@ -125,7 +125,8 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     val vm: MeshChatViewModel = viewModel()
-    val chatPrefs = remember(conversationId) { mutableStateOf(ConversationPreferences.load(context, conversationId)) }
+    val prefsRevision by ConversationPreferences.changes.collectAsState()
+    val chatPrefs = remember(conversationId, prefsRevision) { ConversationPreferences.load(context, conversationId) }
     val messages by vm.messages.collectAsState()
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
@@ -298,13 +299,12 @@ fun ChatScreen(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
-                                bubbleStyleParam = try { BubbleStyle.valueOf(chatPrefs.value.bubbleStyle) } catch (e: Exception) { BubbleStyle.ROUNDED },
-                                ownBubbleColorParam = chatPrefs.value.ownBubbleColor?.let { Color(it) },
-                                otherBubbleColorParam = chatPrefs.value.otherBubbleColor?.let { Color(it) },
-                                fontSizeParam = chatPrefs.value.fontSize,
-                                bubbleOpacityParam = chatPrefs.value.bubbleOpacity,
-                                ownTextColorParam = chatPrefs.value.ownTextColor?.let { Color(it) },
-                                otherTextColorParam = chatPrefs.value.otherTextColor?.let { Color(it) }
+                                ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
+                                otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
+                                fontSizeParam = chatPrefs.fontSize,
+                                bubbleOpacityParam = chatPrefs.bubbleOpacity,
+                                ownTextColorParam = chatPrefs.ownTextColor?.let { Color(it) },
+                                otherTextColorParam = chatPrefs.otherTextColor?.let { Color(it) }
                             )
                     }
                 }
@@ -712,7 +712,6 @@ fun MessageBubbleV2(
     msg: MessageData,
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
-    bubbleStyleParam: BubbleStyle? = null,
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -721,7 +720,7 @@ fun MessageBubbleV2(
     otherTextColorParam: Color? = null
 ) {
     val isOwn = msg.isOwn
-    val bubbleStyle = bubbleStyleParam ?: AccessibilitySettings.bubbleStyle.collectAsState().value
+
     val ownBubbleColor = ownBubbleColorParam ?: AccessibilitySettings.ownBubbleColor.collectAsState().value
     val otherBubbleColor = otherBubbleColorParam ?: AccessibilitySettings.otherBubbleColor.collectAsState().value
     val baseColor = (if (isOwn) ownBubbleColor else otherBubbleColor) ?: if (isOwn) Color(0xFF1A3B4A) else Color(0xFF2A2A2A)
@@ -762,7 +761,7 @@ fun MessageBubbleV2(
                 }
             )
         } else {
-            val shape = BubbleShapes.getShape(bubbleStyle, isOwn)
+            val shape = RoundedCornerShape(16.dp)
             Surface(
                 shape = shape,
                 shadowElevation = 4.dp,
