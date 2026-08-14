@@ -103,6 +103,8 @@ class MainActivity : FragmentActivity() {
         // Iniciar servidor TCP siempre (para comunicación directa)
         NetworkService.startServer()
         LogBuffer.add("MAIN", "NetworkService iniciado")
+        val permissionPrefs = getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
+        showPermissionExplanationState.value = !permissionPrefs.getBoolean("permission_explanation_shown", false)
 
         // Configurar lanzador de permisos
         permissionLauncher = registerForActivityResult(
@@ -120,7 +122,7 @@ class MainActivity : FragmentActivity() {
             }
             showPermissionExplanationState.value = false
             try {
-                getSharedPreferences("malla_prefs", Context.MODE_PRIVATE).edit().putBoolean("permission_explanation_shown", true).apply()
+                getSharedPreferences("malla_prefs", Context.MODE_PRIVATE).edit().putBoolean("permission_explanation_shown", true).commit()
             } catch (_: Exception) {}
         }
 

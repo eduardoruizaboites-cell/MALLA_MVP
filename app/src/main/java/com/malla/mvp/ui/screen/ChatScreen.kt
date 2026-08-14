@@ -485,7 +485,7 @@ fun ChatScreen(
                     ) {
                         val avatarBitmap = IdentityManager.avatarBitmap.collectAsState().value
                         ComposingBubble(
-                            isOwn = true,
+                            isOwn = false,
                             avatarBitmap = avatarBitmap,
                             userName = contactName.take(1).uppercase(),
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
@@ -533,6 +533,13 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showChatSettings) {
+        ChatCustomizationDialog(
+            conversationId = conversationId,
+            onDismiss = { showChatSettings = false }
+        )
     }
 
     if (showChatSettings) {
