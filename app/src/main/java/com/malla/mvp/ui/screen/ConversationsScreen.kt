@@ -456,6 +456,12 @@ fun ConversationsScreen(
                                         )
                                         val db = AppDatabase.getInstance(context)
                                         db?.contactDao()?.insert(contact)
+                                        val conversation = ConversationEntity(
+                                            id = inv.senderUserId,
+                                            title = inv.senderDisplayName,
+                                            timestamp = System.currentTimeMillis()
+                                        )
+                                        db?.conversationDao()?.insertConversation(conversation)
                                         Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
                                         // TODO: Enviar notificación de aceptación al emisor
                                     } catch (e: Exception) {

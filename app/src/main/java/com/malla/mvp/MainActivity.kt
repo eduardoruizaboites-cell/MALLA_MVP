@@ -52,7 +52,6 @@ import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.util.RadioManager
 import com.malla.mvp.service.MeshChatService
-import com.malla.mvp.network.MeshMessageHandler
 import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.BleManager
 import com.malla.mvp.util.NotificationHelper
@@ -139,7 +138,7 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
             requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
-        permissionLauncher.launch(requiredPermissions.toTypedArray())
+        // Permisos se solicitarán después de la explicación
         // Iniciar servicio foreground para mantener la comunicación viva
         val serviceIntent = Intent(this, MeshChatService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -173,6 +172,7 @@ class MainActivity : FragmentActivity() {
             var callContact by remember { mutableStateOf("") }
             var callType by remember { mutableStateOf("voice") }
             var showTutorial by remember { mutableStateOf(false) }
+            var showPermissionExplanation by remember { mutableStateOf(true) }
             val flashlight = remember { FlashlightTransport(context) }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
@@ -225,7 +225,14 @@ class MainActivity : FragmentActivity() {
                             appState = AppState.Main
                         }
                         AppState.Main -> {
-                            if (showRegistration) {
+                            if (showPermissionExplanation) {
+                                PermissionExplanationScreen(
+                                    onContinue = {
+                                        showPermissionExplanation = false
+                                        requestPermissions()
+                                    }
+                                )
+                            } else if (showRegistration) {
                                 RegistrationScreen(onComplete = { showRegistration = false })
                             } else if (showTutorial) {
                                 TutorialOverlay(
@@ -329,6 +336,28 @@ class MainActivity : FragmentActivity() {
         } catch (e: Exception) {
             LogBuffer.add("MAIN", "No se pudo habilitar WiFi: ${e.message}")
         }
+    }
+
+    private fun requestPermissions() {
+        val requiredPermissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_CONTACTS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        permissionLauncher.launch(requiredPermissions.toTypedArray())
     }
 
     private fun insertSampleStories() {
@@ -585,5 +614,78 @@ fun PremiumNavItem(icon: ImageVector, label: String, selected: Boolean, onClick:
             color = if (selected) Color(0xFF4CE6FF) else Color.White.copy(alpha = 0.4f),
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PermissionExplanationScreen(onContinue: () -> Unit) {
+    val context = LocalContext.current
+    val permissionList = listOf(
+        "Ubicación y Bluetooth" to "Para descubrir dispositivos cercanos y crear la red mesh.",
+        "Cámara y micrófono" to "Para llamadas de voz/video y escanear códigos QR.",
+        "Contactos y notificaciones" to "Para mostrar notificaciones y facilitar la comunicación.",
+        "Almacenamiento" to "Para enviar y recibir imágenes y archivos."
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Bienvenido a MALLA") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Permisos necesarios",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "MALLA necesita los siguientes permisos para funcionar correctamente. " +
+                "Tus datos están cifrados y nunca se comparten con terceros.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            permissionList.forEach { (title, desc) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(title, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Continuar")
+            }
+        }
     }
 }

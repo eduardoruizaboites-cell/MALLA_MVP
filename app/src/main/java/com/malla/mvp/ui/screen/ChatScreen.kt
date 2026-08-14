@@ -102,6 +102,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.malla.mvp.camera.contract.CameraContract
 import android.app.Activity
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -272,37 +275,64 @@ fun ChatScreen(
                 }
 
                 // Barra inferior: cambia entre vista previa y composición normal
-                if (pendingMediaUris.isNotEmpty()) {
-                    // Barra de vista previa (WhatsApp-like)
+                                AnimatedVisibility(
+                    visible = pendingMediaUris.isNotEmpty(),
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150))
+                ) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shadowElevation = 8.dp,
-                        color = Color(0xFF1A1A1A)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { shadowElevation = 12.dp.toPx() }
+                            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
+                        color = Color(0xFF141E28),
+                        tonalElevation = 8.dp
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            // Fila de miniaturas con X para eliminar y botón + al final
-                            LazyRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Vista previa",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    "${pendingMediaUris.size} adjunto(s)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF4CE6FF)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 items(pendingMediaUris) { uri ->
+                                    val scale = remember { Animatable(0.9f) }
+                                    LaunchedEffect(uri) { scale.animateTo(1f, tween(200)) }
                                     Box(
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .graphicsLayer {
+                                                scaleX = scale.value
+                                                scaleY = scale.value
+                                            }
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(Color.Black.copy(alpha = 0.4f))
                                     ) {
                                         AsyncImage(
                                             model = uri,
                                             contentDescription = "Miniatura",
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(8.dp)),
+                                            modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
                                         )
-                                        // Botón X para eliminar
                                         Box(
                                             modifier = Modifier
                                                 .align(Alignment.TopEnd)
-                                                .size(16.dp)
-                                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                                .padding(4.dp)
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.6f))
                                                 .clickable { pendingMediaUris.remove(uri) },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -315,60 +345,97 @@ fun ChatScreen(
                                         }
                                     }
                                 }
-                                // Botón + para agregar más imágenes
                                 item {
                                     IconButton(
                                         onClick = { showGalleryPanel = true },
                                         modifier = Modifier
-                                            .size(48.dp)
-                                            .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp))
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(
+                                                        Color(0xFF4CE6FF).copy(alpha = 0.2f),
+                                                        Color(0xFF6C63FF).copy(alpha = 0.2f)
+                                                    )
+                                                )
+                                            )
                                     ) {
-                                        Icon(Icons.Filled.Add, "Agregar más", tint = Color(0xFF4CE6FF))
+                                        Icon(
+                                            Icons.Filled.Add,
+                                            "Agregar más",
+                                            tint = Color(0xFF4CE6FF),
+                                            modifier = Modifier.size(28.dp)
+                                        )
                                     }
                                 }
                             }
-                            // Fila con caption, emoji y enviar
+                            Spacer(modifier = Modifier.height(12.dp))
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                verticalAlignment = Alignment.Bottom
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                OutlinedTextField(
-                                    value = captionText,
-                                    onValueChange = { captionText = it },
+                                Surface(
                                     modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Añade un pie de foto...", color = Color.Gray) },
-                                    maxLines = 2,
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
-                                    leadingIcon = {
-                                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }) {
-                                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF))
+                                    shape = RoundedCornerShape(50),
+                                    color = Color.White.copy(alpha = 0.08f),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF), modifier = Modifier.size(20.dp))
                                         }
-                                    },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color(0xFF4CE6FF),
-                                        unfocusedBorderColor = Color.Gray
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(onClick = {
-                                    coroutineScope.launch {
-                                        // Enviar primera imagen con caption, las demás sin texto
-                                        pendingMediaUris.forEachIndexed { index, uri ->
-                                            val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
-                                            vm.sendMessage(if (textToSend == "Imagen") "" else textToSend, mediaUri = uri.toString())
-                                        }
-                                        pendingMediaUris.clear()
-                                        captionText = ""
+                                        BasicTextField(
+                                            value = captionText,
+                                            onValueChange = { captionText = it },
+                                            modifier = Modifier.weight(1f),
+                                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                            maxLines = 2,
+                                            cursorBrush = SolidColor(Color(0xFF4CE6FF)),
+                                            decorationBox = { innerTextField ->
+                                                Box {
+                                                    if (captionText.isEmpty()) {
+                                                        Text("Añade un pie de foto...", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                                                    }
+                                                    innerTextField()
+                                                }
+                                            }
+                                        )
                                     }
-                                }) {
-                                    Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = Color(0xFF4CE6FF))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF00E5FF))
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                pendingMediaUris.forEachIndexed { index, uri ->
+                                                    val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
+                                                    vm.sendMessage(if (textToSend == "Imagen") "" else textToSend, mediaUri = uri.toString())
+                                                }
+                                                pendingMediaUris.clear()
+                                                captionText = ""
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        "Enviar",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
                             }
                         }
                     }
-                } else {
+                }
+
+                if (pendingMediaUris.isEmpty()) {
                     AnimatedVisibility(
                         visible = typingText.isNotEmpty(),
                         enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
@@ -395,6 +462,7 @@ fun ChatScreen(
                         onTextChanged = { newText -> typingText = newText }
                     )
                 }
+
                 // Panel de emojis
                 if (showEmojiPicker) {
                     Card(
@@ -661,7 +729,7 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
-                        if (msg.content.isNotBlank() && msg.content != "Imagen" && msg.mediaUri == null) {
+                        if (msg.content.isNotBlank() && msg.content != "Imagen") {
                             Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
                         }
                         Text(

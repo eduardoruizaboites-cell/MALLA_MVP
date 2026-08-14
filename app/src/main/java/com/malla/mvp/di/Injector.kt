@@ -17,9 +17,9 @@ import com.malla.mvp.data.entity.MessageEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.*
 import com.malla.mvp.network.DhtService
+import com.malla.mvp.network.CascadeRouter
 import com.malla.mvp.network.SeedManager
 import com.malla.mvp.network.MessageReceiver
-import com.malla.mvp.network.UnifiedMessageRouter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -158,7 +158,7 @@ object Injector {
         // Puente de mensajes
         messageBridge = MessageBridge(context, networkService, messageRepo, conversationRepo, logger, notificationHelper)
         messageBridge.onSendMessage = { contactId, text ->
-            UnifiedMessageRouter.sendMessage(contactId, text)
+            CascadeRouter.sendMessage(contactId, text)
         }
         messageBridge.start()
         MessageReceiver.start(context)
