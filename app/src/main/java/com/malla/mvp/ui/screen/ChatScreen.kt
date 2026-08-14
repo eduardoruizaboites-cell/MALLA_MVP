@@ -110,6 +110,7 @@ import com.malla.mvp.ui.settings.BubbleStyle
 import com.malla.mvp.ui.settings.ConversationPreferences
 import com.malla.mvp.ui.settings.ConversationPrefs
 import androidx.compose.ui.graphics.toArgb
+import com.malla.mvp.ui.components.ChatCustomizationDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,6 +146,8 @@ fun ChatScreen(
     val shakeOffset = remember { Animatable(0f) }
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
+    var showChatMenu by remember { mutableStateOf(false) }
+    var showChatSettings by remember { mutableStateOf(false) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -236,20 +239,42 @@ fun ChatScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onProfileClicked) {
-                            Surface(
-                                modifier = Modifier.size(64.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = contactName.take(1).uppercase(),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 28.sp
-                                    )
+                        Box {
+                            IconButton(onClick = { showChatMenu = true }) {
+                                Surface(
+                                    modifier = Modifier.size(64.dp),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = contactName.take(1).uppercase(),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 28.sp
+                                        )
+                                    }
                                 }
+                            }
+                            DropdownMenu(
+                                expanded = showChatMenu,
+                                onDismissRequest = { showChatMenu = false },
+                                modifier = Modifier.background(Color(0xFF15202B), RoundedCornerShape(8.dp))
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Ver perfil", color = Color.White) },
+                                    onClick = {
+                                        showChatMenu = false
+                                        onProfileClicked()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Personalizar chat", color = Color.White) },
+                                    onClick = {
+                                        showChatMenu = false
+                                        showChatSettings = true
+                                    }
+                                )
                             }
                         }
                     },
@@ -510,6 +535,13 @@ fun ChatScreen(
         }
     }
 
+    if (showChatSettings) {
+        ChatCustomizationDialog(
+            conversationId = conversationId,
+            onDismiss = { showChatSettings = false }
+        )
+    }
+
     if (showZumbidoOverlay) {
         ZumbidoOverlay(onDismiss = { showZumbidoOverlay = false }, colorScheme = colorScheme)
     }
@@ -707,8 +739,8 @@ fun MessageBubbleV2(
             scale.snapTo(0.5f)
             slideY.snapTo(80f)
             slideY.animateTo(0f, tween(300))
-            scale.animateTo(1.2f, spring(dampingRatio = 0.5f, stiffness = 1200f))
-            scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 1000f))
+            scale.animateTo(1.15f, spring(dampingRatio = 0.25f, stiffness = 800f))
+            scale.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 900f))
         } else {
             scale.snapTo(1f)
             slideY.snapTo(0f)
