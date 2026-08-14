@@ -107,6 +107,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Path
 import com.malla.mvp.ui.settings.BubbleStyle
+import com.malla.mvp.ui.settings.ConversationPreferences
+import com.malla.mvp.ui.settings.ConversationPrefs
+import androidx.compose.ui.graphics.toArgb
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,6 +124,7 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     val vm: MeshChatViewModel = viewModel()
+    val chatPrefs = remember(conversationId) { mutableStateOf(ConversationPreferences.load(context, conversationId)) }
     val messages by vm.messages.collectAsState()
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
@@ -265,7 +269,18 @@ fun ChatScreen(
                     state = listState
                 ) {
                     items(messages) { msg ->
-                        MessageBubbleV2(msg = msg, animate = vm.isMessageNew(msg.timestamp), onImageClick = { uri -> fullScreenImageUri = uri })
+                        MessageBubbleV2(
+                                msg = msg,
+                                animate = vm.isMessageNew(msg.timestamp),
+                                onImageClick = { uri -> fullScreenImageUri = uri },
+                                bubbleStyleParam = try { BubbleStyle.valueOf(chatPrefs.value.bubbleStyle) } catch (e: Exception) { BubbleStyle.ROUNDED },
+                                ownBubbleColorParam = chatPrefs.value.ownBubbleColor?.let { Color(it) },
+                                otherBubbleColorParam = chatPrefs.value.otherBubbleColor?.let { Color(it) },
+                                fontSizeParam = chatPrefs.value.fontSize,
+                                bubbleOpacityParam = chatPrefs.value.bubbleOpacity,
+                                ownTextColorParam = chatPrefs.value.ownTextColor?.let { Color(it) },
+                                otherTextColorParam = chatPrefs.value.otherTextColor?.let { Color(it) }
+                            )
                     }
                 }
 
@@ -661,29 +676,44 @@ fun ChatScreen(
 }
 
 @Composable
-fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (Uri) -> Unit = {}) {
+fun MessageBubbleV2(
+    msg: MessageData,
+    animate: Boolean = false,
+    onImageClick: (Uri) -> Unit = {},
+    bubbleStyleParam: BubbleStyle? = null,
+    ownBubbleColorParam: Color? = null,
+    otherBubbleColorParam: Color? = null,
+    fontSizeParam: Float? = null,
+    bubbleOpacityParam: Float? = null,
+    ownTextColorParam: Color? = null,
+    otherTextColorParam: Color? = null
+) {
     val isOwn = msg.isOwn
-    val bubbleStyle by AccessibilitySettings.bubbleStyle.collectAsState()
-    val ownBubbleColor by AccessibilitySettings.ownBubbleColor.collectAsState()
-    val otherBubbleColor by AccessibilitySettings.otherBubbleColor.collectAsState()
-    val baseColor = (if (isOwn) ownBubbleColor else otherBubbleColor)
-        ?: if (isOwn) Color(0xFF1A3B4A) else Color(0xFF2A2A2A)
-    val ownTextColor by ChatSettings.ownTextColor.collectAsState()
-    val otherTextColor by ChatSettings.otherTextColor.collectAsState()
-    val textColor = (if (isOwn) ownTextColor else otherTextColor)
-        ?: contrastingTextColor(baseColor)
-    val bubbleOpacity by ChatSettings.bubbleOpacity.collectAsState()
-    val fontSize by ChatSettings.fontSize.collectAsState()
-    val emojiCount = msg.content.codePointCount(0, msg.content.length)
-    val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && emojiCount <= 4
+    val bubbleStyle = bubbleStyleParam ?: AccessibilitySettings.bubbleStyle.collectAsState().value
+    val ownBubbleColor = ownBubbleColorParam ?: AccessibilitySettings.ownBubbleColor.collectAsState().value
+    val otherBubbleColor = otherBubbleColorParam ?: AccessibilitySettings.otherBubbleColor.collectAsState().value
+    val baseColor = (if (isOwn) ownBubbleColor else otherBubbleColor) ?: if (isOwn) Color(0xFF1A3B4A) else Color(0xFF2A2A2A)
+    val ownTextColor = ownTextColorParam ?: ChatSettings.ownTextColor.collectAsState().value
+    val otherTextColor = otherTextColorParam ?: ChatSettings.otherTextColor.collectAsState().value
+    val textColor = (if (isOwn) ownTextColor else otherTextColor) ?: contrastingTextColor(baseColor)
+    val bubbleOpacity = bubbleOpacityParam ?: ChatSettings.bubbleOpacity.collectAsState().value
+    val fontSize = fontSizeParam ?: ChatSettings.fontSize.collectAsState().value
+    val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && msg.content.codePointCount(0, msg.content.length) <= 4
 
-    val scaleAnim = if (animate) {
-        val anim = remember { Animatable(0.85f) }
-        LaunchedEffect(msg.id) {
-            anim.animateTo(1f, animationSpec = spring(dampingRatio = 0.45f, stiffness = 1500f))
+    val scale = remember { Animatable(1f) }
+    val slideY = remember { Animatable(0f) }
+    LaunchedEffect(msg.id, animate) {
+        if (animate) {
+            scale.snapTo(0.5f)
+            slideY.snapTo(80f)
+            slideY.animateTo(0f, tween(300))
+            scale.animateTo(1.2f, spring(dampingRatio = 0.5f, stiffness = 1200f))
+            scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 1000f))
+        } else {
+            scale.snapTo(1f)
+            slideY.snapTo(0f)
         }
-        anim.value
-    } else 1f
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
@@ -693,46 +723,37 @@ fun MessageBubbleV2(msg: MessageData, animate: Boolean = false, onImageClick: (U
             Text(
                 text = msg.content,
                 fontSize = 28.sp,
-                modifier = Modifier.padding(4.dp)
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    translationY = slideY.value
+                }
             )
         } else {
-            if (bubbleStyle == BubbleStyle.AIM_COMIC) {
-                ComicBubble(
-                    isOwn = isOwn,
-                    baseColor = baseColor,
-                    textColor = textColor,
-                    bubbleOpacity = bubbleOpacity,
-                    scaleAnim = scaleAnim,
-                    msg = msg,
-                    onImageClick = onImageClick,
-                    fontSize = fontSize
-                )
-            } else {
-                val shape = BubbleShapes.getShape(bubbleStyle, isOwn)
-                val horizontalPadding = if (bubbleStyle == BubbleStyle.WHATSAPP) 12.dp else 10.dp
-                val verticalPadding = if (bubbleStyle == BubbleStyle.WHATSAPP) 6.dp else 4.dp
-                Surface(
-                    shape = shape,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier
-                        .widthIn(min = 100.dp, max = 270.dp)
-                        .graphicsLayer {
-                            scaleX = scaleAnim; scaleY = scaleAnim
-                            transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
-                        }
-                        .alpha(bubbleOpacity),
-                    color = Color.Transparent
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
-                                shape = shape
-                            )
-                            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
-                    ) {
-                        BubbleContent(msg, textColor, fontSize, onImageClick)
+            val shape = BubbleShapes.getShape(bubbleStyle, isOwn)
+            Surface(
+                shape = shape,
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .widthIn(min = 100.dp, max = 280.dp)
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                        translationY = slideY.value
+                        transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
                     }
+                    .alpha(bubbleOpacity),
+                color = Color.Transparent
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
+                            shape = shape
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    BubbleContent(msg, textColor, fontSize, onImageClick)
                 }
             }
         }
@@ -746,7 +767,7 @@ private fun BubbleContent(
     fontSize: Float,
     onImageClick: (Uri) -> Unit
 ) {
-    Column(modifier = Modifier) {
+    Column {
         val media = msg.mediaUri
         if (media != null) {
             val uri = Uri.parse(media)
@@ -757,7 +778,7 @@ private fun BubbleContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 200.dp)
+                        .heightIn(max = 220.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { onImageClick(uri) }
                 ) {
@@ -779,55 +800,6 @@ private fun BubbleContent(
             color = textColor.copy(alpha = 0.5f),
             fontSize = 10.sp
         )
-    }
-}
-
-@Composable
-private fun ComicBubble(
-    isOwn: Boolean,
-    baseColor: Color,
-    textColor: Color,
-    bubbleOpacity: Float,
-    scaleAnim: Float,
-    msg: MessageData,
-    onImageClick: (Uri) -> Unit,
-    fontSize: Float
-) {
-    Box(
-        modifier = Modifier
-            .widthIn(max = 290.dp)
-            .graphicsLayer {
-                scaleX = scaleAnim
-                scaleY = scaleAnim
-                transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
-            }
-            .alpha(bubbleOpacity)
-    ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            val points = 16
-            val outerRadius = size.minDimension / 2
-            val innerRadius = outerRadius * 0.78f
-            val center = Offset(size.width / 2, size.height / 2)
-            val path = Path().apply {
-                for (i in 0 until points) {
-                    val angle = 2.0 * Math.PI * i / points - Math.PI / 2
-                    val radius = if (i % 2 == 0) outerRadius else innerRadius
-                    val x = center.x + (Math.cos(angle) * radius).toFloat()
-                    val y = center.y + (Math.sin(angle) * radius).toFloat()
-                    if (i == 0) moveTo(x, y) else lineTo(x, y)
-                }
-                close()
-            }
-            drawPath(path, baseColor.copy(alpha = 0.9f))
-        }
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = baseColor.lighten(0.15f),
-            shadowElevation = 4.dp,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            BubbleContent(msg, textColor, fontSize, onImageClick)
-        }
     }
 }
 

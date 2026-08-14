@@ -263,20 +263,10 @@ fun BubbleStyleSelectorWithPreview(currentStyle: BubbleStyle, onStyleSelected: (
 }
 
 fun styleDescription(style: BubbleStyle): String = when (style) {
-    BubbleStyle.CLASSIC -> "Texto plano, sin burbuja"
-    BubbleStyle.MSN_CARD -> "Tarjeta cuadrada con bordes"
-    BubbleStyle.AIM_COMIC -> "Globo de cómic con cola"
-    BubbleStyle.SKYPE_FULL -> "Bloque ancho, sin curvas"
-    BubbleStyle.WHATSAPP -> "Burbuja con cola asimétrica"
-    BubbleStyle.INSTAGRAM -> "Píldora redondeada sin cola"
-    BubbleStyle.GLASS -> "Efecto vidrio translúcido"
-    BubbleStyle.CUSTOM -> "Estilo personalizado"
-    BubbleStyle.MATERIAL_YOU -> "Asimétrico 3 esquinas curvas"
-    BubbleStyle.GRADIENT -> "Fondo con gradiente dinámico"
-    BubbleStyle.RETRO -> "Degradado metálico 3D (MSN style)"
-    BubbleStyle.CHAT_HEAD -> "Burbuja flotante circular"
-    BubbleStyle.EPHEMERAL -> "Plano y efímero (Snapchat)"
-    BubbleStyle.PIXEL -> "Pixelado / Terminal retro"
+    BubbleStyle.ROUNDED -> "Bordes redondeados clásicos"
+    BubbleStyle.SQUARE -> "Esquinas rectas minimalistas"
+    BubbleStyle.ROUND -> "Píldora circular"
+    BubbleStyle.TAILED -> "Cuadrado con cola de diálogo"
 }
 
 

@@ -1,7 +1,9 @@
 package com.malla.mvp.ui.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.*
 
 @Composable
@@ -33,7 +36,6 @@ fun AdvancedColorPicker(
     var saturation by remember { mutableStateOf(0.7f) }
     var brightness by remember { mutableStateOf(0.8f) }
 
-    // Inicializar HSV desde el color actual
     LaunchedEffect(currentColor) {
         if (currentColor != null) {
             val hsv = FloatArray(3)
@@ -41,39 +43,48 @@ fun AdvancedColorPicker(
             hue = hsv[0] / 360f
             saturation = hsv[1]
             brightness = hsv[2]
+            selectedColor = currentColor
         }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Botón circular con color actual
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(selectedColor)
-                .clickable { showPicker = !showPicker }
-        )
+                .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                .clickable { showPicker = !showPicker },
+            contentAlignment = Alignment.Center
+        ) {
+            if (selectedColor == null) {
+                Text("Auto", color = Color.White, fontSize = 12.sp)
+            }
+        }
 
-        if (showPicker) {
-            Spacer(modifier = Modifier.height(8.dp))
+        AnimatedVisibility(
+            visible = showPicker,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
             Card(
-                modifier = Modifier.width(280.dp),
-                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.width(300.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Mapa de tono/saturación (200x200 dp aprox)
-                    val mapSize = 200.dp
+                    val mapSize = 180.dp
                     val density = LocalDensity.current
                     val mapSizePx = with(density) { mapSize.toPx() }
 
                     Box(
                         modifier = Modifier
                             .size(mapSize)
+                            .clip(RoundedCornerShape(12.dp))
                             .pointerInput(Unit) {
                                 detectTapGestures { offset ->
                                     val x = offset.x / mapSizePx
@@ -94,51 +105,24 @@ fun AdvancedColorPicker(
                             }
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            // Gradiente de blanco a color puro (horizontal)
                             val colorPure = Color.hsv(hue * 360f, 1f, 1f)
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    listOf(Color.White, colorPure)
-                                ),
-                                size = size
-                            )
-                            // Gradiente de transparente a negro (vertical)
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color.Black)
-                                ),
-                                size = size
-                            )
-                            // Indicador de selección
+                            drawRect(brush = Brush.horizontalGradient(listOf(Color.White, colorPure)), size = size)
+                            drawRect(brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black)), size = size)
                             val selX = saturation * size.width
                             val selY = (1f - brightness) * size.height
-                            drawCircle(
-                                color = Color.White,
-                                radius = 8f,
-                                center = Offset(selX, selY),
-                                style = Stroke(2f)
-                            )
-                            drawCircle(
-                                color = Color.Black.copy(alpha = 0.5f),
-                                radius = 6f,
-                                center = Offset(selX, selY)
-                            )
+                            drawCircle(color = Color.White, radius = 8f, center = Offset(selX, selY), style = Stroke(2f))
+                            drawCircle(color = Color.Black.copy(alpha = 0.5f), radius = 6f, center = Offset(selX, selY))
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Barra de tono (hue)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(28.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    (0..360 step 30).map { Color.hsv(it.toFloat(), 1f, 1f) }
-                                )
-                            )
+                            .background(Brush.horizontalGradient((0..360 step 30).map { Color.hsv(it.toFloat(), 1f, 1f) }))
                             .pointerInput(Unit) {
                                 detectTapGestures { offset ->
                                     hue = (offset.x / size.width).coerceIn(0f, 1f)
@@ -152,21 +136,45 @@ fun AdvancedColorPicker(
                                 }
                             }
                     ) {
-                        // Indicador de tono
                         Canvas(modifier = Modifier.fillMaxSize().padding(vertical = 2.dp)) {
                             val indX = hue * size.width
-                            drawCircle(
-                                color = Color.White,
-                                radius = 10f,
-                                center = Offset(indX, size.height / 2),
-                                style = Stroke(2f)
+                            drawCircle(color = Color.White, radius = 10f, center = Offset(indX, size.height / 2), style = Stroke(2f))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            Color(0xFF1A3B4A), Color(0xFF4CAF50), Color(0xFFFF7043),
+                            Color(0xFF9575CD), Color(0xFF78909C), Color(0xFF00E5FF),
+                            Color(0xFFE74C3C), Color(0xFFFFEB3B)
+                        ).forEach { color ->
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(
+                                        width = if (color == selectedColor) 2.dp else 0.dp,
+                                        color = if (color == selectedColor) Color.White else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        selectedColor = color
+                                        onColorSelected(color)
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
+                                        hue = hsv[0] / 360f
+                                        saturation = hsv[1]
+                                        brightness = hsv[2]
+                                    }
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón de tema automático
                     TextButton(
                         onClick = {
                             onColorSelected(null)
@@ -175,7 +183,7 @@ fun AdvancedColorPicker(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Tema automático", color = Color(0xFF00E5FF))
+                        Text("Usar color automático", color = Color(0xFF00E5FF))
                     }
                 }
             }
