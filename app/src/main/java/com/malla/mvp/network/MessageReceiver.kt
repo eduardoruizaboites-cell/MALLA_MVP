@@ -76,7 +76,22 @@ object MessageReceiver {
             }
             bloomFilter.add(messageId)
 
+            if (meshMsg.type == "edit" && meshMsg.quotedMessageId != null) {
+                val originalId = meshMsg.quotedMessageId!!
+                db?.messageDao()?.updateContent(originalId, meshMsg.content)
+                MallaEventBus.messageReceived.emit(meshMsg)
+                return
+            }
+
+            if (meshMsg.type == "delete_for_all" && meshMsg.quotedMessageId != null) {
+                val originalId = meshMsg.quotedMessageId!!
+                db?.messageDao()?.markAsDeleted(originalId)
+                MallaEventBus.messageReceived.emit(meshMsg)
+                return
+            }
+
             val conversationId = meshMsg.senderId
+
             val conversationDao = db.conversationDao()
             val messageDao = db.messageDao()
 

@@ -263,6 +263,40 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun editMessage(messageId: String, newContent: String) {
+        viewModelScope.launch {
+            db?.messageDao()?.updateContent(messageId, newContent)
+            val convId = _conversationId.value ?: return@launch
+            if (convId != "self_chat") {
+                NetworkService.sendMessageToContact(convId, MeshMessage(
+                    content = newContent,
+                    senderId = IdentityManager.getIdentityId(),
+                    type = "edit",
+                    quotedMessageId = messageId,
+                    quotedMessageContent = null
+                ))
+            }
+            refreshMessages(convId)
+        }
+    }
+
+    fun deleteForAll(messageId: String) {
+        viewModelScope.launch {
+            db?.messageDao()?.markAsDeleted(messageId)
+            val convId = _conversationId.value ?: return@launch
+            if (convId != "self_chat") {
+                NetworkService.sendMessageToContact(convId, MeshMessage(
+                    content = "",
+                    senderId = IdentityManager.getIdentityId(),
+                    type = "delete_for_all",
+                    quotedMessageId = messageId,
+                    quotedMessageContent = null
+                ))
+            }
+            refreshMessages(convId)
+        }
+    }
+
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             db?.messageDao()?.deleteMessage(messageId)

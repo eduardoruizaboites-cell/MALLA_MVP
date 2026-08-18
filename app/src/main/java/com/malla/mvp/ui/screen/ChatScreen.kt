@@ -168,6 +168,9 @@ fun ChatScreen(
 
     var typingText by remember { mutableStateOf("") }
     var replyingTo by remember { mutableStateOf<MessageData?>(null) }
+    var editingMessage by remember { mutableStateOf<MessageData?>(null) }
+    var editText by remember { mutableStateOf("") }
+    var deleteTarget by remember { mutableStateOf<MessageData?>(null) }
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -304,6 +307,8 @@ fun ChatScreen(
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
                                 onReplyClick = { selected -> replyingTo = selected },
+                                onEditClick = { selected -> editingMessage = selected; editText = selected.content },
+                                onDeleteClick = { selected -> deleteTarget = selected },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -726,6 +731,67 @@ fun ChatScreen(
             }
         }
     }
+    // ── Editar mensaje premium ───────────────────────────────
+    if (editingMessage != null) {
+        AlertDialog(
+            onDismissRequest = { editingMessage = null },
+            title = { Text("Editar mensaje", color = Color.White) },
+            text = {
+                Column {
+                    Text("Modifica el contenido del mensaje.", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = editText,
+                        onValueChange = { editText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Mensaje") },
+                        minLines = 2,
+                        maxLines = 5,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4CE6FF),
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = Color(0xFF4CE6FF),
+                            cursorColor = Color(0xFF4CE6FF)
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    editingMessage?.let { msg ->
+                        if (editText.isNotBlank()) {
+                            vm.editMessage(msg.id, editText)
+                        }
+                    }
+                    editingMessage = null
+                }) { Text("Guardar", color = Color(0xFF4CE6FF)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingMessage = null }) { Text("Cancelar", color = Color.Gray) }
+            },
+            containerColor = Color(0xFF15202B)
+        )
+    }
+
+    // ── Eliminar para todos premium ─────────────────────────
+    if (deleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Eliminar mensaje", color = Color.White) },
+            text = { Text("¿Seguro que deseas eliminar este mensaje para todos?", color = Color.Gray) },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget?.let { msg -> vm.deleteForAll(msg.id) }
+                    deleteTarget = null
+                }) { Text("Eliminar", color = Color(0xFFFF5252)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("Cancelar", color = Color.Gray) }
+            },
+            containerColor = Color(0xFF15202B)
+        )
+    }
+
 
 }
 
@@ -736,6 +802,8 @@ fun MessageBubbleV2(
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
     onReplyClick: (MessageData) -> Unit = {},
+    onEditClick: (MessageData) -> Unit = {},
+    onDeleteClick: (MessageData) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -754,6 +822,7 @@ fun MessageBubbleV2(
     val bubbleOpacity = bubbleOpacityParam ?: ChatSettings.bubbleOpacity.collectAsState().value
     val fontSize = fontSizeParam ?: ChatSettings.fontSize.collectAsState().value
     val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && msg.content.codePointCount(0, msg.content.length) <= 4
+    var showContextMenu by remember { mutableStateOf(false) }
 
     val scale = remember { Animatable(1f) }
     val slideY = remember { Animatable(0f) }
@@ -772,7 +841,7 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .combinedClickable(onClick = {}, onLongClick = { onReplyClick(msg) }),
+            .combinedClickable(onClick = {}, onLongClick = { showContextMenu = true }),
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (onlyEmojis) {
@@ -814,6 +883,28 @@ fun MessageBubbleV2(
             }
         }
     }
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false },
+            modifier = Modifier.background(Color(0xFF15202B), RoundedCornerShape(8.dp))
+        ) {
+            DropdownMenuItem(
+                text = { Text("Responder", color = Color.White) },
+                onClick = { showContextMenu = false; onReplyClick(msg) }
+            )
+            if (msg.isOwn) {
+                DropdownMenuItem(
+                    text = { Text("Editar", color = Color.White) },
+                    onClick = { showContextMenu = false; onEditClick(msg) }
+                )
+                DropdownMenuItem(
+                    text = { Text("Eliminar para todos", color = Color(0xFFFF5252)) },
+                    onClick = { showContextMenu = false; onDeleteClick(msg) }
+                )
+            }
+        }
+
 }
 
 @Composable
@@ -882,11 +973,21 @@ private fun BubbleContent(
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
-        if (msg.content.isNotBlank() && msg.content != "Imagen") {
+        if (msg.isDeleted) {
+            Text(
+                text = "Mensaje eliminado",
+                color = textColor.copy(alpha = 0.5f),
+                fontSize = fontSize.sp,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+            )
+        } else if (msg.content.isNotBlank() && msg.content != "Imagen") {
             Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
         }
         Text(
-            text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+            text = buildString {
+                append(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)))
+                if (msg.isEdited && !msg.isDeleted) append(" · editado")
+            },
             color = textColor.copy(alpha = 0.5f),
             fontSize = 10.sp
         )
