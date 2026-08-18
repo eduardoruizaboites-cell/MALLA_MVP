@@ -337,3 +337,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; mejorar transiciones del botón agregar; usar animaciones de carrusel más fluidas.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no implementada en vídeo/audio; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 12:18 (carrusel premium en vista previa con HorizontalPager) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el carrusel LazyRow de `MediaPreviewPanel` por `HorizontalPager` con transiciones de escala y alpha entre páginas. Se añadió página final de "Agregar más" con tarjeta de borde cian e icono +. Se aplicó `@OptIn(ExperimentalFoundationApi::class)` a `MediaPreviewPanel` para resolver error de API experimental.
+¿ERA UN FIX DE ERROR?: sí; se corrigió error de compilación por API experimental de HorizontalPager.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; el error fue identificado directamente por el compilador.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar carrusel en dispositivo; transiciones con parallax; probar vista única entre dos dispositivos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo pendiente; vista única no implementada en vídeo/audio; warnings.
+──────────────────────────────

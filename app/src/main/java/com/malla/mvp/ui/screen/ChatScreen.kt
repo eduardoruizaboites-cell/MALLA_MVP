@@ -24,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1430,6 +1432,7 @@ fun PollMessageBubble(
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaPreviewPanel(
     uris: List<Uri>,
@@ -1463,16 +1466,29 @@ private fun MediaPreviewPanel(
                     Text("${uris.size} adjunto(s)", color = Color(0xFF4CE6FF), fontSize = 14.sp)
                 }
 
-                LazyRow(
+                val pagerState = rememberPagerState(pageCount = { uris.size + 1 })
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(uris) { uri ->
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    pageSpacing = 12.dp
+                ) { page ->
+                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                    val normalizedOffset = if (pageOffset < 0f) -pageOffset else pageOffset
+                    val scale = 1f - (1f - 0.92f) * normalizedOffset.coerceIn(0f, 1f)
+                    val alpha = 1f - 0.25f * normalizedOffset.coerceIn(0f, 1f)
+
+                    if (page < uris.size) {
+                        val uri = uris[page]
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(0.9f)
+                                .fillMaxWidth()
                                 .aspectRatio(9f / 16f)
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    this.alpha = alpha
+                                }
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color.Black.copy(alpha = 0.3f))
                         ) {
@@ -1520,17 +1536,36 @@ private fun MediaPreviewPanel(
                                 Icon(Icons.Filled.Close, "Eliminar", tint = Color.White, modifier = Modifier.size(14.dp))
                             }
                         }
-                    }
-                    item {
+                    } else {
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .border(2.dp, Color(0xFF4CE6FF).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                .fillMaxWidth()
+                                .aspectRatio(9f / 16f)
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    this.alpha = alpha
+                                }
+                                .clip(RoundedCornerShape(24.dp))
+                                .border(2.dp, Color(0xFF4CE6FF).copy(alpha = 0.5f), RoundedCornerShape(24.dp))
                                 .clickable { onAddMore() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Add, "Agregar más", tint = Color(0xFF4CE6FF), modifier = Modifier.size(32.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = "Agregar más",
+                                    tint = Color(0xFF4CE6FF),
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Agregar más",
+                                    color = Color(0xFF4CE6FF),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                         }
                     }
                 }
