@@ -45,6 +45,8 @@ import com.malla.mvp.data.entity.ContactEntity
 import com.malla.mvp.util.BiometricAuthHelper
 import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.InvitationManager
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.malla.mvp.viewmodel.ConversationsViewModel
 
 @Composable
 fun ConversationsScreen(
@@ -56,8 +58,8 @@ fun ConversationsScreen(
     val db = remember { AppDatabase.getInstance(context) }
     val conversationDao = remember { db?.conversationDao() }
     val storyDao = remember { db?.storyDao() }
-    var conversations by remember { mutableStateOf<List<ConversationEntity>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    val vm: ConversationsViewModel = viewModel()
+    val conversations by vm.conversations.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(0) }
     var showStoryViewer by remember { mutableStateOf(false) }
@@ -80,13 +82,6 @@ fun ConversationsScreen(
         InvitationManager.acceptanceReceived.collect { (name, seed) ->
             acceptanceMessage = "${name} aceptó tu solicitud"
         }
-    }
-
-    LaunchedEffect(conversationDao) {
-        conversationDao?.getAllVisibleConversations()?.collect { list ->
-            conversations = list
-            isLoading = false
-        } ?: run { conversations = emptyList() }
     }
 
     var stories by remember { mutableStateOf<List<StoryEntity>>(emptyList()) }
@@ -114,11 +109,13 @@ fun ConversationsScreen(
         }
     }
 
-    if (isLoading) {
+    if (conversations.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(Color(0xFF0A1B2A), Color(0xFF0A1118)))
         ), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Sin conversaciones", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            }
         }
     } else {
     Box(modifier = Modifier.fillMaxSize().background(
