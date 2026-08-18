@@ -85,6 +85,8 @@ import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.ui.components.ChatInputBar
 import com.malla.mvp.viewmodel.MeshChatViewModel
+import com.malla.mvp.data.entity.PollEntity
+import com.malla.mvp.data.entity.PollOptionEntity
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.Canvas
@@ -133,6 +135,9 @@ fun ChatScreen(
     val prefsRevision by ConversationPreferences.changes.collectAsState()
     val chatPrefs = remember(conversationId, prefsRevision) { ConversationPreferences.load(context, conversationId) }
     val messages by vm.messages.collectAsState()
+    val polls by vm.polls.collectAsState()
+    val optionsMap by vm.optionsMap.collectAsState()
+
     var text by remember { mutableStateOf("") }
     var showAttachmentSheet by remember { mutableStateOf(false) }
     var showGalleryPanel by remember { mutableStateOf(false) }
@@ -174,6 +179,10 @@ fun ChatScreen(
     var editText by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<MessageData?>(null) }
     var selectedMessage by remember { mutableStateOf<MessageData?>(null) }
+    var showCreatePollDialog by remember { mutableStateOf(false) }
+    var pollQuestion by remember { mutableStateOf("") }
+    val pollOptions = remember { mutableStateListOf("", "") }
+
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -338,7 +347,16 @@ fun ChatScreen(
                     state = listState
                 ) {
                     items(messages) { msg ->
-                        MessageBubbleV2(
+                        if (msg.pollId != null) {
+                            PollMessageBubble(
+                                poll = polls.find { it.id == msg.pollId },
+                                options = optionsMap[msg.pollId] ?: emptyList(),
+                                onVote = { optionId -> vm.votePoll(optionId, msg.pollId!!) },
+                                isOwn = msg.isOwn,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        } else {
+                            MessageBubbleV2(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
@@ -350,6 +368,7 @@ fun ChatScreen(
                                 ownTextColorParam = chatPrefs.ownTextColor?.let { Color(it) },
                                 otherTextColorParam = chatPrefs.otherTextColor?.let { Color(it) }
                             )
+                        }
                     }
                 }
 
@@ -623,6 +642,11 @@ fun ChatScreen(
                         AttachmentOptionPremium(icon = Icons.Default.Photo, label = "Galería", color = Color(0xFF4CE6FF), onClick = { showAttachmentPanel = false; showGalleryPanel = true })
                         Spacer(modifier = Modifier.height(16.dp))
                         AttachmentOptionPremium(icon = Icons.Default.InsertDriveFile, label = "Documento", color = Color(0xFF6C63FF), onClick = { /* TODO */ })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AttachmentOptionPremium(icon = Icons.Default.Poll, label = "Encuesta", color = Color(0xFF6C63FF), onClick = {
+                            showAttachmentPanel = false
+                            showCreatePollDialog = true
+                        })
                     }
                     Column(modifier = Modifier.weight(1f)) {
 
@@ -711,6 +735,65 @@ fun ChatScreen(
             initialSelected = pendingMediaUris.toList()
         )
     }
+    // ── Diálogo premium de creación de encuesta ─────────────
+    if (showCreatePollDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreatePollDialog = false },
+            title = { Text("Nueva encuesta", color = Color.White) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = pollQuestion,
+                        onValueChange = { pollQuestion = it },
+                        label = { Text("Pregunta") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4CE6FF),
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = Color(0xFF4CE6FF),
+                            cursorColor = Color(0xFF4CE6FF)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    pollOptions.forEachIndexed { index, option ->
+                        OutlinedTextField(
+                            value = option,
+                            onValueChange = { pollOptions[index] = it },
+                            label = { Text("Opción ${index + 1}") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF4CE6FF),
+                                unfocusedBorderColor = Color.Gray,
+                                focusedLabelColor = Color(0xFF4CE6FF),
+                                cursorColor = Color(0xFF4CE6FF)
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    TextButton(onClick = { pollOptions.add("") }) {
+                        Text("Añadir opción", color = Color(0xFF4CE6FF))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val options = pollOptions.filter { it.isNotBlank() }
+                    if (pollQuestion.isNotBlank() && options.size >= 2) {
+                        vm.createPoll(pollQuestion, options)
+                        showCreatePollDialog = false
+                        pollQuestion = ""
+                        pollOptions.clear()
+                        pollOptions.addAll(listOf("", ""))
+                    }
+                }) { Text("Crear", color = Color(0xFF4CE6FF)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreatePollDialog = false }) { Text("Cancelar", color = Color.Gray) }
+            },
+            containerColor = Color(0xFF15202B)
+        )
+    }
+
     // Diálogo de imagen a pantalla completa con zoom
     if (fullScreenImageUri != null) {
         Dialog(
@@ -1102,4 +1185,64 @@ fun AttachmentOptionPremium(icon: ImageVector, label: String, color: Color, onCl
         }
     }
     LaunchedEffect(Unit) { scale.animateTo(1f, spring()) }
+}
+@Composable
+fun PollMessageBubble(
+    poll: PollEntity?,
+    options: List<PollOptionEntity>,
+    onVote: (String) -> Unit,
+    isOwn: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (poll == null) return
+    val totalVotes = options.sumOf { it.voteCount }
+    val shape = RoundedCornerShape(16.dp)
+    Surface(
+        modifier = modifier.widthIn(min = 200.dp, max = 300.dp),
+        shape = shape,
+        color = if (isOwn) Color(0xFF1A3B4A) else Color(0xFF2A2A2A),
+        shadowElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = poll.question,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            options.forEach { option ->
+                val percentage = if (totalVotes > 0) (option.voteCount * 100f / totalVotes) else 0f
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onVote(option.id) }
+                        .padding(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(option.text, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(
+                            text = "${option.voteCount} votos · ${percentage.toInt()}%",
+                            color = Color(0xFF4CE6FF),
+                            fontSize = 12.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { percentage / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = Color(0xFF4CE6FF),
+                        trackColor = Color.White.copy(alpha = 0.1f)
+                    )
+                }
+            }
+        }
+    }
 }

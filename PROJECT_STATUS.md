@@ -222,3 +222,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, org.json, flujo de red.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar UI premium de encuestas; probar en dispositivo; continuar con otras funciones.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 11:40 (fase 3: UI premium de encuestas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó la interfaz premium de encuestas en ChatScreen. Se agregó recolección de polls y optionsMap desde el ViewModel, diálogo de creación de encuesta con opciones dinámicas, botón Encuesta en el panel de adjuntos premium y componente PollMessageBubble con votación, porcentajes y barras de progreso. Se bifurcó la lista de mensajes para mostrar encuestas con su propio composable.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de UI premium para encuestas.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, LinearProgressIndicator, AlertDialog.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; reintroducir exportar conversación; mensajes efímeros; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
+──────────────────────────────
