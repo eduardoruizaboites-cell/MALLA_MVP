@@ -1196,52 +1196,115 @@ fun PollMessageBubble(
 ) {
     if (poll == null) return
     val totalVotes = options.sumOf { it.voteCount }
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(20.dp)
+    val accent = Color(0xFF4CE6FF)
+
+    val scale = remember { Animatable(0.95f) }
+    LaunchedEffect(poll.id) { scale.animateTo(1f, tween(200, easing = FastOutSlowInEasing)) }
+
     Surface(
-        modifier = modifier.widthIn(min = 200.dp, max = 300.dp),
+        modifier = modifier
+            .widthIn(min = 240.dp, max = 320.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            },
         shape = shape,
-        color = if (isOwn) Color(0xFF1A3B4A) else Color(0xFF2A2A2A),
-        shadowElevation = 4.dp
+        color = Color.Transparent,
+        shadowElevation = 8.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            if (isOwn) Color(0xFF1F4D5A) else Color(0xFF252B36),
+                            if (isOwn) Color(0xFF163A44) else Color(0xFF1A1E26)
+                        )
+                    ),
+                    shape = shape
+                )
+                .border(1.dp, accent.copy(alpha = 0.25f), shape)
+                .padding(16.dp)
+        ) {
             Text(
                 text = poll.question,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                fontSize = 18.sp,
+                letterSpacing = 0.2.sp
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
             options.forEach { option ->
                 val percentage = if (totalVotes > 0) (option.voteCount * 100f / totalVotes) else 0f
-                Column(
+                val animatedFraction by animateFloatAsState(
+                    targetValue = percentage / 100f,
+                    animationSpec = tween(500, easing = FastOutSlowInEasing),
+                    label = "poll_fraction_${option.id}"
+                )
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .clickable { onVote(option.id) }
-                        .padding(8.dp)
+                        .background(Color.White.copy(alpha = 0.06f))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(option.text, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        Text(
-                            text = "${option.voteCount} votos · ${percentage.toInt()}%",
-                            color = Color(0xFF4CE6FF),
-                            fontSize = 12.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { percentage / 100f },
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = Color(0xFF4CE6FF),
-                        trackColor = Color.White.copy(alpha = 0.1f)
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(accent.copy(alpha = 0.15f))
+                            .border(1.dp, accent, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (option.voteCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(accent)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = option.text,
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(animatedFraction)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(accent)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${percentage.toInt()}%",
+                        color = accent,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
