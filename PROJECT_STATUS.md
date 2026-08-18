@@ -277,3 +277,13 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Room Flow, votación reac
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con exportar conversación; mensajes efímeros; selección múltiple; personalización avanzada; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 09:00 (exportación conversación premium Fase 1+2) ──
+Compilación: BUILD SUCCESSFUL (dos compilaciones exitosas: Fase 1 lógica, Fase 2 UI)
+QUÉ SE HIZO: Se implementó exportación de conversación premium. Fase 1: método suspendido `buildExportText` en MeshChatViewModel que genera texto formateado con mensajes, fechas, remitente, encuestas/votos y citas, descifrando si procede. Fase 2: opción "Exportar conversación" en menú de avatar de ChatScreen, diálogo premium con acciones Compartir y Guardar en Descargas, y helper `saveExportText` compatible Android 10+ y versiones anteriores.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): integrar exportación con adjuntos; mostrar progreso al exportar; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de exportación; warning `more than one label with such a name` en MeshChatViewModel línea 99; warnings de deprecación existentes.
+──────────────────────────────

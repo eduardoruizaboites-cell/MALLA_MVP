@@ -11,6 +11,10 @@ import androidx.core.content.ContextCompat
 import android.location.LocationManager
 import android.location.Location
 import android.content.Intent
+import android.provider.MediaStore
+import android.os.Environment
+import android.widget.Toast
+import android.content.ContentValues
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.animation.core.Animatable
@@ -94,8 +98,10 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.awaitFirstDown
 import com.malla.mvp.ui.components.AudioBubblePlayer
 import com.malla.mvp.media.VoiceRecorder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 import com.malla.mvp.R
@@ -159,6 +165,7 @@ fun ChatScreen(
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -294,6 +301,13 @@ fun ChatScreen(
                                         onClick = {
                                             showChatMenu = false
                                             showChatSettings = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Exportar conversación", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            showExportDialog = true
                                         }
                                     )
                                 }
@@ -615,10 +629,39 @@ fun ChatScreen(
         )
     }
 
-    if (showChatSettings) {
-        ChatCustomizationDialog(
-            conversationId = conversationId,
-            onDismiss = { showChatSettings = false }
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("Exportar conversación", color = Color.White) },
+            text = { Text("Genera un archivo de texto con el historial completo de este chat. ¿Qué deseas hacer?", color = Color.Gray) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExportDialog = false
+                    coroutineScope.launch {
+                        val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
+                        val saved = saveExportText(context, contactName, text)
+                        Toast.makeText(context, if (saved) "Conversación guardada en Descargas" else "No se pudo guardar la conversación", Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("Guardar en Descargas", color = Color(0xFF4CE6FF)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        showExportDialog = false
+                        coroutineScope.launch {
+                            val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "Conversación con $contactName")
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Compartir conversación"))
+                        }
+                    }) { Text("Compartir", color = Color(0xFF6C63FF)) }
+                    TextButton(onClick = { showExportDialog = false }) { Text("Cancelar", color = Color.Gray) }
+                }
+            },
+            containerColor = Color(0xFF15202B)
         )
     }
 
@@ -1318,5 +1361,37 @@ fun PollMessageBubble(
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
+}
+
+
+suspend fun saveExportText(context: Context, contactName: String, content: String): Boolean = withContext(Dispatchers.IO) {
+    val fileName = "MALLA_chat_${contactName}_${System.currentTimeMillis()}.txt"
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: return@withContext false
+            resolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                ?: return@withContext false
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            true
+        } else {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
+            val file = java.io.File(downloadsDir, fileName)
+            java.io.FileOutputStream(file).use { it.write(content.toByteArray()) }
+            true
+        }
+    } catch (e: Exception) {
+        false
     }
 }

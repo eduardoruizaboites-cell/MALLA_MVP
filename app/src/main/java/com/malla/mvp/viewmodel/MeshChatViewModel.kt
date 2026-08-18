@@ -19,6 +19,9 @@ import com.malla.mvp.network.MeshMessage
 import com.malla.mvp.network.NetworkService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.crypto.SecretKey
 
@@ -351,4 +354,54 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             refreshMessages(convId)
         }
     }
+    suspend fun buildExportText(convId: String, contactName: String): String {
+        val database = db ?: return "No se pudo acceder a la base de datos."
+        val msgs = database.messageDao().getMessagesForConversationOnce(convId)
+        if (msgs.isEmpty()) return "No hay mensajes para exportar."
+
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val sb = StringBuilder()
+        sb.appendLine("Conversación: $contactName")
+        sb.appendLine("Exportado: ${dateFormat.format(Date())}")
+        sb.appendLine("Número de mensajes: ${msgs.size}")
+        sb.appendLine("──────────────────────────────")
+
+        msgs.forEach { msg ->
+            val time = dateFormat.format(Date(msg.timestamp))
+            val sender = if (msg.isOwn) "Tú" else contactName
+
+            val displayContent = if (msg.encrypted && sessionKey != null) {
+                try {
+                    SessionCipher.decrypt(msg.content, sessionKey!!)
+                } catch (e: Exception) {
+                    msg.content
+                }
+            } else {
+                msg.content
+            }
+
+            val finalContent = if (msg.isDeleted) "Mensaje eliminado" else displayContent
+            sb.appendLine("[$time] $sender: $finalContent")
+
+            if (msg.pollId != null) {
+                val poll = database.pollDao().getPollById(msg.pollId!!)
+                if (poll != null) {
+                    sb.appendLine("  📊 Encuesta: ${poll.question}")
+                    val options = database.pollDao().getOptionsForPollOnce(poll.id)
+                    val totalVotes = options.fold(0) { acc, opt -> acc + opt.voteCount }
+                    options.forEach { opt ->
+                        val percent = if (totalVotes > 0) (opt.voteCount * 100) / totalVotes else 0
+                        sb.appendLine("    - ${opt.text}: ${opt.voteCount} votos ($percent%)")
+                    }
+                }
+            }
+
+            if (!msg.quotedMessageContent.isNullOrBlank()) {
+                sb.appendLine("    ↳ Cita: ${msg.quotedMessageContent}")
+            }
+        }
+
+        return sb.toString()
+    }
+
 }
