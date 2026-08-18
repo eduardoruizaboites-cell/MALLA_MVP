@@ -90,3 +90,14 @@ Reintroducir estas funciones **una por una**, compilando y probando en dispositi
 
 **Estado:** Pendiente de reintroducción incremental.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 06:00 (creación ConversationsViewModel) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se creó ConversationsViewModel para exponer un StateFlow de conversaciones con distinctUntilChanged y catch. Aún no integrado en la pantalla.
+¿ERA UN FIX DE ERROR?: no era fix; fue preparación para estabilizar la pantalla principal antes de reintroducir mejoras.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ViewModel, StateFlow.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): integrar ViewModel en ConversationsScreen; reintroducir premium incremental; aplicar principios premium visual.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: pantalla principal aún usa LaunchedEffect manual; ANR resuelto solo por reversión; premium pendiente.
+──────────────────────────────
