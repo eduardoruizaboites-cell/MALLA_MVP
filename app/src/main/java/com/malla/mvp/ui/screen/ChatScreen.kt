@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wifi
@@ -164,6 +165,7 @@ fun ChatScreen(
     var showEphemeralDialog by remember { mutableStateOf(false) }
     var ephemeralDuration by remember { mutableStateOf<Long?>(null) }
     var viewOnceEnabled by remember { mutableStateOf(false) }
+    val revealedOnceIds = remember { mutableStateListOf<String>() }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -359,6 +361,17 @@ fun ChatScreen(
                                 isOwn = msg.isOwn,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                                 vm = vm
+                            )
+                        } else if (msg.viewOnce && !msg.isOwn && !msg.isDeleted && msg.id !in revealedOnceIds) {
+                            ViewOnceMessageBubble(
+                                msg = msg,
+                                onReveal = {
+                                    revealedOnceIds.add(msg.id)
+                                    coroutineScope.launch {
+                                        delay(5000)
+                                        vm.deleteMessage(msg.id)
+                                    }
+                                }
                             )
                         } else {
                             MessageBubbleV2(
@@ -941,6 +954,55 @@ fun ChatScreen(
 }
 
 @Composable
+fun ViewOnceMessageBubble(
+    msg: MessageData,
+    onReveal: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF1E2A38)
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onReveal)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Filled.Lock,
+                contentDescription = "Vista única",
+                tint = Color(0xFF4CE6FF),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Contenido de un solo vistazo",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+                Text(
+                    "Toca para revelar",
+                    color = Color(0xFF8B949E),
+                    fontSize = 12.sp
+                )
+            }
+            Icon(
+                Icons.Filled.Visibility,
+                contentDescription = null,
+                tint = Color(0xFF8B949E),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun MessageBubbleV2(
     msg: MessageData,
@@ -1105,6 +1167,22 @@ private fun BubbleContent(
             )
         } else if (msg.content.isNotBlank() && msg.content != "Imagen") {
             Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+        }
+        if (msg.expireAt != null && !msg.isDeleted) {
+            val remainingMs = msg.expireAt!! - System.currentTimeMillis()
+            if (remainingMs > 0) {
+                val remainingLabel = when {
+                    remainingMs < 60_000L -> "menos de 1 min"
+                    remainingMs < 3_600_000L -> "${remainingMs / 60_000L} min"
+                    remainingMs < 86_400_000L -> "${remainingMs / 3_600_000L} h"
+                    else -> "${remainingMs / 86_400_000L} d"
+                }
+                Text(
+                    text = "⏳ $remainingLabel",
+                    color = textColor.copy(alpha = 0.5f),
+                    fontSize = 10.sp
+                )
+            }
         }
         Text(
             text = buildString {

@@ -297,3 +297,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): mostrar indicador visual de mensaje efímero en burbuja; probar vista única en imágenes/vídeo; programar limpieza en background.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de la UI; no se ha implementado la visualización de caducidad/vista única en las burbujas; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 09:57 (mensajes efímeros / vista única - Fase 3: indicadores y vista única) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió `ViewOnceMessageBubble` para mensajes entrantes de un solo vistazo: muestra un contenedor premium con ícono de candado y botón para revelar; al revelar, se elimina el mensaje automáticamente tras 5 segundos usando `vm.deleteMessage`. Se añadió indicador de tiempo restante (`⏳`) en mensajes efímeros. Se importó el icono Lock.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de UI/comportamiento premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; limpiar warnings; extender vista única a imágenes/vídeo/audio.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de indicadores y eliminación automática; warnings existentes.
+──────────────────────────────
