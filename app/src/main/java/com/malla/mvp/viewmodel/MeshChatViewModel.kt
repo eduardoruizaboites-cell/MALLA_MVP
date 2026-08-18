@@ -271,6 +271,19 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     db?.pollDao()?.insertOption(PollOptionEntity(id = UUID.randomUUID().toString(), pollId = pollId, text = text))
                 }
             }
+
+            // Insertar mensaje local para que la encuesta aparezca en el historial
+            val localMsg = MessageEntity(
+                id = UUID.randomUUID().toString(),
+                conversationId = convId,
+                content = "📊 $question",
+                timestamp = System.currentTimeMillis(),
+                isOwn = true,
+                status = 0,
+                pollId = pollId
+            )
+            db?.messageDao()?.insertMessage(localMsg)
+            refreshMessages(convId)
             loadPolls(convId)
 
             if (convId != "self_chat") {

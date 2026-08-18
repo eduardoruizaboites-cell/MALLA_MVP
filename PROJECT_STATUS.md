@@ -233,3 +233,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, LinearProgressIndicator, 
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; reintroducir exportar conversación; mensajes efímeros; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 12:00 (fix: encuesta no aparecía en historial) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió createPoll en MeshChatViewModel para insertar un MessageEntity local con pollId al crear una encuesta. Esto permite que la burbuja de encuesta aparezca en el historial y se renderice con PollMessageBubble.
+¿ERA UN FIX DE ERROR?: ERROR: al crear encuesta no se mostraba en el chat → SOLUCIÓN APLICADA: insertar mensaje local con pollId y refrescar mensajes → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa identificada por inspección.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, flujo de mensajes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo; reintroducir exportar conversación; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
+──────────────────────────────
