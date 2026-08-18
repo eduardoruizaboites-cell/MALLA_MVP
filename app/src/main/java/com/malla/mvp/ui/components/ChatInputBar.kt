@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,9 +38,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.media.VoiceRecorder
 import com.malla.mvp.ui.theme.LocalColorScheme
 import com.malla.mvp.emoji.ui.EmojiPicker
@@ -56,6 +59,8 @@ fun ChatInputBar(
     onCameraClick: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
     onTextChanged: (String) -> Unit = {},
+    replyTo: MessageData? = null,
+    onCancelReply: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -71,6 +76,62 @@ fun ChatInputBar(
     LaunchedEffect(showEmojiPicker) {
         if (!showEmojiPicker) {
             focusRequester.requestFocus()
+        }
+    }
+
+    if (replyTo != null) {
+        AnimatedVisibility(
+            visible = true,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(tween(220, easing = FastOutSlowInEasing)),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(tween(180))
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Línea de acento
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(36.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                                )
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Respondiendo a",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = replyTo.content.take(80),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    IconButton(onClick = onCancelReply) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Cancelar respuesta",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
         }
     }
 

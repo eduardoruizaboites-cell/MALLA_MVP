@@ -123,3 +123,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar UI de cita; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin UI de cita; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 07:10 (función premium: responder con cita) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó la función premium de responder mensajes con cita. Se agregaron campos quotedMessageId/quotedMessageContent en MessageData y MessageMapper. En ChatScreen se añadió estado replyingTo, gesto de long-press en mensajes, y al enviar se incluyen los campos de cita. En ChatInputBar se creó una barra de cita animada con AnimatedVisibility, línea de acento degradado, texto truncado y botón de cerrar.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; se manejó error de compilación por combinedClickable experimental con @OptIn.
+VERIFICADO EN: solo compilación (falta dispositivo).
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, AnimatedVisibility, combinación de gestos.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo; reintroducir editar/eliminar; exportar; encuestas; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings de deprecación; premium restante.
+──────────────────────────────

@@ -16,6 +16,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -164,6 +166,7 @@ fun ChatScreen(
     }
 
     var typingText by remember { mutableStateOf("") }
+    var replyingTo by remember { mutableStateOf<MessageData?>(null) }
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -299,6 +302,7 @@ fun ChatScreen(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
+                                onReplyClick = { selected -> replyingTo = selected },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -493,7 +497,17 @@ fun ChatScreen(
                     }
                     ChatInputBar(
                         voiceRecorder = voiceRecorder,
-                        onSendText = { msg -> vm.sendMessage(msg); typingText = "" },
+                        replyTo = replyingTo,
+                        onCancelReply = { replyingTo = null },
+                        onSendText = { msg ->
+                            vm.sendMessage(
+                                msg,
+                                quotedMessageId = replyingTo?.id,
+                                quotedMessageContent = replyingTo?.content
+                            )
+                            replyingTo = null
+                            typingText = ""
+                        },
                         onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
                         onSendZumbido = { vm.sendZumbido() },
                         onCameraClick = {
@@ -715,10 +729,12 @@ fun ChatScreen(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun MessageBubbleV2(
     msg: MessageData,
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
+    onReplyClick: (MessageData) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -754,7 +770,8 @@ fun MessageBubbleV2(
     }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+            .combinedClickable(onClick = {}, onLongClick = { onReplyClick(msg) }),
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (onlyEmojis) {
