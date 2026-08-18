@@ -94,6 +94,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             messageJob = launch {
                 try {
                     val database = db ?: return@launch
+                    database.messageDao().deleteExpiredMessages(convId, System.currentTimeMillis())
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
                     _messages.value = msgs.filter { it.conversationId == convId }.map { msg ->
                         if (msg.encrypted && sessionKey != null) {
@@ -149,7 +150,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 timestamp = System.currentTimeMillis(),
                 isOwn = false,
                 quotedMessageId = msg.quotedMessageId,
-                quotedMessageContent = msg.quotedMessageContent
+                quotedMessageContent = msg.quotedMessageContent,
+                expireAt = msg.expireAt,
+                viewOnce = msg.viewOnce
             )
             db?.messageDao()?.insertMessage(msgEntity)
             refreshMessages(convId)
@@ -172,7 +175,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 timestamp = System.currentTimeMillis(),
                 isOwn = false,
                 quotedMessageId = msg.quotedMessageId,
-                quotedMessageContent = msg.quotedMessageContent
+                quotedMessageContent = msg.quotedMessageContent,
+                expireAt = msg.expireAt,
+                viewOnce = msg.viewOnce
             )
             db?.messageDao()?.insertMessage(msgEntity)
         }
@@ -240,7 +245,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     senderId = IdentityManager.getIdentityId(),
                     timestamp = System.currentTimeMillis(),
                     quotedMessageId = quotedMessageId,
-                    quotedMessageContent = quotedMessageContent
+                    quotedMessageContent = quotedMessageContent,
+                    expireAt = expireAt,
+                    viewOnce = viewOnce
                 ))
             }
             _inputText.value = ""

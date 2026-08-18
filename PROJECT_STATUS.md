@@ -277,3 +277,13 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Room Flow, votación reac
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con exportar conversación; mensajes efímeros; selección múltiple; personalización avanzada; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 09:50 (mensajes efímeros / vista única - Fase 1: datos y red) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se extendió `MeshMessage` con `expireAt` y `viewOnce`. Se agregó `deleteExpiredMessages` en `MessageDao`. En `MeshChatViewModel`, `refreshMessages` limpia mensajes vencidos antes de cargar; `sendMessage` transmite `expireAt`/`viewOnce`; `handleIncomingMessage` los persiste. `MessageReceiver` guarda esos campos en mensajes entrantes.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación base de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): integrar UI de selección de expiración y vista única; programar limpieza en background; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: UI no implementada; warnings nuevos en MessageReceiver y ViewModel; sin prueba real.
+──────────────────────────────

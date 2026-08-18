@@ -290,5 +290,7 @@ data class MeshMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val type: String = "chat",
     val quotedMessageId: String? = null,
-    val quotedMessageContent: String? = null
+    val quotedMessageContent: String? = null,
+    val expireAt: Long? = null,
+    val viewOnce: Boolean = false
 )

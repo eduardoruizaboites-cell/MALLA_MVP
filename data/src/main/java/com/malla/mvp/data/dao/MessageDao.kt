@@ -41,4 +41,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE timestamp < :threshold")
     suspend fun deleteMessagesOlderThan(threshold: Long)
+
+    @Query("DELETE FROM messages WHERE expireAt IS NOT NULL AND expireAt < :now AND conversationId = :convId")
+    suspend fun deleteExpiredMessages(convId: String, now: Long)
 }

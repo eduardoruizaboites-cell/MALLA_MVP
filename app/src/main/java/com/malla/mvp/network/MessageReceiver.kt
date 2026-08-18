@@ -167,7 +167,9 @@ object MessageReceiver {
                 isOwn = false,
                 status = 1,
                 quotedMessageId = meshMsg.quotedMessageId,
-                quotedMessageContent = meshMsg.quotedMessageContent
+                quotedMessageContent = meshMsg.quotedMessageContent,
+                expireAt = meshMsg.expireAt,
+                viewOnce = meshMsg.viewOnce
             )
             messageDao.insertMessage(msgEntity)
 
