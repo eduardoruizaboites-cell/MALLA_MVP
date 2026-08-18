@@ -7,6 +7,7 @@ import android.widget.Toast
 import com.malla.mvp.core.crypto.ICryptoEngine
 import com.malla.mvp.crypto.CryptoEngineAdapter
 import com.malla.mvp.core.util.IAppContext
+import com.malla.mvp.core.utils.ANRWatchDog
 import com.malla.mvp.di.Injector
 import java.io.File
 
@@ -31,6 +32,9 @@ class App : Application(), IAppContext {
         // 👇 LÍNEA FALTANTE
         Injector.init(this)
         com.malla.mvp.ui.settings.ChatSettings.load(this)
+
+        // Watchdog anti-ANR: detecta bloqueos del hilo principal y genera reporte en Descargas
+        ANRWatchDog(this).start()
 
         val mainHandler = Handler(Looper.getMainLooper())
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
