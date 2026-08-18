@@ -287,3 +287,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): integrar exportación con adjuntos; mostrar progreso al exportar; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de exportación; warning `more than one label with such a name` en MeshChatViewModel línea 99; warnings de deprecación existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 09:30 (rediseño diálogo exportación premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó AlertDialog básico de exportación por diálogo premium personalizado con animación de entrada (spring+fade), tarjeta redondeada 28dp, icono con gradiente cian-morado, título/contacto/contador, y botones premium Guardar/Compartir. Se agregaron imports de iconos Share y Download.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora visual/UX premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; reemplazar icono InsertDriveFile deprecated por AutoMirrored en futura limpieza.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real del nuevo diálogo; warnings de deprecación.
+──────────────────────────────

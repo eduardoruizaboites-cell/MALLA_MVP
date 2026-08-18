@@ -47,6 +47,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
@@ -630,38 +632,30 @@ fun ChatScreen(
     }
 
     if (showExportDialog) {
-        AlertDialog(
-            onDismissRequest = { showExportDialog = false },
-            title = { Text("Exportar conversación", color = Color.White) },
-            text = { Text("Genera un archivo de texto con el historial completo de este chat. ¿Qué deseas hacer?", color = Color.Gray) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExportDialog = false
-                    coroutineScope.launch {
-                        val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
-                        val saved = saveExportText(context, contactName, text)
-                        Toast.makeText(context, if (saved) "Conversación guardada en Descargas" else "No se pudo guardar la conversación", Toast.LENGTH_SHORT).show()
-                    }
-                }) { Text("Guardar en Descargas", color = Color(0xFF4CE6FF)) }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        showExportDialog = false
-                        coroutineScope.launch {
-                            val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "Conversación con $contactName")
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Compartir conversación"))
-                        }
-                    }) { Text("Compartir", color = Color(0xFF6C63FF)) }
-                    TextButton(onClick = { showExportDialog = false }) { Text("Cancelar", color = Color.Gray) }
+        ExportConversationDialog(
+            contactName = contactName,
+            messageCount = messages.size,
+            onDismiss = { showExportDialog = false },
+            onSave = {
+                showExportDialog = false
+                coroutineScope.launch {
+                    val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
+                    val saved = saveExportText(context, contactName, text)
+                    Toast.makeText(context, if (saved) "Conversación guardada en Descargas" else "No se pudo guardar la conversación", Toast.LENGTH_SHORT).show()
                 }
             },
-            containerColor = Color(0xFF15202B)
+            onShare = {
+                showExportDialog = false
+                coroutineScope.launch {
+                    val text = withContext(Dispatchers.IO) { vm.buildExportText(conversationId, contactName) }
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, "Conversación con $contactName")
+                        putExtra(Intent.EXTRA_TEXT, text)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Compartir conversación"))
+                }
+            }
         )
     }
 
@@ -1170,6 +1164,146 @@ fun getBestLocation(context: Context): Location? {
     return best
 }
 
+
+@Composable
+private fun ExportConversationDialog(
+    contactName: String,
+    messageCount: Int,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit
+) {
+    val scale = remember { Animatable(0.9f) }
+    val alpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 350f))
+        alpha.animateTo(1f, tween(220))
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 300.dp, max = 360.dp)
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                        this.alpha = alpha.value
+                    }
+                    .clip(RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xFF0A1B2A),
+                shadowElevation = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clickable(onClick = {})
+                        .padding(24.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF4CE6FF), Color(0xFF6C63FF))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.InsertDriveFile,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Exportar conversación",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "$messageCount mensajes · $contactName",
+                        color = Color(0xFF8B949E),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color.White.copy(alpha = 0.08f))
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    PremiumExportActionButton(
+                        icon = Icons.Filled.Download,
+                        label = "Guardar en Descargas",
+                        containerColor = Color(0xFF4CE6FF),
+                        contentColor = Color(0xFF00141A),
+                        onClick = onSave
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PremiumExportActionButton(
+                        icon = Icons.Filled.Share,
+                        label = "Compartir",
+                        containerColor = Color.White.copy(alpha = 0.08f),
+                        contentColor = Color.White,
+                        onClick = onShare
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Cancelar", color = Color(0xFF8B949E))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PremiumExportActionButton(
+    icon: ImageVector,
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = containerColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(label, color = contentColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        }
+    }
+}
 
 fun formatSeconds(seconds: Int): String {
     val min = seconds / 60
