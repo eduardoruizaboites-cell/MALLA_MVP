@@ -189,3 +189,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Surface, TopAppBar condic
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; reintroducir encuestas; exportar conversación; personalización avanzada; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings de deprecación; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 10:00 (verificación en dispositivo de edición/eliminación premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se verificó en dispositivo físico que la barra contextual premium funciona correctamente. Al mantener presionado un mensaje propio aparecen Responder, Editar y Eliminar; en mensajes ajenos solo Responder. Los diálogos de edición/eliminación funcionan. No se presentaron bloqueos ni errores.
+¿ERA UN FIX DE ERROR?: no era fix; fue confirmación de implementación premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: dispositivo real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, TopAppBar condicional.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con encuestas; exportar conversación; personalización avanzada; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; MallaApplication.kt borrada pendiente de commit; premium restante.
+──────────────────────────────
