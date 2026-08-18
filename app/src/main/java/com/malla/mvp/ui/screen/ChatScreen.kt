@@ -369,17 +369,38 @@ fun ChatScreen(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                                 vm = vm
                             )
-                        } else if (msg.viewOnce && !msg.isOwn && !msg.isDeleted && msg.id !in revealedOnceIds) {
-                            ViewOnceMessageBubble(
-                                msg = msg,
-                                onReveal = {
-                                    revealedOnceIds.add(msg.id)
-                                    coroutineScope.launch {
-                                        delay(5000)
-                                        vm.deleteMessage(msg.id)
+                        } else if (msg.viewOnce && !msg.isOwn && !msg.isDeleted) {
+                            if (msg.id !in revealedOnceIds) {
+                                ViewOnceMessageBubble(
+                                    msg = msg,
+                                    onReveal = {
+                                        msg.mediaUri?.let { uriString ->
+                                            fullScreenImageUri = Uri.parse(uriString)
+                                        }
+                                        revealedOnceIds.add(msg.id)
+                                        coroutineScope.launch {
+                                            delay(5000)
+                                            vm.deleteMessage(msg.id)
+                                        }
+                                    }
+                                )
+                            } else {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF1E2A38)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Filled.Lock, null, tint = Color(0xFF8B949E), modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Contenido efímero revelado", color = Color(0xFF8B949E), fontSize = 14.sp)
                                     }
                                 }
-                            )
+                            }
                         } else {
                             MessageBubbleV2(
                                 msg = msg,
@@ -491,6 +512,7 @@ fun ChatScreen(
             onCaptionChange = { captionText = it },
             onToggleViewOnce = { uri, checked -> viewOnceMap[uri] = checked },
             onRemove = { uri -> pendingMediaUris.remove(uri) },
+            onAddMore = { showGalleryPanel = true },
             onDismiss = {
                 pendingMediaUris.clear()
                 captionText = ""
@@ -1416,6 +1438,7 @@ private fun MediaPreviewPanel(
     onCaptionChange: (String) -> Unit,
     onToggleViewOnce: (Uri, Boolean) -> Unit,
     onRemove: (Uri) -> Unit,
+    onAddMore: () -> Unit,
     onDismiss: () -> Unit,
     onSend: () -> Unit
 ) {
@@ -1496,6 +1519,18 @@ private fun MediaPreviewPanel(
                             ) {
                                 Icon(Icons.Filled.Close, "Eliminar", tint = Color.White, modifier = Modifier.size(14.dp))
                             }
+                        }
+                    }
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(2.dp, Color(0xFF4CE6FF).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                .clickable { onAddMore() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.Add, "Agregar más", tint = Color(0xFF4CE6FF), modifier = Modifier.size(32.dp))
                         }
                     }
                 }

@@ -327,3 +327,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; añadir edición/marcadores en vista previa; transiciones más fluidas.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no aplica a vídeo/audio; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 11:51 (vista única real + botón agregar más en vista previa) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió el comportamiento de vista única: al tocar `ViewOnceMessageBubble` se abre la imagen en pantalla completa, se marca como revelada y se elimina automáticamente a los 5 segundos. Se añadió estado bloqueado "Contenido efímero revelado". Se agregó botón `Agregar más` al carrusel de vista previa con borde punteado semántico (border cian) y transición visual. `MediaPreviewPanel` recibe `onAddMore` para volver a abrir galería.
+¿ERA UN FIX DE ERROR?: sí; la opción de vista única no bloqueaba ni eliminaba la imagen al abrirse, y no existía el botón para agregar más imágenes desde la vista previa.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; se confirmó por inspección de código.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; mejorar transiciones del botón agregar; usar animaciones de carrusel más fluidas.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no implementada en vídeo/audio; warnings.
+──────────────────────────────
