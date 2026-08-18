@@ -22,5 +22,6 @@ data class MessageEntity(
     val mimeType: String? = null,
     val fileSize: Long? = null,
     val isEdited: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val pollId: String? = null
 )

@@ -200,3 +200,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, TopAppBar condicional.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con encuestas; exportar conversación; personalización avanzada; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; MallaApplication.kt borrada pendiente de commit; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 10:40 (fase datos: campo pollId) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregó pollId a MessageEntity, MessageData y MessageMapper. Se actualizó AppDatabase a versión 15 con migración aditiva 14→15 para la nueva columna pollId en messages.
+¿ERA UN FIX DE ERROR?: no era fix; fue preparación de datos para encuestas premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, migración aditiva.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar lógica de encuestas en ViewModel y receptor; UI premium de creación y votación.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; premium restante.
+──────────────────────────────

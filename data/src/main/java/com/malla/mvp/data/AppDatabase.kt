@@ -34,7 +34,7 @@ import java.io.File
         ContactEntity::class,
         PollVoteEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -58,6 +58,12 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE messages ADD COLUMN isEdited INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE messages ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN pollId TEXT")
             }
         }
 
@@ -92,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
@@ -109,7 +115,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
