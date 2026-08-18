@@ -307,3 +307,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; limpiar warnings; extender vista única a imágenes/vídeo/audio.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de indicadores y eliminación automática; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 10:49 (vista única en vista previa premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó el interruptor de vista única del panel de adjuntos. Se creó `MediaPreviewPanel`, una pantalla completa premium de vista previa que se abre automáticamente al seleccionar imágenes, con transición entre imágenes, interruptor de vista única por imagen, pie de foto y botón de envío. Se reemplazó `viewOnceEnabled` por `viewOnceMap` para manejar la vista única por URI. Los mensajes de texto y voz no usan vista única; solo el contenido multimedia visual.
+¿ERA UN FIX DE ERROR?: no era fix; fue rediseño de flujo premium solicitado por el usuario.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir edición/marcadores en vista previa; mejorar transiciones entre imágenes; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no implementada en vídeo/audio; warnings existentes.
+──────────────────────────────

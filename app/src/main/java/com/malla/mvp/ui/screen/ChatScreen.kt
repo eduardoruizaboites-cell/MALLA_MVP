@@ -303,6 +303,13 @@ fun ChatScreen(
                                             showChatSettings = true
                                         }
                                     )
+                                    DropdownMenuItem(
+                                        text = { Text("Mensaje temporal", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            showEphemeralDialog = true
+                                        }
+                                    )
                                 }
                             }
                         },
@@ -538,7 +545,12 @@ fun ChatScreen(
                                             coroutineScope.launch {
                                                 pendingMediaUris.forEachIndexed { index, uri ->
                                                     val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
-                                                    vm.sendMessage(if (textToSend == "Imagen") "" else textToSend, mediaUri = uri.toString())
+                                                    vm.sendMessage(
+                                                        if (textToSend == "Imagen") "" else textToSend,
+                                                        mediaUri = uri.toString(),
+                                                        expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
+                                                        viewOnce = viewOnceEnabled
+                                                    )
                                                 }
                                                 pendingMediaUris.clear()
                                                 captionText = ""
@@ -582,7 +594,7 @@ fun ChatScreen(
                                 quotedMessageId = replyingTo?.id,
                                 quotedMessageContent = replyingTo?.content,
                                 expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
-                                viewOnce = viewOnceEnabled
+                                viewOnce = false
                             )
                             replyingTo = null
                             typingText = ""
@@ -592,7 +604,7 @@ fun ChatScreen(
                                 "",
                                 mediaUri = file.absolutePath,
                                 expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
-                                viewOnce = viewOnceEnabled
+                                viewOnce = false
                             )
                             typingText = ""
                         },
@@ -653,11 +665,9 @@ fun ChatScreen(
     if (showEphemeralDialog) {
         EphemeralOptionsDialog(
             currentDuration = ephemeralDuration,
-            currentViewOnce = viewOnceEnabled,
             onDismiss = { showEphemeralDialog = false },
-            onConfirm = { duration, viewOnce ->
+            onConfirm = { duration ->
                 ephemeralDuration = duration
-                viewOnceEnabled = viewOnce
                 showEphemeralDialog = false
             }
         )
@@ -701,6 +711,40 @@ fun ChatScreen(
                                 vm.sendMessage("📍 No se pudo obtener la ubicación. Concede permisos.")
                             }
                         })
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF4CE6FF).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Lock,
+                                        contentDescription = null,
+                                        tint = Color(0xFF4CE6FF),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text("Vista única", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text("Contenido visible solo una vez", color = Color(0xFF8B949E), fontSize = 12.sp)
+                                }
+                            }
+                            Switch(
+                                checked = viewOnceEnabled,
+                                onCheckedChange = { viewOnceEnabled = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = Color(0xFF4CE6FF),
+                                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -1237,12 +1281,10 @@ fun getBestLocation(context: Context): Location? {
 @Composable
 private fun EphemeralOptionsDialog(
     currentDuration: Long?,
-    currentViewOnce: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (Long?, Boolean) -> Unit
+    onConfirm: (Long?) -> Unit
 ) {
     var selectedDuration by remember { mutableStateOf(currentDuration) }
-    var viewOnce by remember { mutableStateOf(currentViewOnce) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1322,34 +1364,6 @@ private fun EphemeralOptionsDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        Text(
-                            "Vista única",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "El contenido desaparece tras abrirlo",
-                            color = Color(0xFF8B949E),
-                            fontSize = 12.sp
-                        )
-                    }
-                    Switch(
-                        checked = viewOnce,
-                        onCheckedChange = { viewOnce = it },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = Color(0xFF4CE6FF),
-                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.5f)
-                        )
-                    )
-                }
 
                 Spacer(modifier = Modifier.height(20.dp))
                 Row(
@@ -1360,7 +1374,7 @@ private fun EphemeralOptionsDialog(
                         Text("Cancelar", color = Color.Gray)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = { onConfirm(selectedDuration, viewOnce) }) {
+                    TextButton(onClick = { onConfirm(selectedDuration) }) {
                         Text("Aplicar", color = Color(0xFF4CE6FF))
                     }
                 }
