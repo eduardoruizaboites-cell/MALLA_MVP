@@ -7,6 +7,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.util.Printer
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -41,19 +42,29 @@ class ANRWatchDog(
         }
     }
 
-    private fun generateReport() {
+    fun generateReport() {
         try {
             val traces = mutableListOf<String>()
             traces.add("=== MALLA ANR REPORT ===")
             traces.add("Fecha: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
+            traces.add("Dispositivo: ${Build.MANUFACTURER} ${Build.MODEL}")
+            traces.add("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             traces.add("Tiempo límite: $timeoutMs ms\n")
 
+            // 1. Hilo principal
             val mainThread = Looper.getMainLooper().thread
             traces.add("=== HILO PRINCIPAL (${mainThread.name}) ===")
             traces.add("State: ${mainThread.state}")
             mainThread.stackTrace.forEach { traces.add("\tat ${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})") }
             traces.add("")
 
+            // 2. Dump del Looper principal (cola de mensajes)
+            traces.add("=== MENSAJES PENDIENTES EN EL LOOPER ===")
+            val printer = Printer { line -> traces.add(line) }
+            Looper.getMainLooper().dump(printer, "")
+            traces.add("")
+
+            // 3. Todos los hilos
             traces.add("=== TODOS LOS HILOS ===")
             for ((thread, stack) in Thread.getAllStackTraces()) {
                 if (thread.name == "main") continue
