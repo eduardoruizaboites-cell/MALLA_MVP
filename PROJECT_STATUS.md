@@ -266,3 +266,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Room Flow, collectAsState
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; continuar con exportar conversación; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 13:30 (verificación en dispositivo de encuestas premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se verificó en dispositivo físico que las encuestas premium funcionan correctamente. Se crean con opciones, se visualizan con barras de progreso y porcentajes, y la votación se actualiza en tiempo real. No se presentaron bloqueos ni errores.
+¿ERA UN FIX DE ERROR?: no era fix; fue confirmación de implementación premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: dispositivo real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Room Flow, votación reactiva.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con exportar conversación; mensajes efímeros; selección múltiple; personalización avanzada; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; premium restante.
+──────────────────────────────
