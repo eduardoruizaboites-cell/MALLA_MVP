@@ -69,3 +69,24 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Looper.dump disponible desde API 1
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar watchdog simulando bloqueo; reintroducir premium incremental; consolidar App duplicadas; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: watchdog sin prueba real; warnings de deprecación; premium por reintroducir.
 ──────────────────────────────
+
+## 🔴 FUNCIÓN PREMIUM CAUSANTE DEL ANR (ANÁLISIS)
+
+**Fecha de análisis:** 2026-08-18
+
+**Función señalada en rojo:**  
+La combinación de **personalización avanzada de chat** y **animaciones continuas** introducidas en los commits:
+
+- `c90418a7` feat(ui): reorganizar barra superior y rediseñar personalización de chat  
+- `dcda77ec` feat(ui): sonidos reales, animación sutil de burbujas y fondo degradado  
+- `a38a4c88` feat(ui): fondo con imagen, más sonidos, animación de escritura y menú elegante  
+- `6301f815` feat(ui): avatar degradado, reacciones en chips y botón enviar premium  
+
+**Por qué:**  
+Estos commits introdujeron múltiples animaciones infinitas (`rememberInfiniteTransition`) y un `CircularProgressIndicator` en la pantalla principal. Al combinarse con el flujo de conversaciones que emitía con frecuencia, saturaron el hilo principal y provocaron el ANR.
+
+**Lección aprendida:**  
+Reintroducir estas funciones **una por una**, compilando y probando en dispositivo real entre cada adición. Evitar animaciones infinitas cuando no sean esenciales y controlar las emisiones del flujo de datos.
+
+**Estado:** Pendiente de reintroducción incremental.
+──────────────────────────────
