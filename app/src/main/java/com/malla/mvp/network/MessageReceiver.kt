@@ -6,6 +6,8 @@ import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.MessageEntity
+import com.malla.mvp.data.entity.PollEntity
+import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.di.Injector
 import com.malla.mvp.events.MallaEventBus
 import kotlinx.coroutines.*
@@ -75,6 +77,50 @@ object MessageReceiver {
                 return
             }
             bloomFilter.add(messageId)
+
+            if (meshMsg.type == "poll_create") {
+                try {
+                    val json = org.json.JSONObject(meshMsg.content)
+                    val pollId = json.getString("pollId")
+                    val question = json.getString("question")
+                    val optionsArray = json.getJSONArray("options")
+                    db.pollDao().insertPoll(PollEntity(id = pollId, groupId = meshMsg.senderId, question = question, creatorId = meshMsg.senderId))
+                    for (i in 0 until optionsArray.length()) {
+                        val text = optionsArray.getString(i)
+                        if (text.isNotBlank()) {
+                            db.pollDao().insertOption(PollOptionEntity(id = java.util.UUID.randomUUID().toString(), pollId = pollId, text = text))
+                        }
+                    }
+                    val localMsg = MessageEntity(
+                        id = java.util.UUID.randomUUID().toString(),
+                        conversationId = meshMsg.senderId,
+                        content = "📊 $question",
+                        timestamp = meshMsg.timestamp,
+                        isOwn = false,
+                        status = 1,
+                        pollId = pollId
+                    )
+                    db.messageDao().insertMessage(localMsg)
+                    MallaEventBus.messageReceived.emit(meshMsg)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error procesando poll_create: ${e.message}", e)
+                }
+                return
+            }
+
+            if (meshMsg.type == "poll_vote") {
+                try {
+                    val json = org.json.JSONObject(meshMsg.content)
+                    val pollId = json.getString("pollId")
+                    val optionId = json.getString("optionId")
+                    db.pollDao().incrementVoteCount(optionId, 1)
+                    MallaEventBus.messageReceived.emit(meshMsg)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error procesando poll_vote: ${e.message}", e)
+                }
+                return
+            }
+
 
             if (meshMsg.type == "edit" && meshMsg.quotedMessageId != null) {
                 val originalId = meshMsg.quotedMessageId!!

@@ -211,3 +211,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, migración aditiva.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar lógica de encuestas en ViewModel y receptor; UI premium de creación y votación.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 11:10 (fases 1-2: encuestas, datos y lógica) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregó pollId a MessageEntity/MessageData/MessageMapper con migración 14→15. En MeshChatViewModel, createPoll y votePoll envían JSON por red con tipos poll_create/poll_vote. MessageReceiver procesa poll_create y poll_vote, persiste encuestas, opciones y votos. Aún falta UI premium de creación y votación (Fase 3).
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de encuestas premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, org.json, flujo de red.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar UI premium de encuestas; probar en dispositivo; continuar con otras funciones.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
+──────────────────────────────

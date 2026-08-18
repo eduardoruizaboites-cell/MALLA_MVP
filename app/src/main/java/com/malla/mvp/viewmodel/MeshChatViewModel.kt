@@ -239,6 +239,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun votePoll(optionId: String, pollId: String) {
+        val convId = _conversationId.value ?: return
         viewModelScope.launch {
             db?.pollDao()?.incrementVoteCount(optionId, 1)
             val currentOptions = _optionsMap.value[pollId] ?: return@launch
@@ -246,6 +247,17 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 if (opt.id == optionId) opt.copy(voteCount = opt.voteCount + 1) else opt
             }
             _optionsMap.value = _optionsMap.value + (pollId to updated)
+
+            if (convId != "self_chat") {
+                val json = org.json.JSONObject().apply {
+                    put("pollId", pollId)
+                    put("optionId", optionId)
+                }.toString()
+                NetworkService.sendMessageToContact(
+                    convId,
+                    MeshMessage(content = json, senderId = IdentityManager.getIdentityId(), type = "poll_vote")
+                )
+            }
         }
     }
 
@@ -260,6 +272,18 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             loadPolls(convId)
+
+            if (convId != "self_chat") {
+                val json = org.json.JSONObject().apply {
+                    put("pollId", pollId)
+                    put("question", question)
+                    put("options", org.json.JSONArray(options.filter { it.isNotBlank() }))
+                }.toString()
+                NetworkService.sendMessageToContact(
+                    convId,
+                    MeshMessage(content = json, senderId = IdentityManager.getIdentityId(), type = "poll_create")
+                )
+            }
         }
     }
 
