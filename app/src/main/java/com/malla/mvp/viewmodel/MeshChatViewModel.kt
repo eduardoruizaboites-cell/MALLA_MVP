@@ -115,6 +115,12 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    suspend fun getPollData(pollId: String): Pair<PollEntity?, List<PollOptionEntity>> {
+        val poll = db?.pollDao()?.getPollById(pollId)
+        val options = if (poll != null) db?.pollDao()?.getOptionsForPollOnce(pollId) ?: emptyList() else emptyList()
+        return poll to options
+    }
+
     fun getOptionsForPoll(pollId: String): kotlinx.coroutines.flow.Flow<List<PollOptionEntity>> {
         return db?.pollDao()?.getOptionsForPoll(pollId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
     }

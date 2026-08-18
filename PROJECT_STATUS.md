@@ -255,3 +255,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, StateFlow.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo; reintroducir exportar conversación; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 13:10 (fix: reactividad de votación en encuestas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó PollMessageBubble por una versión reactiva que usa collectAsState sobre getOptionsForPoll(pollId) y vm.polls. Ahora los cambios de votación se reflejan en tiempo real sin salir del chat. Se eliminó la carga estática previa.
+¿ERA UN FIX DE ERROR?: ERROR: el cambio de votación no se veía inmediatamente → SOLUCIÓN APLICADA: flujo reactivo de opciones desde Room → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa identificada por inspección.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Room Flow, collectAsState.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; continuar con exportar conversación; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings.
+──────────────────────────────

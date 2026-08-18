@@ -349,11 +349,11 @@ fun ChatScreen(
                     items(messages) { msg ->
                         if (msg.pollId != null) {
                             PollMessageBubble(
-                                poll = polls.find { it.id == msg.pollId },
-                                options = optionsMap[msg.pollId] ?: emptyList(),
+                                pollId = msg.pollId!!,
                                 onVote = { optionId -> vm.votePoll(optionId, msg.pollId!!) },
                                 isOwn = msg.isOwn,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                                vm = vm
                             )
                         } else {
                             MessageBubbleV2(
@@ -1188,19 +1188,30 @@ fun AttachmentOptionPremium(icon: ImageVector, label: String, color: Color, onCl
 }
 @Composable
 fun PollMessageBubble(
-    poll: PollEntity?,
-    options: List<PollOptionEntity>,
+    pollId: String,
     onVote: (String) -> Unit,
     isOwn: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    vm: MeshChatViewModel
 ) {
-    if (poll == null) return
+    val polls by vm.polls.collectAsState()
+    val poll = polls.find { it.id == pollId }
+    val options by vm.getOptionsForPoll(pollId).collectAsState(initial = emptyList())
+
+    if (poll == null) {
+        Box(modifier = modifier.padding(16.dp)) {
+            Text("Encuesta no disponible", color = Color.Gray)
+        }
+        return
+    }
+    val pollData = poll ?: return
+
     val totalVotes = options.sumOf { it.voteCount }
     val shape = RoundedCornerShape(20.dp)
     val accent = Color(0xFF4CE6FF)
 
     val scale = remember { Animatable(0.95f) }
-    LaunchedEffect(poll.id) { scale.animateTo(1f, tween(200, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(pollData.id) { scale.animateTo(1f, tween(200, easing = FastOutSlowInEasing)) }
 
     Surface(
         modifier = modifier
@@ -1228,7 +1239,7 @@ fun PollMessageBubble(
                 .padding(16.dp)
         ) {
             Text(
-                text = poll.question,
+                text = pollData.question,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,

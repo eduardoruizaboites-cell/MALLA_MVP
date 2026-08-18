@@ -20,6 +20,12 @@ interface PollDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVote(vote: PollVoteEntity)
 
+    @Query("SELECT * FROM polls WHERE id = :pollId")
+    suspend fun getPollById(pollId: String): PollEntity?
+
+    @Query("SELECT * FROM poll_options WHERE pollId = :pollId")
+    suspend fun getOptionsForPollOnce(pollId: String): List<PollOptionEntity>
+
     @Query("SELECT * FROM polls WHERE groupId = :groupId ORDER BY createdAt ASC")
     fun getPollsForGroup(groupId: String): Flow<List<PollEntity>>
 
