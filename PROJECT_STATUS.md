@@ -317,3 +317,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir edición/marcadores en vista previa; mejorar transiciones entre imágenes; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no implementada en vídeo/audio; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 11:19 (corrección: vista única movida a vista previa premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió la implementación anterior que no se había aplicado. Se eliminó definitivamente el interruptor de vista única del panel de adjuntos. Se añadió `MediaPreviewPanel` a pantalla completa que se abre al seleccionar imágenes; incluye vista única por imagen con `viewOnceMap`, eliminación individual, pie de foto y envío. La vista previa inline antigua fue eliminada. Mensajes de texto y voz siguen sin vista única.
+¿ERA UN FIX DE ERROR?: sí; la implementación previa no se había aplicado correctamente y dejó la vista única en adjuntos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se confirmó mediante `grep` que `viewOnceEnabled` y `viewOnceMap` no existían, indicando que el script previo no se ejecutó.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo real.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; añadir edición/marcadores en vista previa; transiciones más fluidas.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; vista única no aplica a vídeo/audio; warnings.
+──────────────────────────────

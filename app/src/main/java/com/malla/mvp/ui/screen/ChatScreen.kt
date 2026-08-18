@@ -164,7 +164,7 @@ fun ChatScreen(
     var showChatSettings by remember { mutableStateOf(false) }
     var showEphemeralDialog by remember { mutableStateOf(false) }
     var ephemeralDuration by remember { mutableStateOf<Long?>(null) }
-    var viewOnceEnabled by remember { mutableStateOf(false) }
+    val viewOnceMap = remember { mutableStateMapOf<Uri, Boolean>() }
     val revealedOnceIds = remember { mutableStateListOf<String>() }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
@@ -405,172 +405,7 @@ fun ChatScreen(
                 }
 
                 // Barra inferior: cambia entre vista previa y composición normal
-                                AnimatedVisibility(
-                    visible = pendingMediaUris.isNotEmpty(),
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150))
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer { shadowElevation = 12.dp.toPx() }
-                            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
-                        color = Color(0xFF141E28),
-                        tonalElevation = 8.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Vista previa",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    "${pendingMediaUris.size} adjunto(s)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF4CE6FF)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(pendingMediaUris) { uri ->
-                                    val scale = remember { Animatable(0.9f) }
-                                    LaunchedEffect(uri) { scale.animateTo(1f, tween(200)) }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .graphicsLayer {
-                                                scaleX = scale.value
-                                                scaleY = scale.value
-                                            }
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(Color.Black.copy(alpha = 0.4f))
-                                    ) {
-                                        AsyncImage(
-                                            model = uri,
-                                            contentDescription = "Miniatura",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(4.dp)
-                                                .size(20.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.6f))
-                                                .clickable { pendingMediaUris.remove(uri) },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Close,
-                                                contentDescription = "Eliminar",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                item {
-                                    IconButton(
-                                        onClick = { showGalleryPanel = true },
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                Brush.linearGradient(
-                                                    listOf(
-                                                        Color(0xFF4CE6FF).copy(alpha = 0.2f),
-                                                        Color(0xFF6C63FF).copy(alpha = 0.2f)
-                                                    )
-                                                )
-                                            )
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Add,
-                                            "Agregar más",
-                                            tint = Color(0xFF4CE6FF),
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(50),
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        IconButton(onClick = { showEmojiPicker = !showEmojiPicker }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Filled.InsertEmoticon, "Emoji", tint = Color(0xFF4CE6FF), modifier = Modifier.size(20.dp))
-                                        }
-                                        BasicTextField(
-                                            value = captionText,
-                                            onValueChange = { captionText = it },
-                                            modifier = Modifier.weight(1f),
-                                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                                            maxLines = 2,
-                                            cursorBrush = SolidColor(Color(0xFF4CE6FF)),
-                                            decorationBox = { innerTextField ->
-                                                Box {
-                                                    if (captionText.isEmpty()) {
-                                                        Text("Añade un pie de foto...", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                                                    }
-                                                    innerTextField()
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF00E5FF))
-                                        .clickable {
-                                            coroutineScope.launch {
-                                                pendingMediaUris.forEachIndexed { index, uri ->
-                                                    val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
-                                                    vm.sendMessage(
-                                                        if (textToSend == "Imagen") "" else textToSend,
-                                                        mediaUri = uri.toString(),
-                                                        expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
-                                                        viewOnce = viewOnceEnabled
-                                                    )
-                                                }
-                                                pendingMediaUris.clear()
-                                                captionText = ""
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.Send,
-                                        "Enviar",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (pendingMediaUris.isEmpty()) {
+                                if (pendingMediaUris.isEmpty()) {
                     AnimatedVisibility(
                         visible = typingText.isNotEmpty(),
                         enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
@@ -648,6 +483,36 @@ fun ChatScreen(
         }
     }
 
+    if (pendingMediaUris.isNotEmpty()) {
+        MediaPreviewPanel(
+            uris = pendingMediaUris.toList(),
+            viewOnceMap = viewOnceMap,
+            caption = captionText,
+            onCaptionChange = { captionText = it },
+            onToggleViewOnce = { uri, checked -> viewOnceMap[uri] = checked },
+            onRemove = { uri -> pendingMediaUris.remove(uri) },
+            onDismiss = {
+                pendingMediaUris.clear()
+                captionText = ""
+            },
+            onSend = {
+                coroutineScope.launch {
+                    pendingMediaUris.forEachIndexed { index, uri ->
+                        val textToSend = if (index == 0 && captionText.isNotBlank()) captionText else ""
+                        vm.sendMessage(
+                            if (textToSend == "Imagen") "" else textToSend,
+                            mediaUri = uri.toString(),
+                            expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
+                            viewOnce = viewOnceMap[uri] ?: false
+                        )
+                    }
+                    pendingMediaUris.clear()
+                    captionText = ""
+                }
+            }
+        )
+    }
+
     if (showChatSettings) {
         ChatCustomizationDialog(
             conversationId = conversationId,
@@ -711,40 +576,6 @@ fun ChatScreen(
                                 vm.sendMessage("📍 No se pudo obtener la ubicación. Concede permisos.")
                             }
                         })
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF4CE6FF).copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Lock,
-                                        contentDescription = null,
-                                        tint = Color(0xFF4CE6FF),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text("Vista única", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    Text("Contenido visible solo una vez", color = Color(0xFF8B949E), fontSize = 12.sp)
-                                }
-                            }
-                            Switch(
-                                checked = viewOnceEnabled,
-                                onCheckedChange = { viewOnceEnabled = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = Color(0xFF4CE6FF),
-                                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.5f)
-                                )
-                            )
-                        }
                     }
                 }
             }
@@ -1571,6 +1402,143 @@ fun PollMessageBubble(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun MediaPreviewPanel(
+    uris: List<Uri>,
+    viewOnceMap: Map<Uri, Boolean>,
+    caption: String,
+    onCaptionChange: (String) -> Unit,
+    onToggleViewOnce: (Uri, Boolean) -> Unit,
+    onRemove: (Uri) -> Unit,
+    onDismiss: () -> Unit,
+    onSend: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color(0xFF0A1118)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar", tint = Color.White)
+                    }
+                    Text("Vista previa", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("${uris.size} adjunto(s)", color = Color(0xFF4CE6FF), fontSize = 14.sp)
+                }
+
+                LazyRow(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
+                ) {
+                    items(uris) { uri ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .aspectRatio(9f / 16f)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.Black.copy(alpha = 0.3f))
+                        ) {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(12.dp)
+                                    .clip(RoundedCornerShape(16.dp)),
+                                color = Color(0xFF15202B).copy(alpha = 0.9f)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Filled.Lock, null, tint = Color(0xFF4CE6FF), modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Vista única", color = Color.White, fontSize = 14.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Switch(
+                                        checked = viewOnceMap[uri] ?: false,
+                                        onCheckedChange = { checked -> onToggleViewOnce(uri, checked) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedTrackColor = Color(0xFF4CE6FF),
+                                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.5f)
+                                        )
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .clickable { onRemove(uri) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.Close, "Eliminar", tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(50),
+                        color = Color.White.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                    ) {
+                        BasicTextField(
+                            value = caption,
+                            onValueChange = onCaptionChange,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                            maxLines = 2,
+                            cursorBrush = SolidColor(Color(0xFF4CE6FF)),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (caption.isEmpty()) {
+                                        Text("Añade un pie de foto...", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF00E5FF))
+                            .clickable { onSend() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                }
             }
         }
     }
