@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -58,6 +59,7 @@ fun ChatInputBar(
     onSendZumbido: () -> Unit,
     onCameraClick: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
+    onTimerClick: () -> Unit = {},
     onTextChanged: (String) -> Unit = {},
     replyTo: MessageData? = null,
     onCancelReply: () -> Unit = {},
@@ -216,6 +218,13 @@ fun ChatInputBar(
                     },
                     trailingIcon = {
                         Row {
+                            IconButton(onClick = onTimerClick) {
+                                Icon(
+                                    Icons.Filled.Timer,
+                                    "Mensaje temporal",
+                                    tint = colorScheme.primary
+                                )
+                            }
                             IconButton(onClick = onAttachmentClick) {
                                 Icon(
                                     Icons.Filled.AttachFile,

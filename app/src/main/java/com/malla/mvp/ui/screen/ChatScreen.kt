@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.*
@@ -159,6 +161,9 @@ fun ChatScreen(
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
+    var showEphemeralDialog by remember { mutableStateOf(false) }
+    var ephemeralDuration by remember { mutableStateOf<Long?>(null) }
+    var viewOnceEnabled by remember { mutableStateOf(false) }
         var elapsedSeconds by remember { mutableIntStateOf(0) }
     val voiceRecorder = remember { VoiceRecorder(context) }
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -562,12 +567,22 @@ fun ChatScreen(
                             vm.sendMessage(
                                 msg,
                                 quotedMessageId = replyingTo?.id,
-                                quotedMessageContent = replyingTo?.content
+                                quotedMessageContent = replyingTo?.content,
+                                expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
+                                viewOnce = viewOnceEnabled
                             )
                             replyingTo = null
                             typingText = ""
                         },
-                        onSendVoice = { file -> vm.sendMessage("", mediaUri = file.absolutePath); typingText = "" },
+                        onSendVoice = { file ->
+                            vm.sendMessage(
+                                "",
+                                mediaUri = file.absolutePath,
+                                expireAt = if (ephemeralDuration != null) System.currentTimeMillis() + ephemeralDuration!! else null,
+                                viewOnce = viewOnceEnabled
+                            )
+                            typingText = ""
+                        },
                         onSendZumbido = { vm.sendZumbido() },
                         onCameraClick = {
                             val intent = CameraContract.createIntent(context, "photo")
@@ -619,6 +634,19 @@ fun ChatScreen(
         ChatCustomizationDialog(
             conversationId = conversationId,
             onDismiss = { showChatSettings = false }
+        )
+    }
+
+    if (showEphemeralDialog) {
+        EphemeralOptionsDialog(
+            currentDuration = ephemeralDuration,
+            currentViewOnce = viewOnceEnabled,
+            onDismiss = { showEphemeralDialog = false },
+            onConfirm = { duration, viewOnce ->
+                ephemeralDuration = duration
+                viewOnceEnabled = viewOnce
+                showEphemeralDialog = false
+            }
         )
     }
 
@@ -1127,6 +1155,141 @@ fun getBestLocation(context: Context): Location? {
     return best
 }
 
+
+@Composable
+private fun EphemeralOptionsDialog(
+    currentDuration: Long?,
+    currentViewOnce: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Long?, Boolean) -> Unit
+) {
+    var selectedDuration by remember { mutableStateOf(currentDuration) }
+    var viewOnce by remember { mutableStateOf(currentViewOnce) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.widthIn(min = 300.dp, max = 360.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = Color(0xFF0A1B2A),
+            shadowElevation = 12.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF4CE6FF), Color(0xFF6C63FF))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Timer,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Mensaje temporal",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Elige cuánto tiempo permanecerá visible.",
+                    color = Color(0xFF8B949E),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                listOf(
+                    null to "Nunca",
+                    24L * 60L * 60L * 1000L to "24 horas",
+                    7L * 24L * 60L * 60L * 1000L to "7 días",
+                    90L * 24L * 60L * 60L * 1000L to "90 días"
+                ).forEach { (duration, label) ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { selectedDuration = duration },
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (selectedDuration == duration) Color(0xFF4CE6FF).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedDuration == duration,
+                                onClick = { selectedDuration = duration },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Color(0xFF4CE6FF),
+                                    unselectedColor = Color.Gray
+                                )
+                            )
+                            Text(
+                                label,
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Text(
+                            "Vista única",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "El contenido desaparece tras abrirlo",
+                            color = Color(0xFF8B949E),
+                            fontSize = 12.sp
+                        )
+                    }
+                    Switch(
+                        checked = viewOnce,
+                        onCheckedChange = { viewOnce = it },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = Color(0xFF4CE6FF),
+                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = { onConfirm(selectedDuration, viewOnce) }) {
+                        Text("Aplicar", color = Color(0xFF4CE6FF))
+                    }
+                }
+            }
+        }
+    }
+}
 
 fun formatSeconds(seconds: Int): String {
     val min = seconds / 60

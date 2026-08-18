@@ -287,3 +287,13 @@ VERIFICADO EN: solo compilación.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): integrar UI de selección de expiración y vista única; programar limpieza en background; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: UI no implementada; warnings nuevos en MessageReceiver y ViewModel; sin prueba real.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 09:53 (mensajes efímeros / vista única - Fase 2: UI premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregó botón de temporizador en ChatInputBar. Se creó diálogo premium `EphemeralOptionsDialog` en ChatScreen con selección de duración (Nunca, 24h, 7d, 90d) y opción de vista única. Los mensajes de texto y voz ahora pasan `expireAt` y `viewOnce` al ViewModel.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de UI premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): mostrar indicador visual de mensaje efímero en burbuja; probar vista única en imágenes/vídeo; programar limpieza en background.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real de la UI; no se ha implementado la visualización de caducidad/vista única en las burbujas; warnings existentes.
+──────────────────────────────
