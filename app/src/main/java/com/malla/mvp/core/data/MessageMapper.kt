@@ -22,7 +22,9 @@ object MessageMapper {
             mimeType = entity.mimeType,
             fileSize = entity.fileSize,
             quotedMessageId = entity.quotedMessageId,
-            quotedMessageContent = entity.quotedMessageContent
+            quotedMessageContent = entity.quotedMessageContent,
+            isEdited = entity.isEdited,
+            isDeleted = entity.isDeleted
         )
     }
 
@@ -41,7 +43,9 @@ object MessageMapper {
             mimeType = data.mimeType,
             fileSize = data.fileSize,
             quotedMessageId = data.quotedMessageId,
-            quotedMessageContent = data.quotedMessageContent
+            quotedMessageContent = data.quotedMessageContent,
+            isEdited = data.isEdited,
+            isDeleted = data.isDeleted
         )
     }
 }

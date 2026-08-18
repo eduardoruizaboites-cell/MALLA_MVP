@@ -18,6 +18,8 @@ data class MessageData(
     val fileSize: Long? = null,
     val quotedMessageId: String? = null,
     val quotedMessageContent: String? = null,
+    val isEdited: Boolean = false,
+    val isDeleted: Boolean = false,
 )
 
 interface IMessageRepository {

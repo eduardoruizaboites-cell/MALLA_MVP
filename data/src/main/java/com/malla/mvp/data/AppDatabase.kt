@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.malla.mvp.data.dao.ConversationDao
 import com.malla.mvp.data.dao.MessageDao
 import com.malla.mvp.data.dao.StoryDao
@@ -32,7 +34,7 @@ import java.io.File
         ContactEntity::class,
         PollVoteEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +52,13 @@ abstract class AppDatabase : RoomDatabase() {
         private fun selfChatValues(): String {
             val now = System.currentTimeMillis()
             return "('self_chat', 'Yo (Mensajes guardados)', 'Toca para guardar notas, imágenes...', $now, 0, 0, 0, 0, NULL)"
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN isEdited INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE messages ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+            }
         }
 
         val CALLBACK = object : RoomDatabase.Callback() {
@@ -83,6 +92,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
+                            .addMigrations(MIGRATION_13_14)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
@@ -99,6 +109,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
+                            .addMigrations(MIGRATION_13_14)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()

@@ -17,9 +17,10 @@ data class MessageEntity(
     val viewOnce: Boolean = false,
     val quotedMessageId: String? = null,
     val quotedMessageContent: String? = null,
-    val encrypted: Boolean = false,  // NUEVO: indica si 'content' está cifrado
-
+    val encrypted: Boolean = false,
     val fileName: String? = null,
     val mimeType: String? = null,
-    val fileSize: Long? = null
+    val fileSize: Long? = null,
+    val isEdited: Boolean = false,
+    val isDeleted: Boolean = false
 )

@@ -156,3 +156,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, gesto long-press, Animate
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con edición/eliminación premium; exportar conversación; encuestas; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 08:30 (fase datos: campos de edición) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregaron isEdited e isDeleted a MessageEntity, MessageData y MessageMapper. Se actualizó AppDatabase a versión 14 con migración aditiva para las nuevas columnas.
+¿ERA UN FIX DE ERROR?: no era fix; fue preparación para la función premium de edición/eliminación.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, migración aditiva.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar lógica de edición/eliminación en ViewModel y receptor; UI premium.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; premium restante.
+──────────────────────────────
