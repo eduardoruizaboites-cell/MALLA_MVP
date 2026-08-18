@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
@@ -171,6 +173,7 @@ fun ChatScreen(
     var editingMessage by remember { mutableStateOf<MessageData?>(null) }
     var editText by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<MessageData?>(null) }
+    var selectedMessage by remember { mutableStateOf<MessageData?>(null) }
 
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
@@ -227,67 +230,100 @@ fun ChatScreen(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(contactName, color = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            val isOnline = ConnectivityMonitor.isOnline.collectAsState().value
-                            Canvas(modifier = Modifier.size(12.dp)) {
-                                drawCircle(
-                                    color = if (isOnline) Color(0xFF2ECC71) else Color(0xFFF1C40F),
-                                    radius = size.minDimension / 2
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
-                        }
-                    },
-                    actions = {
-                        Box {
-                            IconButton(onClick = { showChatMenu = true }) {
-                                Surface(
-                                    modifier = Modifier.size(64.dp),
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = contactName.take(1).uppercase(),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 28.sp
-                                        )
-                                    }
+                if (selectedMessage == null) {
+                    TopAppBar(
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(contactName, color = Color.White)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val isOnline = ConnectivityMonitor.isOnline.collectAsState().value
+                                Canvas(modifier = Modifier.size(12.dp)) {
+                                    drawCircle(
+                                        color = if (isOnline) Color(0xFF2ECC71) else Color(0xFFF1C40F),
+                                        radius = size.minDimension / 2
+                                    )
                                 }
                             }
-                            DropdownMenu(
-                                expanded = showChatMenu,
-                                onDismissRequest = { showChatMenu = false },
-                                modifier = Modifier.background(Color(0xFF15202B), RoundedCornerShape(8.dp))
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Ver perfil", color = Color.White) },
-                                    onClick = {
-                                        showChatMenu = false
-                                        onProfileClicked()
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Regresar", tint = Color.White)
+                            }
+                        },
+                        actions = {
+                            Box {
+                                IconButton(onClick = { showChatMenu = true }) {
+                                    Surface(
+                                        modifier = Modifier.size(64.dp),
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = contactName.take(1).uppercase(),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 28.sp
+                                            )
+                                        }
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Personalizar chat", color = Color.White) },
-                                    onClick = {
-                                        showChatMenu = false
-                                        showChatSettings = true
-                                    }
-                                )
+                                }
+                                DropdownMenu(
+                                    expanded = showChatMenu,
+                                    onDismissRequest = { showChatMenu = false },
+                                    modifier = Modifier.background(Color(0xFF15202B), RoundedCornerShape(8.dp))
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Ver perfil", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            onProfileClicked()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Personalizar chat", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            showChatSettings = true
+                                        }
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A1B2A))
+                    )
+                } else {
+                    Surface(
+                        color = Color(0xFF0A1B2A),
+                        shadowElevation = 8.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { selectedMessage = null }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar selección", tint = Color.White)
+                            }
+                            Text(
+                                text = "1 seleccionado",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { selectedMessage?.let { replyingTo = it }; selectedMessage = null }) {
+                                Icon(Icons.AutoMirrored.Filled.Send, "Responder", tint = Color(0xFF4CE6FF))
+                            }
+                            if (selectedMessage?.isOwn == true) {
+                                IconButton(onClick = { selectedMessage?.let { editingMessage = it; editText = it.content }; selectedMessage = null }) {
+                                    Icon(Icons.Filled.Edit, "Editar", tint = Color(0xFF4CE6FF))
+                                }
+                                IconButton(onClick = { selectedMessage?.let { deleteTarget = it }; selectedMessage = null }) {
+                                    Icon(Icons.Filled.Delete, "Eliminar", tint = Color(0xFFFF5252))
+                                }
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A1B2A))
-                )
+                    }
+                }
             },
             containerColor = Color(0xFF0A1118)
         ) { padding ->
@@ -306,9 +342,7 @@ fun ChatScreen(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
-                                onReplyClick = { selected -> replyingTo = selected },
-                                onEditClick = { selected -> editingMessage = selected; editText = selected.content },
-                                onDeleteClick = { selected -> deleteTarget = selected },
+                                onLongClick = { selected -> selectedMessage = selected },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -801,9 +835,7 @@ fun MessageBubbleV2(
     msg: MessageData,
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
-    onReplyClick: (MessageData) -> Unit = {},
-    onEditClick: (MessageData) -> Unit = {},
-    onDeleteClick: (MessageData) -> Unit = {},
+    onLongClick: (MessageData) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -822,7 +854,7 @@ fun MessageBubbleV2(
     val bubbleOpacity = bubbleOpacityParam ?: ChatSettings.bubbleOpacity.collectAsState().value
     val fontSize = fontSizeParam ?: ChatSettings.fontSize.collectAsState().value
     val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && msg.content.codePointCount(0, msg.content.length) <= 4
-    var showContextMenu by remember { mutableStateOf(false) }
+
 
     val scale = remember { Animatable(1f) }
     val slideY = remember { Animatable(0f) }
@@ -841,7 +873,7 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .combinedClickable(onClick = {}, onLongClick = { showContextMenu = true }),
+            .combinedClickable(onClick = {}, onLongClick = { onLongClick(msg) }),
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (onlyEmojis) {
@@ -884,26 +916,6 @@ fun MessageBubbleV2(
         }
     }
 
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false },
-            modifier = Modifier.background(Color(0xFF15202B), RoundedCornerShape(8.dp))
-        ) {
-            DropdownMenuItem(
-                text = { Text("Responder", color = Color.White) },
-                onClick = { showContextMenu = false; onReplyClick(msg) }
-            )
-            if (msg.isOwn) {
-                DropdownMenuItem(
-                    text = { Text("Editar", color = Color.White) },
-                    onClick = { showContextMenu = false; onEditClick(msg) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Eliminar para todos", color = Color(0xFFFF5252)) },
-                    onClick = { showContextMenu = false; onDeleteClick(msg) }
-                )
-            }
-        }
 
 }
 
