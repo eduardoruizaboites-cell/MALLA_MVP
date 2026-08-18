@@ -145,3 +145,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, visualización de cita.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo real; continuar con editar/eliminar; exportar; etc.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; warnings; premium restante.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 08:00 (verificación en dispositivo de cita premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se verificó en dispositivo físico que la función premium de responder con cita funciona correctamente. El mensaje citado se visualiza dentro de la burbuja con línea de acento y texto truncado. No se presentaron bloqueos, cierres ni errores.
+¿ERA UN FIX DE ERROR?: no era fix; fue confirmación de implementación.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: dispositivo real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, gesto long-press, AnimatedVisibility.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar con edición/eliminación premium; exportar conversación; encuestas; etc.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; premium restante.
+──────────────────────────────
