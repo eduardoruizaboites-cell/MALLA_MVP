@@ -20,7 +20,9 @@ object MessageMapper {
             reaction = entity.reaction,
             fileName = entity.fileName,
             mimeType = entity.mimeType,
-            fileSize = entity.fileSize
+            fileSize = entity.fileSize,
+            quotedMessageId = entity.quotedMessageId,
+            quotedMessageContent = entity.quotedMessageContent
         )
     }
 
@@ -37,7 +39,9 @@ object MessageMapper {
             reaction = data.reaction,
             fileName = data.fileName,
             mimeType = data.mimeType,
-            fileSize = data.fileSize
+            fileSize = data.fileSize,
+            quotedMessageId = data.quotedMessageId,
+            quotedMessageContent = data.quotedMessageContent
         )
     }
 }

@@ -16,6 +16,8 @@ data class MessageData(
     val fileName: String? = null,
     val mimeType: String? = null,
     val fileSize: Long? = null,
+    val quotedMessageId: String? = null,
+    val quotedMessageContent: String? = null,
 )
 
 interface IMessageRepository {

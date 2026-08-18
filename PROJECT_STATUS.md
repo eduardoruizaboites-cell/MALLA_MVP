@@ -112,3 +112,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ViewModel, StateFlow, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo antes de continuar; reintroducir premium incremental con diseño premium; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin prueba real; premium por reintroducir; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-18 06:45 (capa de datos para respuesta con cita) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregaron campos quotedMessageId y quotedMessageContent a MessageData y MessageMapper. Aún sin UI.
+¿ERA UN FIX DE ERROR?: no era fix; fue preparación de datos para la función premium de respuesta con cita.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar UI de cita; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sin UI de cita; warnings.
+──────────────────────────────
