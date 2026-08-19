@@ -69,6 +69,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -413,6 +414,7 @@ fun ChatScreen(
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
                                 onLongClick = { selected -> selectedMessage = selected },
+                                onSwipeToReply = { selected -> replyingTo = selected },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -923,6 +925,7 @@ fun MessageBubbleV2(
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
     onLongClick: (MessageData) -> Unit = {},
+    onSwipeToReply: (MessageData) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -960,7 +963,23 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .combinedClickable(onClick = {}, onLongClick = { onLongClick(msg) }),
+            .combinedClickable(onClick = {}, onLongClick = { onLongClick(msg) })
+            .pointerInput(msg.id) {
+                var totalDrag = 0f
+                var fired = false
+                detectHorizontalDragGestures(
+                    onDragStart = { totalDrag = 0f; fired = false },
+                    onDragEnd = { totalDrag = 0f; fired = false },
+                    onDragCancel = { totalDrag = 0f; fired = false },
+                    onHorizontalDrag = { _, dragAmount ->
+                        totalDrag += dragAmount
+                        if (!fired && totalDrag < -100f) {
+                            fired = true
+                            onSwipeToReply(msg)
+                        }
+                    }
+                )
+            },
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (onlyEmojis) {

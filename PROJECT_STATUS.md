@@ -377,3 +377,13 @@ VERIFICADO EN: dispositivo real (confirmado por el usuario).
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reimplementar long-press flotante con Popup raíz y mover emoji de reacción fuera de la burbuja.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: diseño final de reacciones; validación de comunicación entre dispositivos; swipe-to-reply pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 08:39 (función premium: deslizar para responder) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó swipe-to-reply. `MessageBubbleV2` ahora detecta arrastre horizontal con `detectHorizontalDragGestures` y activa la respuesta con cita cuando el deslizamiento supera 100px hacia la izquierda. Se agregó parámetro `onSwipeToReply` y se conectó en `ChatScreen` para establecer `replyingTo`. Sin animaciones infinitas ni menús anidados.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: dispositivo real (confirmado por el usuario).
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir feedback visual de arrastre; activar swipe en ambos sentidos; probar en conversaciones largas.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; mensajes fijados pendiente.
+──────────────────────────────
