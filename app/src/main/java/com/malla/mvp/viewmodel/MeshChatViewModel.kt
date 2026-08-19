@@ -351,6 +351,38 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun addReaction(messageId: String, emoji: String) {
+        val convId = _conversationId.value ?: return
+        viewModelScope.launch {
+            db?.messageDao()?.updateReaction(messageId, emoji)
+            refreshMessages(convId)
+            if (convId != "self_chat") {
+                NetworkService.sendMessageToContact(convId, MeshMessage(
+                    content = emoji,
+                    senderId = IdentityManager.getIdentityId(),
+                    type = "reaction",
+                    quotedMessageId = messageId
+                ))
+            }
+        }
+    }
+
+    fun removeReaction(messageId: String) {
+        val convId = _conversationId.value ?: return
+        viewModelScope.launch {
+            db?.messageDao()?.updateReaction(messageId, null)
+            refreshMessages(convId)
+            if (convId != "self_chat") {
+                NetworkService.sendMessageToContact(convId, MeshMessage(
+                    content = "",
+                    senderId = IdentityManager.getIdentityId(),
+                    type = "reaction",
+                    quotedMessageId = messageId
+                ))
+            }
+        }
+    }
+
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             db?.messageDao()?.deleteMessage(messageId)

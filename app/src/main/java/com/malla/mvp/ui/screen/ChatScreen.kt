@@ -163,6 +163,7 @@ fun ChatScreen(
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
+    var showReactionPicker by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
     var showEphemeralDialog by remember { mutableStateOf(false) }
     var ephemeralDuration by remember { mutableStateOf<Long?>(null) }
@@ -335,6 +336,9 @@ fun ChatScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = { showReactionPicker = true }) {
+                                Icon(Icons.Filled.InsertEmoticon, "Reaccionar", tint = Color(0xFF4CE6FF))
+                            }
                             IconButton(onClick = { selectedMessage?.let { replyingTo = it }; selectedMessage = null }) {
                                 Icon(Icons.AutoMirrored.Filled.Send, "Responder", tint = Color(0xFF4CE6FF))
                             }
@@ -568,6 +572,17 @@ fun ChatScreen(
 
 
     // ── Panel de adjuntos premium ─────────────────────────────────
+    if (showReactionPicker && selectedMessage != null) {
+        ReactionPicker(
+            onDismiss = { showReactionPicker = false },
+            onEmojiSelected = { emoji ->
+                vm.addReaction(selectedMessage!!.id, emoji)
+                showReactionPicker = false
+                selectedMessage = null
+            }
+        )
+    }
+
     if (showAttachmentPanel) {
         ModalBottomSheet(
             onDismissRequest = { showAttachmentPanel = false },
@@ -1066,6 +1081,17 @@ private fun BubbleContent(
             )
         } else if (msg.content.isNotBlank() && msg.content != "Imagen") {
             Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+        }
+
+        if (!msg.isDeleted) {
+            val reaction = msg.reaction
+            if (!reaction.isNullOrBlank()) {
+                Text(
+                    text = reaction,
+                    color = textColor.copy(alpha = 0.9f),
+                    fontSize = (fontSize + 2).sp
+                )
+            }
         }
         if (msg.expireAt != null && !msg.isDeleted) {
             val remainingMs = msg.expireAt!! - System.currentTimeMillis()
@@ -1610,6 +1636,57 @@ private fun MediaPreviewPanel(
                     }
                 }
             }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReactionPicker(
+    onDismiss: () -> Unit,
+    onEmojiSelected: (String) -> Unit
+) {
+    val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color(0xFF1A1A2E),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text(
+                "Reaccionar",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                emojis.forEach { emoji ->
+                    val scale = remember { Animatable(0.8f) }
+                    LaunchedEffect(emoji) {
+                        scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .scale(scale.value)
+                            .clip(CircleShape)
+                            .clickable { onEmojiSelected(emoji) },
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.08f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(emoji, fontSize = 26.sp)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

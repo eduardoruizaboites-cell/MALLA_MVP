@@ -108,6 +108,12 @@ object MessageReceiver {
                 return
             }
 
+            if (meshMsg.type == "reaction" && meshMsg.quotedMessageId != null) {
+                db.messageDao().updateReaction(meshMsg.quotedMessageId!!, meshMsg.content.ifBlank { null })
+                MallaEventBus.messageReceived.emit(meshMsg)
+                return
+            }
+
             if (meshMsg.type == "poll_vote") {
                 try {
                     val json = org.json.JSONObject(meshMsg.content)

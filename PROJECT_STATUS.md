@@ -347,3 +347,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar carrusel en dispositivo; transiciones con parallax; probar vista única entre dos dispositivos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo pendiente; vista única no implementada en vídeo/audio; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 05:22 (función premium: reacciones a mensajes) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementaron reacciones a mensajes. `MeshChatViewModel` ahora tiene `addReaction` y `removeReaction`; `MessageReceiver` maneja `type="reaction"` y actualiza la reacción en BD; `ChatScreen` incluye botón para reaccionar en la barra contextual, `ReactionPicker` premium con emojis animados, y badge de reacción en la burbuja del mensaje. Se corrigió smart cast de `msg.reaction` con variable local.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): permitir múltiples reacciones por mensaje; mostrar reacción del otro usuario en tiempo real; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo de comunicación sigue pendiente; warnings existentes.
+──────────────────────────────
