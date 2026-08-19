@@ -417,3 +417,13 @@ VERIFICADO EN: dispositivo real (confirmado por el usuario).
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): permitir múltiples mensajes fijados; animar lista; refinamiento visual futuro.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; selección múltiple pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 09:37 (función premium: selección múltiple y reenvío) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó selección múltiple por long-press: al mantener presionado un mensaje se activa el modo multiselección. La barra superior cambia a `MultiSelectTopBar` con contador, reenviar y eliminar. Se agregó `forwardMessages` en ViewModel para copiar mensajes a otra conversación y diálogo `ForwardTargetDialog` para elegir destino.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir checkboxes visuales; reenviar adjuntos; probar en dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; modo silencioso/biométrico pendiente.
+──────────────────────────────

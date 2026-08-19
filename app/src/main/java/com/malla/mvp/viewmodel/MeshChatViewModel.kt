@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
+import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.crypto.CryptoEngine
 import com.malla.mvp.crypto.SessionCipher
@@ -392,6 +393,49 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             db?.messageDao()?.setPinned(messageId, pinned)
             refreshMessages(convId)
+        }
+    }
+
+    suspend fun getConversationsOnce(): List<ConversationEntity> {
+        return db?.conversationDao()?.getAllConversations()?.first() ?: emptyList()
+    }
+
+    fun forwardMessages(messageIds: List<String>, targetConversationId: String) {
+        viewModelScope.launch {
+            val messageDao = db?.messageDao() ?: return@launch
+            messageIds.forEach { id ->
+                val original = messageDao.getMessageById(id) ?: return@forEach
+                val forwarded = original.copy(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = targetConversationId,
+                    timestamp = System.currentTimeMillis(),
+                    isOwn = true,
+                    status = 0,
+                    reaction = null,
+                    expireAt = null,
+                    viewOnce = false,
+                    quotedMessageId = null,
+                    quotedMessageContent = null,
+                    isEdited = false,
+                    isDeleted = false,
+                    isPinned = false
+                )
+                messageDao.insertMessage(forwarded)
+            }
+            val last = messageIds.lastOrNull()?.let { messageDao.getMessageById(it) }
+            if (targetConversationId != "self_chat" && last != null) {
+                NetworkService.sendMessageToContact(
+                    targetConversationId,
+                    MeshMessage(
+                        content = last.content,
+                        senderId = IdentityManager.getIdentityId(),
+                        timestamp = System.currentTimeMillis(),
+                        type = "forward",
+                        quotedMessageId = null,
+                        quotedMessageContent = null
+                    )
+                )
+            }
         }
     }
 
