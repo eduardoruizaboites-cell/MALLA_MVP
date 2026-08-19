@@ -367,3 +367,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; aumentar catálogo de emojis recientes; animar entrada/salida del menú.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo de comunicación sigue pendiente; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 08:31 (reversión estable de reacciones y nueva fase) ──
+Compilación: BUILD SUCCESSFUL (base estable verificada)
+QUÉ SE HIZO: Se revirtió ChatScreen.kt al commit estable 21725e3a para eliminar ANR causado por DropdownMenu/LazyRow anidados en la burbuja. Se conservan las reacciones premium accesibles desde el icono de la barra superior mediante ModalBottomSheet. Se deja la rama feature/reactions-premium en un punto estable y se retoma el roadmap con la siguiente función: swipe-to-reply.
+¿ERA UN FIX DE ERROR?: sí; se corrigió ANR al mantener presionada una burbuja.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se confirma que anidar menús flotantes dentro de LazyColumn saturaba el hilo principal de Compose.
+VERIFICADO EN: dispositivo real (confirmado por el usuario).
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reimplementar long-press flotante con Popup raíz y mover emoji de reacción fuera de la burbuja.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: diseño final de reacciones; validación de comunicación entre dispositivos; swipe-to-reply pendiente.
+──────────────────────────────

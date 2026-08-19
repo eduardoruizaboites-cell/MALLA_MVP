@@ -24,15 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -172,6 +163,7 @@ fun ChatScreen(
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
+    var showReactionPicker by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
     var showEphemeralDialog by remember { mutableStateOf(false) }
     var ephemeralDuration by remember { mutableStateOf<Long?>(null) }
@@ -344,6 +336,9 @@ fun ChatScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = { showReactionPicker = true }) {
+                                Icon(Icons.Filled.InsertEmoticon, "Reaccionar", tint = Color(0xFF4CE6FF))
+                            }
                             IconButton(onClick = { selectedMessage?.let { replyingTo = it }; selectedMessage = null }) {
                                 Icon(Icons.AutoMirrored.Filled.Send, "Responder", tint = Color(0xFF4CE6FF))
                             }
@@ -418,7 +413,6 @@ fun ChatScreen(
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
                                 onLongClick = { selected -> selectedMessage = selected },
-                                onAddReaction = { emoji -> vm.addReaction(msg.id, emoji) },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -578,6 +572,17 @@ fun ChatScreen(
 
 
     // ── Panel de adjuntos premium ─────────────────────────────────
+    if (showReactionPicker && selectedMessage != null) {
+        ReactionPicker(
+            onDismiss = { showReactionPicker = false },
+            onEmojiSelected = { emoji ->
+                vm.addReaction(selectedMessage!!.id, emoji)
+                showReactionPicker = false
+                selectedMessage = null
+            }
+        )
+    }
+
     if (showAttachmentPanel) {
         ModalBottomSheet(
             onDismissRequest = { showAttachmentPanel = false },
@@ -918,7 +923,6 @@ fun MessageBubbleV2(
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
     onLongClick: (MessageData) -> Unit = {},
-    onAddReaction: (String) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -939,11 +943,6 @@ fun MessageBubbleV2(
     val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && msg.content.codePointCount(0, msg.content.length) <= 4
 
 
-    var showReactionMenu by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    var bubbleBounds by remember { mutableStateOf(Rect.Zero) }
-    var recentEmojis by remember { mutableStateOf(loadRecentReactionEmojis(context)) }
-    var showExtendedEmojiSheet by remember { mutableStateOf(false) }
     val scale = remember { Animatable(1f) }
     val slideY = remember { Animatable(0f) }
     LaunchedEffect(msg.id, animate) {
@@ -961,8 +960,7 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .onGloballyPositioned { bubbleBounds = it.boundsInWindow() }
-            .combinedClickable(onClick = {}, onLongClick = { showReactionMenu = true; onLongClick(msg) }),
+            .combinedClickable(onClick = {}, onLongClick = { onLongClick(msg) }),
         contentAlignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (onlyEmojis) {
@@ -1005,77 +1003,6 @@ fun MessageBubbleV2(
         }
     }
 
-
-        DropdownMenu(
-            expanded = showReactionMenu,
-            onDismissRequest = { showReactionMenu = false },
-            offset = DpOffset(0.dp, 4.dp),
-            modifier = Modifier
-                .background(Color(0xE614202B), RoundedCornerShape(24.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-        ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.width(280.dp)
-            ) {
-                val defaultEmojis = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
-                val displayEmojis = if (recentEmojis.isNotEmpty()) recentEmojis.take(8) else defaultEmojis
-                items(displayEmojis.size) { index ->
-                    val emoji = displayEmojis[index]
-                    Text(
-                        text = emoji,
-                        fontSize = 22.sp,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .clickable {
-                                onAddReaction(emoji)
-                                val updated = listOf(emoji) + recentEmojis.filter { it != emoji }.take(7)
-                                recentEmojis = updated
-                                saveRecentReactionEmojis(context, updated)
-                                showReactionMenu = false
-                            }
-                            .padding(6.dp)
-                    )
-                }
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                showReactionMenu = false
-                                showExtendedEmojiSheet = true
-                            },
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.14f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription = "Más reacciones",
-                                tint = Color(0xFF4CE6FF),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (showExtendedEmojiSheet) {
-            ExtendedReactionSheet(
-                onDismiss = { showExtendedEmojiSheet = false },
-                onEmojiSelected = { emoji ->
-                    onAddReaction(emoji)
-                    val updated = listOf(emoji) + recentEmojis.filter { it != emoji }.take(5)
-                    recentEmojis = updated
-                    saveRecentReactionEmojis(context, updated)
-                    showExtendedEmojiSheet = false
-                }
-            )
-        }
 
 }
 
@@ -1714,67 +1641,52 @@ private fun MediaPreviewPanel(
 }
 
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExtendedReactionSheet(
+private fun ReactionPicker(
     onDismiss: () -> Unit,
     onEmojiSelected: (String) -> Unit
 ) {
-    val extendedEmojis = listOf(
-        "😀","😁","😂","🤣","😃","😄","😅","😆","😉","😊","😋","😎",
-        "😍","🥰","😘","😗","😙","😚","🙂","🤗","🤔","😐","😑","😶",
-        "🙄","😏","😣","😥","😮","🤐","😪","😴","🥺","😢","😭","😤",
-        "😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓",
-        "🤗","🤔","🫣","🤭","🫢","🤫","🤥","😶","😐","😑","😬","🙄"
-    )
+    val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xFF101B26),
+        containerColor = Color(0xFF1A1A2E),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+        Column(modifier = Modifier.padding(24.dp)) {
             Text(
-                "Elige una reacción",
+                "Reaccionar",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 20.sp
             )
             Spacer(modifier = Modifier.height(16.dp))
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(6),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.heightIn(min = 180.dp, max = 420.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                gridItems(extendedEmojis) { emoji ->
-                    Box(
+                emojis.forEach { emoji ->
+                    val scale = remember { Animatable(0.8f) }
+                    LaunchedEffect(emoji) {
+                        scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                    }
+                    Surface(
                         modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White.copy(alpha = 0.06f))
+                            .size(52.dp)
+                            .scale(scale.value)
+                            .clip(CircleShape)
                             .clickable { onEmojiSelected(emoji) },
-                        contentAlignment = Alignment.Center
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.08f)
                     ) {
-                        Text(emoji, fontSize = 26.sp)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(emoji, fontSize = 26.sp)
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
-}
-
-private fun loadRecentReactionEmojis(context: Context): List<String> {
-    val prefs = context.getSharedPreferences("malla_reactions", Context.MODE_PRIVATE)
-    return prefs.getString("recent_emojis", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
-}
-
-private fun saveRecentReactionEmojis(context: Context, emojis: List<String>) {
-    context.getSharedPreferences("malla_reactions", Context.MODE_PRIVATE)
-        .edit()
-        .putString("recent_emojis", emojis.joinToString(","))
-        .apply()
 }
