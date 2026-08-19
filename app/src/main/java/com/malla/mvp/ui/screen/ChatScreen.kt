@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
@@ -141,6 +142,7 @@ fun ChatScreen(
     val prefsRevision by ConversationPreferences.changes.collectAsState()
     val chatPrefs = remember(conversationId, prefsRevision) { ConversationPreferences.load(context, conversationId) }
     val messages by vm.messages.collectAsState()
+    val pinnedMessage by vm.pinnedMessage.collectAsState()
     val polls by vm.polls.collectAsState()
     val optionsMap by vm.optionsMap.collectAsState()
 
@@ -362,6 +364,18 @@ fun ChatScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
+                pinnedMessage?.let { pinned ->
+                    PinnedMessageBanner(
+                        message = pinned,
+                        onNavigate = {
+                            val index = messages.indexOfFirst { it.id == pinned.id }
+                            if (index >= 0) {
+                                coroutineScope.launch { listState.animateScrollToItem(index) }
+                            }
+                        },
+                        onUnpin = { vm.togglePinMessage(pinned.id, false) }
+                    )
+                }
                 // Lista de mensajes
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -1706,6 +1720,51 @@ private fun ReactionPicker(
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+
+@Composable
+private fun PinnedMessageBanner(
+    message: MessageData,
+    onNavigate: () -> Unit,
+    onUnpin: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn(tween(200)) + expandVertically(),
+        exit = fadeOut(tween(150)) + shrinkVertically()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(onClick = onNavigate),
+            color = Color(0xFF1A2A3A),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Mensaje fijado", color = Color(0xFF8B949E), fontSize = 12.sp)
+                    Text(
+                        message.content.take(60),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = onUnpin, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Filled.Close, "Desfijar", tint = Color(0xFF8B949E), modifier = Modifier.size(16.dp))
+                }
+            }
         }
     }
 }

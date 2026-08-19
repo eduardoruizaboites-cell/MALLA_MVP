@@ -387,3 +387,13 @@ VERIFICADO EN: dispositivo real (confirmado por el usuario).
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir feedback visual de arrastre; activar swipe en ambos sentidos; probar en conversaciones largas.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; mensajes fijados pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 08:51 (función premium: mensajes fijados) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementaron mensajes fijados/favoritos. Se agregó `isPinned` a MessageEntity, MessageData, MessageMapper y MessageDao. Se creó migración Room 15→16. `MeshChatViewModel` ahora expone `pinnedMessage` y método `togglePinMessage`. `ChatScreen` incluye botón de estrella en barra contextual para fijar/desfijar mensajes y `PinnedMessageBanner` premium sobre la lista de mensajes con navegación al mensaje fijado.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; permitir múltiples mensajes fijados; animar transición de banner.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; selección múltiple pendiente.
+──────────────────────────────

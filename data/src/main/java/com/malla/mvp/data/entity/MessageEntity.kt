@@ -23,5 +23,6 @@ data class MessageEntity(
     val fileSize: Long? = null,
     val isEdited: Boolean = false,
     val isDeleted: Boolean = false,
-    val pollId: String? = null
+    val pollId: String? = null,
+    val isPinned: Boolean = false
 )

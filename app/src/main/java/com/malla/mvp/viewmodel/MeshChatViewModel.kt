@@ -43,6 +43,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _optionsMap = MutableStateFlow<Map<String, List<PollOptionEntity>>>(emptyMap())
     val optionsMap: StateFlow<Map<String, List<PollOptionEntity>>> = _optionsMap.asStateFlow()
 
+    private val _pinnedMessage = MutableStateFlow<MessageData?>(null)
+    val pinnedMessage: StateFlow<MessageData?> = _pinnedMessage.asStateFlow()
+
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
@@ -106,6 +109,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                             }
                         } else msg
                     }.map { MessageMapper.toMessageData(it) }
+                    _pinnedMessage.value = _messages.value.firstOrNull { it.isPinned }
                     if (msgs.isNotEmpty()) {
                         lastMessageTimestamp = msgs.maxOf { it.timestamp }
                     }
@@ -380,6 +384,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     quotedMessageId = messageId
                 ))
             }
+        }
+    }
+
+    fun togglePinMessage(messageId: String, pinned: Boolean) {
+        val convId = _conversationId.value ?: return
+        viewModelScope.launch {
+            db?.messageDao()?.setPinned(messageId, pinned)
+            refreshMessages(convId)
         }
     }
 

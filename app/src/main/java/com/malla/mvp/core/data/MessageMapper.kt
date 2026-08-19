@@ -25,7 +25,8 @@ object MessageMapper {
             quotedMessageContent = entity.quotedMessageContent,
             isEdited = entity.isEdited,
             isDeleted = entity.isDeleted,
-            pollId = entity.pollId
+            pollId = entity.pollId,
+            isPinned = entity.isPinned
         )
     }
 
@@ -47,7 +48,8 @@ object MessageMapper {
             quotedMessageContent = data.quotedMessageContent,
             isEdited = data.isEdited,
             isDeleted = data.isDeleted,
-            pollId = data.pollId
+            pollId = data.pollId,
+            isPinned = data.isPinned
         )
     }
 }

@@ -44,4 +44,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE expireAt IS NOT NULL AND expireAt < :now AND conversationId = :convId")
     suspend fun deleteExpiredMessages(convId: String, now: Long)
+
+    @Query("UPDATE messages SET isPinned = :pinned WHERE id = :messageId")
+    suspend fun setPinned(messageId: String, pinned: Boolean)
 }
