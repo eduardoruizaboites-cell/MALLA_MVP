@@ -93,7 +93,6 @@ import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.ui.components.ChatInputBar
 import com.malla.mvp.viewmodel.MeshChatViewModel
 import com.malla.mvp.data.entity.PollEntity
-import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
@@ -167,10 +166,6 @@ fun ChatScreen(
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
     var showPinnedMessagesSheet by remember { mutableStateOf(false) }
-    var multiSelectMode by remember { mutableStateOf(false) }
-    val selectedMessageIds = remember { mutableStateListOf<String>() }
-    var showForwardDialog by remember { mutableStateOf(false) }
-    var forwardTargets by remember { mutableStateOf<List<ConversationEntity>>(emptyList()) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
     var showEphemeralDialog by remember { mutableStateOf(false) }
@@ -257,28 +252,7 @@ fun ChatScreen(
     ) {
         Scaffold(
             topBar = {
-                if (multiSelectMode) {
-                    MultiSelectTopBar(
-                        count = selectedMessageIds.size,
-                        onClose = {
-                            multiSelectMode = false
-                            selectedMessageIds.clear()
-                        },
-                        onForward = {
-                            coroutineScope.launch {
-                                forwardTargets = vm.getConversationsOnce()
-                                showForwardDialog = true
-                            }
-                        },
-                        onDelete = {
-                            coroutineScope.launch {
-                                selectedMessageIds.forEach { id -> vm.deleteMessage(id) }
-                                multiSelectMode = false
-                                selectedMessageIds.clear()
-                            }
-                        }
-                    )
-                } else if (selectedMessage == null) {
+                if (selectedMessage == null) {
                     TopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -458,18 +432,8 @@ fun ChatScreen(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
                                 onImageClick = { uri -> fullScreenImageUri = uri },
-                                onLongClick = { selected ->
-                                if (multiSelectMode) {
-                                    if (selected.id in selectedMessageIds) {
-                                        selectedMessageIds.remove(selected.id)
-                                    } else {
-                                        selectedMessageIds.add(selected.id)
-                                    }
-                                } else {
-                                    multiSelectMode = true
-                                    selectedMessageIds.add(selected.id)
-                                }
-                            },                                onSwipeToReply = { selected -> replyingTo = selected },
+                                onLongClick = { selected -> selectedMessage = selected },
+                                onSwipeToReply = { selected -> replyingTo = selected },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -636,21 +600,6 @@ fun ChatScreen(
             },
             onUnpin = { id -> vm.togglePinMessage(id, false) },
             onDismiss = { showPinnedMessagesSheet = false }
-        )
-    }
-
-    if (showForwardDialog) {
-        ForwardTargetDialog(
-            conversations = forwardTargets,
-            onDismiss = { showForwardDialog = false },
-            onSelect = { targetId ->
-                coroutineScope.launch {
-                    vm.forwardMessages(selectedMessageIds.toList(), targetId)
-                    selectedMessageIds.clear()
-                    multiSelectMode = false
-                    showForwardDialog = false
-                }
-            }
         )
     }
 
@@ -1929,75 +1878,4 @@ private fun PinnedMessageRow(
             }
         }
     }
-}
-
-
-@Composable
-private fun MultiSelectTopBar(
-    count: Int,
-    onClose: () -> Unit,
-    onForward: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Surface(color = Color(0xFF0A1B2A), shadowElevation = 8.dp) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onClose) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar selección", tint = Color.White)
-            }
-            Text(
-                text = "$count seleccionado(s)",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
-            )
-            if (count > 0) {
-                IconButton(onClick = onForward) {
-                    Icon(Icons.AutoMirrored.Filled.Send, "Reenviar", tint = Color(0xFF4CE6FF))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, "Eliminar", tint = Color(0xFFFF5252))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ForwardTargetDialog(
-    conversations: List<ConversationEntity>,
-    onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Reenviar mensajes", color = Color.White) },
-        text = {
-            if (conversations.isEmpty()) {
-                Text("No hay conversaciones disponibles.", color = Color.Gray)
-            } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                    items(conversations) { conv ->
-                        Text(
-                            text = conv.title,
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(conv.id) }
-                                .padding(vertical = 12.dp)
-                        )
-                        Divider(color = Color.White.copy(alpha = 0.1f))
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
-        },
-        containerColor = Color(0xFF15202B)
-    )
 }

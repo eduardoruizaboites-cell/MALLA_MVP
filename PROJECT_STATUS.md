@@ -427,3 +427,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): añadir checkboxes visuales; reenviar adjuntos; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; modo silencioso/biométrico pendiente.
 ──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (cierre de sesión: selección múltiple pospuesta) ──
+Compilación: BUILD SUCCESSFUL (base estable restaurada)
+QUÉ SE HIZO: Se revirtió ChatScreen.kt a la versión estable de mensajes fijados, eliminando la implementación inestable de selección múltiple. Se conserva forwardMessages en MeshChatViewModel como deuda preparada.
+¿ERA UN FIX DE ERROR?: sí; se corrigió UI inconsistente de selección múltiple.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reimplementar selección múltiple con fragmentos mínimos y compilación por pasos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple y reenvío; comunicación entre dispositivos; reacciones premium finales.
+──────────────────────────────
