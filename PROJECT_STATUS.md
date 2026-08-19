@@ -357,3 +357,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): permitir múltiples reacciones por mensaje; mostrar reacción del otro usuario en tiempo real; probar en dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo de comunicación sigue pendiente; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 07:22 (reacciones premium: menú flotante compacto) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se rediseñó el menú de reacciones para que sea flotante, compacto y translúcido. Ahora aparece siempre debajo de la burbuja seleccionada con `DpOffset(0.dp, 4.dp)`. Incluye emojis recientes en scroll horizontal y botón "+" al final para abrir hoja extendida de reacciones. Se eliminó la lógica de alternar arriba/abajo según posición.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de UX/Motion premium solicitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; aumentar catálogo de emojis recientes; animar entrada/salida del menú.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo de comunicación sigue pendiente; warnings existentes.
+──────────────────────────────
