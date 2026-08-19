@@ -142,7 +142,6 @@ fun ChatScreen(
     val prefsRevision by ConversationPreferences.changes.collectAsState()
     val chatPrefs = remember(conversationId, prefsRevision) { ConversationPreferences.load(context, conversationId) }
     val messages by vm.messages.collectAsState()
-    val pinnedMessage by vm.pinnedMessage.collectAsState()
     val polls by vm.polls.collectAsState()
     val optionsMap by vm.optionsMap.collectAsState()
 
@@ -166,6 +165,7 @@ fun ChatScreen(
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
+    var showPinnedMessagesSheet by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showChatSettings by remember { mutableStateOf(false) }
     var showEphemeralDialog by remember { mutableStateOf(false) }
@@ -316,6 +316,13 @@ fun ChatScreen(
                                             showEphemeralDialog = true
                                         }
                                     )
+                                    DropdownMenuItem(
+                                        text = { Text("Mensajes fijados", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            showPinnedMessagesSheet = true
+                                        }
+                                    )
                                 }
                             }
                         },
@@ -345,6 +352,16 @@ fun ChatScreen(
                             IconButton(onClick = { selectedMessage?.let { replyingTo = it }; selectedMessage = null }) {
                                 Icon(Icons.AutoMirrored.Filled.Send, "Responder", tint = Color(0xFF4CE6FF))
                             }
+                            IconButton(onClick = {
+                                selectedMessage?.let { vm.togglePinMessage(it.id, !it.isPinned) }
+                                selectedMessage = null
+                            }) {
+                                Icon(
+                                    Icons.Filled.Star,
+                                    "Fijar mensaje",
+                                    tint = if (selectedMessage?.isPinned == true) Color(0xFFFFD700) else Color(0xFF4CE6FF)
+                                )
+                            }
                             if (selectedMessage?.isOwn == true) {
                                 IconButton(onClick = { selectedMessage?.let { editingMessage = it; editText = it.content }; selectedMessage = null }) {
                                     Icon(Icons.Filled.Edit, "Editar", tint = Color(0xFF4CE6FF))
@@ -364,18 +381,6 @@ fun ChatScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                pinnedMessage?.let { pinned ->
-                    PinnedMessageBanner(
-                        message = pinned,
-                        onNavigate = {
-                            val index = messages.indexOfFirst { it.id == pinned.id }
-                            if (index >= 0) {
-                                coroutineScope.launch { listState.animateScrollToItem(index) }
-                            }
-                        },
-                        onUnpin = { vm.togglePinMessage(pinned.id, false) }
-                    )
-                }
                 // Lista de mensajes
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -579,6 +584,22 @@ fun ChatScreen(
                 ephemeralDuration = duration
                 showEphemeralDialog = false
             }
+        )
+    }
+
+    if (showPinnedMessagesSheet) {
+        val pinnedMessages = messages.filter { it.isPinned }
+        PinnedMessagesSheet(
+            pinnedMessages = pinnedMessages,
+            onNavigate = { pinned ->
+                val index = messages.indexOfFirst { it.id == pinned.id }
+                if (index >= 0) {
+                    coroutineScope.launch { listState.animateScrollToItem(index) }
+                }
+                showPinnedMessagesSheet = false
+            },
+            onUnpin = { id -> vm.togglePinMessage(id, false) },
+            onDismiss = { showPinnedMessagesSheet = false }
         )
     }
 
@@ -1764,6 +1785,96 @@ private fun PinnedMessageBanner(
                 IconButton(onClick = onUnpin, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Filled.Close, "Desfijar", tint = Color(0xFF8B949E), modifier = Modifier.size(16.dp))
                 }
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PinnedMessagesSheet(
+    pinnedMessages: List<MessageData>,
+    onNavigate: (MessageData) -> Unit,
+    onUnpin: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color(0xFF101B26),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+            Text(
+                "Mensajes fijados",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (pinnedMessages.isEmpty()) {
+                Text(
+                    "No hay mensajes fijados en esta conversación.",
+                    color = Color(0xFF8B949E),
+                    fontSize = 14.sp
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.heightIn(max = 420.dp)
+                ) {
+                    items(pinnedMessages) { msg ->
+                        PinnedMessageRow(
+                            message = msg,
+                            onClick = { onNavigate(msg) },
+                            onUnpin = { onUnpin(msg.id) }
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun PinnedMessageRow(
+    message: MessageData,
+    onClick: () -> Unit,
+    onUnpin: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
+        color = Color(0xFF1A2A3A),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    message.content.take(80),
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(message.timestamp)),
+                    color = Color(0xFF8B949E),
+                    fontSize = 11.sp
+                )
+            }
+            IconButton(onClick = onUnpin, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Filled.Close, "Desfijar", tint = Color(0xFF8B949E), modifier = Modifier.size(16.dp))
             }
         }
     }

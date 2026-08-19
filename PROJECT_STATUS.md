@@ -397,3 +397,13 @@ VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; permitir múltiples mensajes fijados; animar transición de banner.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; selección múltiple pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 09:16 (mensajes fijados premium sin banner persistente) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó el banner persistente de mensaje fijado. Se añadió opción "Mensajes fijados" en el menú del chat que abre una hoja premium con la lista de mensajes fijados, navegación al mensaje y desfijar. El botón de estrella en la barra contextual se mantiene para fijar/desfijar. Se conservan migración 15-16 y lógica de ViewModel.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de UX/Motion premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): probar en dispositivo; permitir múltiples mensajes fijados; animar lista.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de comunicación entre dispositivos; reacciones finales premium; selección múltiple pendiente.
+──────────────────────────────
