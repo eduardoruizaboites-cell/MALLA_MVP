@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
@@ -94,6 +95,7 @@ import com.malla.mvp.ui.components.ChatInputBar
 import com.malla.mvp.viewmodel.MeshChatViewModel
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
+import com.malla.mvp.data.entity.ConversationEntity
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.Canvas
@@ -192,6 +194,11 @@ fun ChatScreen(
     var editText by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<MessageData?>(null) }
     var selectedMessage by remember { mutableStateOf<MessageData?>(null) }
+    var multiSelectMode by remember { mutableStateOf(false) }
+    var selectedMessageIds by remember { mutableStateOf(setOf<String>()) }
+    var showForwardDialog by remember { mutableStateOf(false) }
+    var showMultiDeleteDialog by remember { mutableStateOf(false) }
+    val forwardConversations = remember { mutableStateListOf<ConversationEntity>() }
     var showCreatePollDialog by remember { mutableStateOf(false) }
     var pollQuestion by remember { mutableStateOf("") }
     val pollOptions = remember { mutableStateListOf("", "") }
@@ -252,7 +259,7 @@ fun ChatScreen(
     ) {
         Scaffold(
             topBar = {
-                if (selectedMessage == null) {
+                if (selectedMessage == null && !multiSelectMode) {
                     TopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -289,6 +296,9 @@ fun ChatScreen(
                                             )
                                         }
                                     }
+                                }
+                                IconButton(onClick = { multiSelectMode = true; selectedMessage = null; selectedMessageIds = emptySet() }) {
+                                    Icon(Icons.Filled.CheckCircle, "Seleccionar mensajes", tint = Color.White)
                                 }
                                 DropdownMenu(
                                     expanded = showChatMenu,
@@ -328,6 +338,38 @@ fun ChatScreen(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0A1B2A))
                     )
+                } else if (multiSelectMode) {
+                    Surface(
+                        color = Color(0xFF0A1B2A),
+                        shadowElevation = 8.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { multiSelectMode = false; selectedMessageIds = emptySet() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Salir de selección", tint = Color.White)
+                            }
+                            Text(
+                                text = "${selectedMessageIds.size} seleccionados",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = {
+                                coroutineScope.launch {
+                                    forwardConversations.clear()
+                                    forwardConversations.addAll(vm.getConversationsOnce())
+                                }
+                                showForwardDialog = true
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.Send, "Reenviar", tint = Color(0xFF4CE6FF))
+                            }
+                            IconButton(onClick = { showMultiDeleteDialog = true }) {
+                                Icon(Icons.Filled.Delete, "Eliminar", tint = Color(0xFFFF5252))
+                            }
+                        }
+                    }
                 } else {
                     Surface(
                         color = Color(0xFF0A1B2A),
@@ -431,9 +473,19 @@ fun ChatScreen(
                             MessageBubbleV2(
                                 msg = msg,
                                 animate = vm.isMessageNew(msg.timestamp),
+                                isSelected = msg.id in selectedMessageIds,
+                                onClick = { clicked ->
+                                    if (multiSelectMode) {
+                                        selectedMessageIds = if (clicked.id in selectedMessageIds) selectedMessageIds - clicked.id else selectedMessageIds + clicked.id
+                                    }
+                                },
                                 onImageClick = { uri -> fullScreenImageUri = uri },
-                                onLongClick = { selected -> selectedMessage = selected },
-                                onSwipeToReply = { selected -> replyingTo = selected },
+                                onLongClick = { selected ->
+                                    if (!multiSelectMode) selectedMessage = selected
+                                },
+                                onSwipeToReply = { selected ->
+                                    if (!multiSelectMode) replyingTo = selected
+                                },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -584,6 +636,75 @@ fun ChatScreen(
                 ephemeralDuration = duration
                 showEphemeralDialog = false
             }
+        )
+    }
+
+    if (showForwardDialog) {
+        AlertDialog(
+            onDismissRequest = { showForwardDialog = false },
+            title = { Text("Reenviar mensajes", color = Color.White) },
+            text = {
+                Column {
+                    Text("Selecciona la conversación destino:", color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    if (forwardConversations.isEmpty()) {
+                        Text("No hay conversaciones disponibles.", color = Color.Gray)
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                            items(forwardConversations) { conv ->
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            vm.forwardMessages(selectedMessageIds.toList(), conv.id)
+                                            showForwardDialog = false
+                                            multiSelectMode = false
+                                            selectedMessageIds = emptySet()
+                                        },
+                                    color = Color(0xFF1A2A3A),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        conv.name,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showForwardDialog = false }) { Text("Cancelar", color = Color.Gray) }
+            },
+            containerColor = Color(0xFF15202B)
+        )
+    }
+
+    if (showMultiDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showMultiDeleteDialog = false },
+            title = { Text("Eliminar mensajes", color = Color.White) },
+            text = { Text("Se eliminarán ${selectedMessageIds.size} mensaje(s).", color = Color.Gray) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val selectedMsgs = messages.filter { it.id in selectedMessageIds }
+                    selectedMsgs.forEach { msg ->
+                        if (msg.isOwn) vm.deleteForAll(msg.id) else vm.deleteMessage(msg.id)
+                    }
+                    showMultiDeleteDialog = false
+                    multiSelectMode = false
+                    selectedMessageIds = emptySet()
+                }) { Text("Eliminar", color = Color(0xFFFF5252)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMultiDeleteDialog = false }) { Text("Cancelar", color = Color.Gray) }
+            },
+            containerColor = Color(0xFF15202B)
         )
     }
 
@@ -960,6 +1081,8 @@ fun MessageBubbleV2(
     animate: Boolean = false,
     onImageClick: (Uri) -> Unit = {},
     onLongClick: (MessageData) -> Unit = {},
+    onClick: (MessageData) -> Unit = {},
+    isSelected: Boolean = false,
     onSwipeToReply: (MessageData) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
@@ -998,7 +1121,7 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .combinedClickable(onClick = {}, onLongClick = { onLongClick(msg) })
+            .combinedClickable(onClick = { onClick(msg) }, onLongClick = { onLongClick(msg) })
             .pointerInput(msg.id) {
                 var totalDrag = 0f
                 var fired = false
@@ -1021,11 +1144,13 @@ fun MessageBubbleV2(
             Text(
                 text = msg.content,
                 fontSize = 28.sp,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = scale.value
-                    scaleY = scale.value
-                    translationY = slideY.value
-                }
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                        translationY = slideY.value
+                    }
+                    .then(if (isSelected) Modifier.border(2.dp, Color(0xFF4CE6FF), CircleShape) else Modifier)
             )
         } else {
             val shape = RoundedCornerShape(16.dp)
@@ -1040,7 +1165,8 @@ fun MessageBubbleV2(
                         translationY = slideY.value
                         transformOrigin = if (isOwn) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
                     }
-                    .alpha(bubbleOpacity),
+                    .alpha(bubbleOpacity)
+                    .then(if (isSelected) Modifier.border(2.dp, Color(0xFF4CE6FF), shape) else Modifier),
                 color = Color.Transparent
             ) {
                 Box(

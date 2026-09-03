@@ -437,3 +437,33 @@ VERIFICADO EN: solo compilación.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reimplementar selección múltiple con fragmentos mínimos y compilación por pasos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple y reenvío; comunicación entre dispositivos; reacciones premium finales.
 ──────────────────────────────
+
+── ENTRADA — 2026-08-19 11:04 (rama feature/multi-select-reimpl creada y base compilada) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se creó la rama feature/multi-select-reimpl desde la base estable de mensajes fijados. Se compiló para confirmar punto de partida limpio.
+¿ERA UN FIX DE ERROR?: no era fix; fue preparación para reimplementar selección múltiple.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple sin implementar; warnings de KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-08-19 11:10 (Fase 1 selección múltiple: estados y barra contextual) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se intentó aplicar script Python para añadir estados multiSelectMode/selectedMessageIds, botón de activación en top bar y barra contextual multiselección. Compilación exitosa; pendiente verificar inserción real con grep.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple aún sin interacción en burbujas; warnings de KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-08-19 11:13 (Fase 2 selección múltiple: interacción en burbujas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se modificó MessageBubbleV2 para aceptar onClick e isSelected. En modo multiselección, tocar una burbuja alterna su selección y muestra borde cian. El long-press y swipe-to-reply se desactivan durante la multiselección.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): eliminar bloques duplicados de ChatCustomizationDialog; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: acciones de reenviar/eliminar en barra multiselección aún son TODO; falta diálogo de destino y borrado masivo; warnings existentes.
+──────────────────────────────
