@@ -667,7 +667,7 @@ fun ChatScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        conv.name,
+                                        conv.title,
                                         color = Color.White,
                                         fontSize = 15.sp,
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)

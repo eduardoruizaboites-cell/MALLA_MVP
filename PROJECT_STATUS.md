@@ -467,3 +467,13 @@ VERIFICADO EN: solo compilación.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): eliminar bloques duplicados de ChatCustomizationDialog; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: acciones de reenviar/eliminar en barra multiselección aún son TODO; falta diálogo de destino y borrado masivo; warnings existentes.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-03 08:35 (Fase 3 selección múltiple: diálogos de reenvío y borrado, fix conv.name→conv.title) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se aplicó Fase 3: diálogo de reenvío con lista de conversaciones usando getConversationsOnce(), diálogo de confirmación de borrado masivo, conexión de botones. Se corrigió error de compilación al usar conv.name en lugar de conv.title.
+¿ERA UN FIX DE ERROR?: sí; error de compilación  → se cambió conv.name por conv.title.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): la clase ConversationEntity no tiene campo name; se confirmó con inspección del archivo entity.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reenvío de adjuntos; borrado sincronizado para mensajes ajenos; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple funcional localmente, falta prueba en dispositivo; comunicación entre dispositivos sin validar; warnings.
+──────────────────────────────
