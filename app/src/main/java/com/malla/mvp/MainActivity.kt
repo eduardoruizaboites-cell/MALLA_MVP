@@ -195,7 +195,7 @@ class MainActivity : FragmentActivity() {
                     if (!meshToastShown.value) {
                         android.widget.Toast.makeText(
                             context,
-                            "Modo Mesh activado – Tema OLED para ahorro de batería",
+                            "Modo Mesh activado – comunicaciones locales",
                             android.widget.Toast.LENGTH_LONG
                         ).show()
                         meshToastShown.value = true

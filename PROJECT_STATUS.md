@@ -477,3 +477,13 @@ VERIFICADO EN: solo compilación.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): reenvío de adjuntos; borrado sincronizado para mensajes ajenos; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: selección múltiple funcional localmente, falta prueba en dispositivo; comunicación entre dispositivos sin validar; warnings.
 ──────────────────────────────
+
+── ENTRADA — $date_str (fix: tema siempre azul o seleccionado, no cambia sin internet) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó la dependencia del tema con ConnectivityMonitor. AppThemeState ahora usa siempre el tema seleccionado por el usuario (por defecto MALLA_DARK azul). Se actualizó toast de modo mesh para no mencionar cambio de tema.
+¿ERA UN FIX DE ERROR?: sí; al perder internet la app forzaba MallaColorScheme.OLED_PURE → se desacopló el tema de la conectividad.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa encontrada por inspección.
+VERIFICADO EN: solo compilación.
+IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; comunicación entre dispositivos sin validar.
+──────────────────────────────

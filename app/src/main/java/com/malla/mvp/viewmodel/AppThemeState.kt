@@ -3,7 +3,6 @@ package com.malla.mvp.viewmodel
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.ui.theme.MallaColorScheme
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -38,12 +37,10 @@ class AppThemeState private constructor(private val prefs: SharedPreferences?) {
 
     init {
         scope.launch {
-            combine(_userSelectedScheme, ConnectivityMonitor.isOnline) { userScheme, isOnline ->
-                if (isOnline) userScheme else MallaColorScheme.OLED_PURE
-            }.collect { scheme ->
+            _userSelectedScheme.collect { scheme ->
                 try {
                     _effectiveScheme.value = scheme
-                    Log.d(TAG, "[THEME] Tema cambiado a: ${scheme.name}")
+                    Log.d(TAG, "[THEME] Tema aplicado: ${scheme.name}")
                 } catch (e: Exception) {
                     Log.e(TAG, "[THEME:ERR] Error al aplicar tema ${scheme.name}", e)
                     _effectiveScheme.value = MallaColorScheme.MALLA_DARK // Fallback seguro
