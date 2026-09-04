@@ -58,12 +58,15 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.focus.FocusRequester
@@ -225,6 +228,8 @@ fun ChatScreen(
     var searchQuery by remember { mutableStateOf("") }
     var pollQuestion by remember { mutableStateOf("") }
     val pollOptions = remember { mutableStateListOf("", "") }
+    var isFetchingLocation by remember { mutableStateOf(false) }
+    var showLocationError by remember { mutableStateOf(false) }
 
 
     LaunchedEffect(conversationId) {
@@ -931,14 +936,16 @@ fun ChatScreen(
                         onClick = {
                             showAttachmentPanel = false
                             coroutineScope.launch {
+                                isFetchingLocation = true
                                 val loc = LocationProvider.getCurrentLocation(context)
+                                isFetchingLocation = false
                                 if (loc != null) {
                                     val lat = loc.latitude
                                     val lon = loc.longitude
                                     val mapsUrl = "https://maps.google.com/maps?q=$lat,$lon"
                                     vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\n$mapsUrl")
                                 } else {
-                                    vm.sendMessage("📍 No se pudo obtener la ubicación real. Concede permisos de ubicación y espera unos segundos.")
+                                    showLocationError = true
                                 }
                             }
                         }
@@ -977,12 +984,16 @@ fun ChatScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(onClick = {
                             showAttachmentSheet = false
-                            val loc = getBestLocation(context)
-                            if (loc != null) {
-                                val lat = loc.latitude; val lon = loc.longitude
-                                vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\nhttps://maps.google.com/maps?q=$lat,$lon")
-                            } else {
-                                vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
+                            coroutineScope.launch {
+                                isFetchingLocation = true
+                                val loc = LocationProvider.getCurrentLocation(context)
+                                isFetchingLocation = false
+                                if (loc != null) {
+                                    val lat = loc.latitude; val lon = loc.longitude
+                                    vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\nhttps://maps.google.com/maps?q=$lat,$lon")
+                                } else {
+                                    showLocationError = true
+                                }
                             }
                         }) {
                             Icon(Icons.Filled.LocationOn, "Ubicación", tint = Color(0xFF4CE6FF))
@@ -1076,7 +1087,96 @@ fun ChatScreen(
         )
     }
 
+    if (isFetchingLocation) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Obteniendo ubicación...") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Espera unos segundos")
+                }
+            },
+            confirmButton = {},
+            dismissButton = {}
+        )
+    }
+
+    if (showLocationError) {
+        AlertDialog(
+            onDismissRequest = { showLocationError = false },
+            title = { Text("Ubicación no disponible") },
+            text = { Text("No se pudo obtener tu ubicación. Revisa que los permisos de ubicación estén concedidos y que el GPS esté activo.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLocationError = false
+                    // Reintentar
+                    coroutineScope.launch {
+                        isFetchingLocation = true
+                        val loc = LocationProvider.getCurrentLocation(context)
+                        isFetchingLocation = false
+                        if (loc != null) {
+                            val lat = loc.latitude; val lon = loc.longitude
+                            vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\nhttps://maps.google.com/maps?q=$lat,$lon")
+                        } else {
+                            showLocationError = true
+                        }
+                    }
+                }) { Text("Reintentar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationError = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (isFetchingLocation) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Obteniendo ubicación...") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Espera unos segundos")
+                }
+            },
+            confirmButton = {},
+            dismissButton = {}
+        )
+    }
+
+    if (showLocationError) {
+        AlertDialog(
+            onDismissRequest = { showLocationError = false },
+            title = { Text("Ubicación no disponible") },
+            text = { Text("No se pudo obtener tu ubicación. Revisa que los permisos de ubicación estén concedidos y que el GPS esté activo.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLocationError = false
+                    coroutineScope.launch {
+                        isFetchingLocation = true
+                        val loc = LocationProvider.getCurrentLocation(context)
+                        isFetchingLocation = false
+                        if (loc != null) {
+                            val lat = loc.latitude; val lon = loc.longitude
+                            vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\nhttps://maps.google.com/maps?q=$lat,$lon")
+                        } else {
+                            showLocationError = true
+                        }
+                    }
+                }) { Text("Reintentar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationError = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     // Diálogo de imagen a pantalla completa con zoom
+
+
     if (fullScreenImageUri != null) {
         Dialog(
             onDismissRequest = {
@@ -1553,6 +1653,28 @@ private fun BubbleContent(
             fontSize = 10.sp
         )
     }
+        if (msg.isOwn) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                when (msg.status) {
+                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        if (msg.isOwn) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                when (msg.status) {
+                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
 }
 
 fun Color.lighten(factor: Float = 0.1f): Color {
