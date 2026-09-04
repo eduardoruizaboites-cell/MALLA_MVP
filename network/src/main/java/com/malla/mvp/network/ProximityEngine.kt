@@ -22,6 +22,8 @@ object ProximityEngine {
         appContext = context.applicationContext
         discoveryJob = scope.launch {
             LogBuffer.add("PROX", "ProximityEngine iniciado")
+            // Inicializar BleManager (adapter, scanner, advertiser)
+            BleManager.start(context)
             // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
                 addOrUpdate(token, name, seed, SignalType.BLE, strength, device)

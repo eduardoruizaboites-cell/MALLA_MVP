@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malla.mvp.ui.components.SmsFallbackSwitch
 import com.malla.mvp.network.NetworkService
+import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.core.model.NearbyUser
+import androidx.compose.runtime.collectAsState
 import kotlin.math.roundToInt
 
 // Datos simulados de nodos
@@ -94,7 +97,7 @@ fun PulsoScreen(
 
         when (selectedTab) {
             0 -> TabPulso()
-            1 -> TabNodos()
+            1 -> TabNodos(onConnectToPeer = onConnectToPeer)
             2 -> TabLogros()
             3 -> TabModos(onConnectToPeer = onConnectToPeer)
         }
@@ -223,10 +226,45 @@ fun UptimeBanner() {
 }
 
 @Composable
-fun TabNodos() {
+fun TabNodos(onConnectToPeer: (String) -> Unit) {
+    val nearbyUsers by ProximityEngine.nearbyUsers.collectAsState()
+    val realUsers = nearbyUsers.filter { it.token.startsWith("mdns_") || it.bluetoothDevice != null }
+
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Text("NODOS ALCANZABLES AHORA", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)) }
-        items(sampleNodes) { node -> NodeCard(node) }
+        if (realUsers.isEmpty()) {
+            item { Text("No hay dispositivos cercanos aún", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) }
+        } else {
+            items(realUsers, key = { it.token }) { user ->
+                val ip = if (user.token.startsWith("mdns_")) user.token.removePrefix("mdns_") else null
+                RealNodeCard(user, ip, onConnectToPeer)
+            }
+        }
+    }
+}
+
+@Composable
+fun RealNodeCard(user: NearbyUser, ip: String?, onConnectToPeer: (String) -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(12.dp)) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                Text(user.displayName.take(1).uppercase(), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(user.displayName, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    if (ip != null) "IP: $ip" else "Dispositivo BLE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+            }
+            if (ip != null) {
+                Button(onClick = { onConnectToPeer(ip) }) {
+                    Text("Conectar")
+                }
+            }
+        }
     }
 }
 

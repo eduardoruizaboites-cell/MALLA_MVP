@@ -892,3 +892,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Column alignment, Row sin
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): validar en dispositivo; centralizar paleta; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; reenvío de adjuntos sin implementar.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 11:20 (fase 1-2: activar descubrimiento y UI de nodos reales) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se activó ProximityEngine al iniciar MainActivity si los permisos ya están concedidos, y se llamó a BleManager.start y MeshConnector.start en onCreate y callback de permisos. Se añadió hasRequiredPermissions(). En ProximityEngine.start, se inicializa BleManager antes de escanear. En PulsoScreen, la pestaña NODOS ahora muestra los dispositivos reales de ProximityEngine.nearbyUsers, con botón Conectar para IPs mDNS.
+¿ERA UN FIX DE ERROR?: sí; no se podía conectar entre dispositivos porque el descubrimiento no se iniciaba automáticamente y la UI de nodos usaba datos simulados.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el fallo fuera del servidor TCP o handshake; el problema era de arranque e integración de descubrimiento.
+VERIFICADO EN: solo compilación; pendiente prueba en dos dispositivos.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, NSD/mDNS, BLE, permisos runtime, pantallas típicas.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar flujo de código de 24h; mostrar dispositivos BLE con conectar automático; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba en dispositivo real; código de 24h; validación inter-dispositivo de ack; warnings KSP/deprecación.
+──────────────────────────────

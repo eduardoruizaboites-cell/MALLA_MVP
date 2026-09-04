@@ -50,6 +50,7 @@ import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.ConnectivityMonitor
+import com.malla.mvp.network.MeshConnector
 import com.malla.mvp.util.RadioManager
 import com.malla.mvp.service.MeshChatService
 import com.malla.mvp.network.ProximityEngine
@@ -103,6 +104,14 @@ class MainActivity : FragmentActivity() {
         // Iniciar servidor TCP siempre (para comunicación directa)
         NetworkService.startServer()
         LogBuffer.add("MAIN", "NetworkService iniciado")
+
+        // Iniciar descubrimiento y conexión mesh si los permisos ya están concedidos
+        if (hasRequiredPermissions()) {
+            enableRadio()
+            ProximityEngine.start(this)
+            BleManager.start(this)
+            MeshConnector.start()
+        }
         val permissionPrefs = getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
         showPermissionExplanationState.value = !permissionPrefs.getBoolean("permission_explanation_shown", false)
 
@@ -116,6 +125,7 @@ class MainActivity : FragmentActivity() {
                 enableRadio()
                 ProximityEngine.start(this)
                 BleManager.start(this)
+                MeshConnector.start()
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()
@@ -415,6 +425,31 @@ class MainActivity : FragmentActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error al crear conversación", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun hasRequiredPermissions(): Boolean {
+        val requiredPermissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_CONTACTS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            requiredPermissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        return requiredPermissions.all { perm ->
+            checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
         }
     }
 
