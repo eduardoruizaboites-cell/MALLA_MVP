@@ -129,6 +129,7 @@ class MainActivity : FragmentActivity() {
         // Solicitar todos los permisos necesarios para el funcionamiento completo
         val requiredPermissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.READ_CONTACTS
@@ -352,6 +353,7 @@ class MainActivity : FragmentActivity() {
     private fun requestPermissions() {
         val requiredPermissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.READ_CONTACTS

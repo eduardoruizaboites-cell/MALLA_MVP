@@ -9,6 +9,7 @@ import com.malla.mvp.data.entity.MessageEntity
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.di.Injector
+import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.events.MallaEventBus
 import kotlinx.coroutines.*
 import java.util.UUID
@@ -127,6 +128,17 @@ object MessageReceiver {
                 return
             }
 
+            if (meshMsg.type == "ack" && meshMsg.messageId != null) {
+                val newStatus = when (meshMsg.content) {
+                    "1" -> 1
+                    "2" -> 2
+                    else -> 1
+                }
+                db.messageDao().updateStatus(meshMsg.messageId!!, newStatus)
+                MallaEventBus.messageReceived.emit(meshMsg)
+                return
+            }
+
 
             if (meshMsg.type == "edit" && meshMsg.quotedMessageId != null) {
                 val originalId = meshMsg.quotedMessageId!!
@@ -178,6 +190,23 @@ object MessageReceiver {
                 viewOnce = meshMsg.viewOnce
             )
             messageDao.insertMessage(msgEntity)
+
+            // Enviar ack real al emisor si el mensaje trae messageId
+            if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
+                try {
+                    NetworkService.sendMessageToContact(
+                        meshMsg.senderId,
+                        MeshMessage(
+                            content = "2",
+                            senderId = IdentityManager.getIdentityId(),
+                            type = "ack",
+                            messageId = meshMsg.messageId
+                        )
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error enviando ack: ${e.message}")
+                }
+            }
 
             // Marcar como leídos los mensajes propios de esta conversación (palomita leída)
             try {

@@ -834,3 +834,25 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Google Play Services, permisos de 
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar indicador de carga mientras se obtiene la ubicación; implementar ack real de entrega/lectura en protocolo de red.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; protocolo de confirmación de entrega/lectura real pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-04 11:50 (fix permisos y robustez de ubicación) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregó ACCESS_COARSE_LOCATION en MainActivity. Se reescribió LocationProvider con fallback a LocationManager y verificación de Google Play Services. Se compiló con warnings existentes.
+¿ERA UN FIX DE ERROR?: sí; la ubicación fallaba por permiso faltante y dependencia exclusiva de FusedLocation.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por inspección de permisos y dependencias.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Google Play Services, LocationManager fallback.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): indicador de carga en ubicación; ack real de entrega/lectura.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación en dispositivo; ack real pendiente; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 12:15 (ack real de entrega/lectura en protocolo) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se agregó messageId a MeshMessage y serialización/parseo. MessageReceiver procesa type="ack" y actualiza estado del mensaje original; al recibir chat envía ack con status=2. MeshChatViewModel incluye messageId y type="chat" en sendMessage.
+¿ERA UN FIX DE ERROR?: no; fue implementación de ack real pendiente.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, NetworkService TCP/WebRTC, Room.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; indicador de carga en ubicación; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del ack; warnings KSP/deprecación; ubicación sin prueba real.
+──────────────────────────────

@@ -232,15 +232,17 @@ object NetworkService {
                     val encrypted = ByteArray(length)
                     input?.readFully(encrypted)
                     val decrypted = CryptoEngine.decrypt(encrypted, secretKey!!)
-                    val parts = decrypted.split("|", limit = 4)
+                    val parts = decrypted.split("|", limit = 5)
                     val type = parts.getOrElse(0) { "chat" }
-                    val quoteId = parts.getOrElse(1) { "" }.ifBlank { null }
-                    val quoteContent = parts.getOrElse(2) { "" }.ifBlank { null }
-                    val text = parts.getOrElse(3) { decrypted }
+                    val msgId = parts.getOrElse(1) { "" }.ifBlank { null }
+                    val quoteId = parts.getOrElse(2) { "" }.ifBlank { null }
+                    val quoteContent = parts.getOrElse(3) { "" }.ifBlank { null }
+                    val text = parts.getOrElse(4) { decrypted }
                     val message = MeshMessage(
                         content = text,
                         senderId = contactId ?: "unknown",
                         type = type,
+                        messageId = msgId,
                         quotedMessageId = quoteId,
                         quotedMessageContent = quoteContent
                     )
@@ -259,7 +261,7 @@ object NetworkService {
 
         suspend fun send(message: MeshMessage) {
             try {
-                val wire = "${message.type}|${message.quotedMessageId ?: ""}|${message.quotedMessageContent ?: ""}|${message.content}"
+                val wire = "${message.type}|${message.messageId ?: ""}|${message.quotedMessageId ?: ""}|${message.quotedMessageContent ?: ""}|${message.content}"
                 val encrypted = CryptoEngine.encrypt(wire, secretKey!!)
                 output?.writeInt(encrypted.size)
                 output?.write(encrypted)
@@ -289,6 +291,7 @@ data class MeshMessage(
     val senderId: String = "self",
     val timestamp: Long = System.currentTimeMillis(),
     val type: String = "chat",
+    val messageId: String? = null,
     val quotedMessageId: String? = null,
     val quotedMessageContent: String? = null,
     val expireAt: Long? = null,

@@ -250,6 +250,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         content = finalContent,
                         senderId = IdentityManager.getIdentityId(),
                         timestamp = System.currentTimeMillis(),
+                        type = "chat",
+                        messageId = msg.id,
                         quotedMessageId = quotedMessageId,
                         quotedMessageContent = quotedMessageContent,
                         expireAt = expireAt,
