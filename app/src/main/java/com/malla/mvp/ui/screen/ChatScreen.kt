@@ -18,8 +18,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.InsertDriveFile
@@ -41,13 +45,14 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Poll
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
@@ -55,11 +60,13 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.draw.alpha
@@ -76,13 +83,18 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.malla.mvp.core.data.MessageData
@@ -165,6 +177,8 @@ fun ChatScreen(
     val colorScheme = LocalColorScheme.current
     val shakeOffset = remember { Animatable(0f) }
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
+    var expiringViewOnceUri by remember { mutableStateOf<Uri?>(null) }
+    var currentViewOnceMessageId by remember { mutableStateOf<String?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
     var showChatMenu by remember { mutableStateOf(false) }
     var showPinnedMessagesSheet by remember { mutableStateOf(false) }
@@ -194,12 +208,15 @@ fun ChatScreen(
     var editText by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<MessageData?>(null) }
     var selectedMessage by remember { mutableStateOf<MessageData?>(null) }
+    var selectedMessagePosition by remember { mutableStateOf(Offset.Zero) }
     var multiSelectMode by remember { mutableStateOf(false) }
     var selectedMessageIds by remember { mutableStateOf(setOf<String>()) }
     var showForwardDialog by remember { mutableStateOf(false) }
     var showMultiDeleteDialog by remember { mutableStateOf(false) }
     val forwardConversations = remember { mutableStateListOf<ConversationEntity>() }
     var showCreatePollDialog by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     var pollQuestion by remember { mutableStateOf("") }
     val pollOptions = remember { mutableStateListOf("", "") }
 
@@ -259,7 +276,7 @@ fun ChatScreen(
     ) {
         Scaffold(
             topBar = {
-                if (selectedMessage == null && !multiSelectMode) {
+                if ((selectedMessage == null && !multiSelectMode) || showReactionPicker) {
                     TopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -297,9 +314,6 @@ fun ChatScreen(
                                         }
                                     }
                                 }
-                                IconButton(onClick = { multiSelectMode = true; selectedMessage = null; selectedMessageIds = emptySet() }) {
-                                    Icon(Icons.Filled.CheckCircle, "Seleccionar mensajes", tint = Color.White)
-                                }
                                 DropdownMenu(
                                     expanded = showChatMenu,
                                     onDismissRequest = { showChatMenu = false },
@@ -333,6 +347,13 @@ fun ChatScreen(
                                             showPinnedMessagesSheet = true
                                         }
                                     )
+                                    DropdownMenuItem(
+                                        text = { Text("Buscar mensajes", color = Color.White) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            isSearchActive = true
+                                        }
+                                    )
                                 }
                             }
                         },
@@ -351,7 +372,7 @@ fun ChatScreen(
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Salir de selección", tint = Color.White)
                             }
                             Text(
-                                text = "${selectedMessageIds.size} seleccionados",
+                                text = "${selectedMessageIds.size}",
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
@@ -363,7 +384,18 @@ fun ChatScreen(
                                 }
                                 showForwardDialog = true
                             }) {
-                                Icon(Icons.AutoMirrored.Filled.Send, "Reenviar", tint = Color(0xFF4CE6FF))
+                                Icon(Icons.AutoMirrored.Filled.Forward, "Reenviar", tint = Color(0xFF4CE6FF))
+                            }
+                            IconButton(onClick = {
+                                val selected = messages.filter { it.id in selectedMessageIds }
+                                val allPinned = selected.all { it.isPinned }
+                                selected.forEach { vm.togglePinMessage(it.id, !allPinned) }
+                            }) {
+                                Icon(
+                                    Icons.Filled.Star,
+                                    "Favoritos",
+                                    tint = if (selectedMessageIds.any { id -> messages.find { it.id == id }?.isPinned == true }) Color(0xFFFFD700) else Color(0xFF4CE6FF)
+                                )
                             }
                             IconButton(onClick = { showMultiDeleteDialog = true }) {
                                 Icon(Icons.Filled.Delete, "Eliminar", tint = Color(0xFFFF5252))
@@ -383,7 +415,7 @@ fun ChatScreen(
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar selección", tint = Color.White)
                             }
                             Text(
-                                text = "1 seleccionado",
+                                text = "1",
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
@@ -423,12 +455,86 @@ fun ChatScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                // Lista de mensajes
+                val filteredMessages = remember(messages, searchQuery, isSearchActive) {
+                    if (isSearchActive && searchQuery.isNotBlank()) {
+                        messages.filter { it.content.contains(searchQuery, ignoreCase = true) }
+                    } else {
+                        messages
+                    }
+                }
+                // Barra de búsqueda animada
+                AnimatedVisibility(
+                    visible = isSearchActive,
+                    enter = expandVertically(tween(250, easing = FastOutSlowInEasing)) + fadeIn(tween(200)),
+                    exit = shrinkVertically(tween(200)) + fadeOut(tween(150))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .shadow(4.dp, RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF15202B))
+                            .border(1.dp, Color(0xFF4CE6FF).copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription = "Buscar",
+                                tint = Color(0xFF4CE6FF),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                cursorBrush = SolidColor(Color(0xFF4CE6FF)),
+                                decorationBox = { innerTextField ->
+                                    Box {
+                                        if (searchQuery.isEmpty()) {
+                                            Text(
+                                                "Buscar mensajes...",
+                                                color = Color.Gray,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "${filteredMessages.size}",
+                                color = Color(0xFF4CE6FF),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    isSearchActive = false
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Filled.Close, "Cerrar búsqueda", tint = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                // Lista de mensajes filtrada (declarada antes de la barra)
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     state = listState
                 ) {
-                    items(messages) { msg ->
+                    items(filteredMessages) { msg ->
                         if (msg.pollId != null) {
                             PollMessageBubble(
                                 pollId = msg.pollId!!,
@@ -437,18 +543,25 @@ fun ChatScreen(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                                 vm = vm
                             )
-                        } else if (msg.viewOnce && !msg.isOwn && !msg.isDeleted) {
+                        } else if (msg.viewOnce && !msg.isDeleted) {
                             if (msg.id !in revealedOnceIds) {
                                 ViewOnceMessageBubble(
                                     msg = msg,
                                     onReveal = {
                                         msg.mediaUri?.let { uriString ->
                                             fullScreenImageUri = Uri.parse(uriString)
+                                            expiringViewOnceUri = Uri.parse(uriString)
+                                            currentViewOnceMessageId = msg.id
                                         }
                                         revealedOnceIds.add(msg.id)
                                         coroutineScope.launch {
                                             delay(5000)
                                             vm.deleteMessage(msg.id)
+                                            if (fullScreenImageUri == expiringViewOnceUri) {
+                                                fullScreenImageUri = null
+                                                expiringViewOnceUri = null
+                                                currentViewOnceMessageId = null
+                                            }
                                         }
                                     }
                                 )
@@ -481,11 +594,15 @@ fun ChatScreen(
                                 },
                                 onImageClick = { uri -> fullScreenImageUri = uri },
                                 onLongClick = { selected ->
-                                    if (!multiSelectMode) selectedMessage = selected
+                                    if (!multiSelectMode) {
+                                        selectedMessage = selected
+                                        showReactionPicker = true
+                                    }
                                 },
                                 onSwipeToReply = { selected ->
                                     if (!multiSelectMode) replyingTo = selected
                                 },
+                                onPositioned = { pos -> selectedMessagePosition = pos },
                                 ownBubbleColorParam = chatPrefs.ownBubbleColor?.let { Color(it) },
                                 otherBubbleColorParam = chatPrefs.otherBubbleColor?.let { Color(it) },
                                 fontSizeParam = chatPrefs.fontSize,
@@ -731,7 +848,8 @@ fun ChatScreen(
 
     // ── Panel de adjuntos premium ─────────────────────────────────
     if (showReactionPicker && selectedMessage != null) {
-        ReactionPicker(
+        FloatingReactionPopup(
+            offset = IntOffset(selectedMessagePosition.x.toInt(), selectedMessagePosition.y.toInt() + 80),
             onDismiss = { showReactionPicker = false },
             onEmojiSelected = { emoji ->
                 vm.addReaction(selectedMessage!!.id, emoji)
@@ -910,7 +1028,14 @@ fun ChatScreen(
     // Diálogo de imagen a pantalla completa con zoom
     if (fullScreenImageUri != null) {
         Dialog(
-            onDismissRequest = { fullScreenImageUri = null },
+            onDismissRequest = {
+                if (fullScreenImageUri == expiringViewOnceUri) {
+                    currentViewOnceMessageId?.let { vm.deleteMessage(it) }
+                    expiringViewOnceUri = null
+                    currentViewOnceMessageId = null
+                }
+                fullScreenImageUri = null
+            },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             val scale = remember { Animatable(1f) }
@@ -921,7 +1046,14 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
-                    .clickable { fullScreenImageUri = null }  // Cerrar al tocar fondo
+                    .clickable {
+                        if (fullScreenImageUri == expiringViewOnceUri) {
+                            currentViewOnceMessageId?.let { vm.deleteMessage(it) }
+                            expiringViewOnceUri = null
+                            currentViewOnceMessageId = null
+                        }
+                        fullScreenImageUri = null
+                    }  // Cerrar al tocar fondo
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             val newScale = (scale.value * zoom).coerceIn(0.5f, 5f)
@@ -958,6 +1090,30 @@ fun ChatScreen(
                         },
                     contentScale = ContentScale.Fit
                 )
+
+                if (fullScreenImageUri == expiringViewOnceUri) {
+                    val progress = remember { Animatable(1f) }
+                    LaunchedEffect(fullScreenImageUri) {
+                        progress.snapTo(1f)
+                        progress.animateTo(0f, tween(5000, easing = LinearEasing))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(24.dp)
+                            .size(64.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            progress = progress.value,
+                            modifier = Modifier.size(48.dp),
+                            color = Color(0xFF4CE6FF),
+                            trackColor = Color.White.copy(alpha = 0.2f),
+                            strokeWidth = 4.dp
+                        )
+                    }
+                }
             }
         }
     }
@@ -1030,6 +1186,10 @@ fun ViewOnceMessageBubble(
     msg: MessageData,
     onReveal: () -> Unit
 ) {
+    val lockRotation = remember { Animatable(0f) }
+    val lockColor = remember { Animatable(Color(0xFF4CE6FF)) }
+    val coroutineScope = rememberCoroutineScope()
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1039,7 +1199,13 @@ fun ViewOnceMessageBubble(
     ) {
         Row(
             modifier = Modifier
-                .clickable(onClick = onReveal)
+                .clickable {
+                    coroutineScope.launch {
+                        lockRotation.animateTo(180f, tween(300))
+                        lockColor.animateTo(Color(0xFF4CAF50), tween(300))
+                        onReveal()
+                    }
+                }
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -1047,8 +1213,10 @@ fun ViewOnceMessageBubble(
             Icon(
                 Icons.Filled.Lock,
                 contentDescription = "Vista única",
-                tint = Color(0xFF4CE6FF),
-                modifier = Modifier.size(20.dp)
+                tint = lockColor.value,
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { rotationY = lockRotation.value }
             )
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -1084,6 +1252,7 @@ fun MessageBubbleV2(
     onClick: (MessageData) -> Unit = {},
     isSelected: Boolean = false,
     onSwipeToReply: (MessageData) -> Unit = {},
+    onPositioned: (Offset) -> Unit = {},
     ownBubbleColorParam: Color? = null,
     otherBubbleColorParam: Color? = null,
     fontSizeParam: Float? = null,
@@ -1121,6 +1290,9 @@ fun MessageBubbleV2(
 
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+            .onGloballyPositioned { coordinates ->
+                onPositioned(coordinates.positionInRoot())
+            }
             .combinedClickable(onClick = { onClick(msg) }, onLongClick = { onLongClick(msg) })
             .pointerInput(msg.id) {
                 var totalDrag = 0f
@@ -1288,6 +1460,15 @@ private fun BubbleContent(
                     fontSize = 10.sp
                 )
             }
+        }
+        if (msg.isPinned) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = "Fijado",
+                tint = Color(0xFFFFD700),
+                modifier = Modifier.size(10.dp)
+            )
+            Spacer(Modifier.width(2.dp))
         }
         Text(
             text = buildString {
@@ -1571,11 +1752,24 @@ fun PollMessageBubble(
                     label = "poll_fraction_${option.id}"
                 )
 
+                val haptic = LocalHapticFeedback.current
+                val isVoted = option.voteCount > 0
+                val checkScale = remember { Animatable(if (isVoted) 1f else 0.6f) }
+                LaunchedEffect(isVoted) {
+                    if (isVoted) {
+                        checkScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 600f))
+                    } else {
+                        checkScale.snapTo(0.6f)
+                    }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { onVote(option.id) }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onVote(option.id)
+                        }
                         .background(Color.White.copy(alpha = 0.06f))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1588,12 +1782,14 @@ fun PollMessageBubble(
                             .border(1.dp, accent, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (option.voteCount > 0) {
-                            Box(
+                        if (isVoted) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Votado",
+                                tint = accent,
                                 modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(accent)
+                                    .size(16.dp)
+                                    .scale(checkScale.value)
                             )
                         }
                     }
@@ -1821,52 +2017,228 @@ private fun MediaPreviewPanel(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReactionPicker(
+private fun FloatingReactionPopup(
+    offset: IntOffset,
     onDismiss: () -> Unit,
     onEmojiSelected: (String) -> Unit
 ) {
-    val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
-    ModalBottomSheet(
+    val haptic = LocalHapticFeedback.current
+    val favorites = ReactionFavorites.favorites
+    var showExtended by remember { mutableStateOf(false) }
+
+    Popup(
+        alignment = Alignment.TopStart,
+        offset = offset,
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xFF1A1A2E),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        properties = PopupProperties(focusable = true)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Text(
-                "Reaccionar",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
+        AnimatedVisibility(
+            visible = true,
+            enter = scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)) + fadeIn(tween(180)),
+            exit = scaleOut(targetScale = 0.85f, animationSpec = tween(120)) + fadeOut(tween(120))
+        ) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 300.dp, max = 380.dp)
+                    .shadow(16.dp, RoundedCornerShape(28.dp))
+                    .clip(RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xFF101B26),
+                border = BorderStroke(1.dp, Brush.linearGradient(listOf(Color(0xFF4CE6FF), Color(0xFF6C63FF))))
             ) {
-                emojis.forEach { emoji ->
-                    val scale = remember { Animatable(0.8f) }
-                    LaunchedEffect(emoji) {
-                        scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
-                    }
-                    Surface(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .scale(scale.value)
-                            .clip(CircleShape)
-                            .clickable { onEmojiSelected(emoji) },
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.08f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(emoji, fontSize = 26.sp)
+                AnimatedContent(
+                    targetState = showExtended,
+                    transitionSpec = {
+                        if (targetState) {
+                            (fadeIn(tween(200)) + slideInHorizontally(initialOffsetX = { it / 3 }, animationSpec = tween(250, easing = FastOutSlowInEasing)))
+                                .togetherWith(fadeOut(tween(120)) + slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(150)))
+                        } else {
+                            (fadeIn(tween(200)) + slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(250, easing = FastOutSlowInEasing)))
+                                .togetherWith(fadeOut(tween(120)) + slideOutHorizontally(targetOffsetX = { it / 3 }, animationSpec = tween(150)))
                         }
+                    },
+                    label = "reaction_panel"
+                ) { isExtended ->
+                    if (!isExtended) {
+                        ReactionFavoritesRow(
+                            favorites = favorites,
+                            onEmojiSelected = onEmojiSelected,
+                            onAddMore = { showExtended = true }
+                        )
+                    } else {
+                        ExtendedEmojiPickerContent(
+                            onBack = { showExtended = false },
+                            onEmojiSelected = { emoji ->
+                                ReactionFavorites.addOrReplace(emoji)
+                                onEmojiSelected(emoji)
+                                showExtended = false
+                            }
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReactionFavoritesRow(
+    favorites: SnapshotStateList<String>,
+    onEmojiSelected: (String) -> Unit,
+    onAddMore: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
+    Row(
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        favorites.forEach { emoji ->
+            val scale = remember { Animatable(0.9f) }
+            LaunchedEffect(emoji) {
+                scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+            }
+            Surface(
+                modifier = Modifier
+                    .size(44.dp)
+                    .scale(scale.value)
+                    .clip(CircleShape)
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEmojiSelected(emoji)
+                    },
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(emoji, fontSize = 24.sp)
+                }
+            }
+        }
+        // Botón "+"
+        val plusScale = remember { Animatable(1f) }
+        Surface(
+            modifier = Modifier
+                .size(44.dp)
+                .scale(plusScale.value)
+                .clip(CircleShape)
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    coroutineScope.launch {
+                        plusScale.animateTo(1.1f, spring(dampingRatio = 0.5f, stiffness = 500f))
+                        plusScale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                    }
+                    onAddMore()
+                },
+            shape = CircleShape,
+            color = Color(0xFF4CE6FF).copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, Color(0xFF4CE6FF))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Add, "Más reacciones", tint = Color(0xFF4CE6FF))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExtendedEmojiPickerContent(
+    onBack: () -> Unit,
+    onEmojiSelected: (String) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val allEmojis = listOf(
+        "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇",
+        "🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
+        "😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩",
+        "🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣",
+        "😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬",
+        "🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗",
+        "🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯",
+        "😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐",
+        "🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈",
+        "👿","👹","👺","🤡","💩","👻","💀","☠️","👽","👾",
+        "👍","👎","👊","✊","🤛","🤜","👏","🙌","👐","🤲",
+        "🤝","🙏","💪","🦾","🖕","✌️","🤞","🤟","🤘","👌",
+        "❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔",
+        "💯","💢","💥","💫","💦","💨","🕳️","💣","💬","💭"
+    )
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Cabecera con botón atrás
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = Color.White
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Todas las reacciones",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.heightIn(max = 360.dp)
+        ) {
+            items(allEmojis.chunked(8)) { rowEmojis ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    rowEmojis.forEach { emoji ->
+                        val scale = remember { Animatable(1f) }
+                        Text(
+                            emoji,
+                            fontSize = 28.sp,
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .scale(scale.value)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        scale.animateTo(1.3f, spring(dampingRatio = 0.5f, stiffness = 600f))
+                                        scale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                                    }
+                                    onEmojiSelected(emoji)
+                                }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+object ReactionFavorites {
+    val favorites = mutableStateListOf("👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "🎉", "👏", "💯")
+    private val usageCounts = mutableStateMapOf<String, Int>()
+
+    fun addOrReplace(emoji: String) {
+        val count = usageCounts.getOrPut(emoji) { 0 } + 1
+        usageCounts[emoji] = count
+        if (!favorites.contains(emoji)) {
+            if (favorites.size >= 10) {
+                val leastUsed = favorites.minByOrNull { usageCounts[it] ?: 0 }
+                if (leastUsed != null) {
+                    favorites.remove(leastUsed)
+                    usageCounts.remove(leastUsed)
+                }
+            }
+            favorites.add(emoji)
         }
     }
 }

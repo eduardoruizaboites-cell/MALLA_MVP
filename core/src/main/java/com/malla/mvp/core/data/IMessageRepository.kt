@@ -22,6 +22,7 @@ data class MessageData(
     val isDeleted: Boolean = false,
     val pollId: String? = null,
     val isPinned: Boolean = false,
+    val status: Int = 0,
 )
 
 interface IMessageRepository {

@@ -487,3 +487,278 @@ VERIFICADO EN: solo compilación.
 IDEAS DE MEJORA QUE SURGIERON (sin implementar aún): ninguna.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: warnings de deprecación; comunicación entre dispositivos sin validar.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-03 09:32 (mejoras premium en chat) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió duplicación de ChatCustomizationDialog en ChatScreen.kt. Se refinó la animación de entrada de burbujas (escala 0.92→1, desplazamiento 24dp, FastOutSlowIn). Se añadió campo status a MessageData y MessageMapper. Se implementó indicador visual de estado de mensaje (enviado/entregado/leído) en BubbleContent con iconos Done/DoneAll y micro-animación de color y escala.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de UX/premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Iconos vectoriales, animateColorAsState.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): popup flotante de reacciones (evita ANR, tipo iMessage); haptic y check animado en encuestas; mejora de vista única con cuenta regresiva; búsqueda en conversación; modo silencioso biométrico; centralizar paleta de colores.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService (solo visual); popup de reacciones pendiente; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 09:35 (popup flotante de reacciones premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el ModalBottomSheet de reacciones por un popup flotante anclado (FloatingReactionPopup) con animación scaleIn+fadeIn, haptic feedback, y catálogo ampliado a 10 emojis. Se eliminó el antiguo ReactionPicker. Se añadieron imports Popup, LocalHapticFeedback, HapticFeedbackType, IntOffset.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de UX/premium (evita ANR documentado).
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Popup, HapticFeedback, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; mejora de vista única con cuenta regresiva; búsqueda en conversación; modo silencioso biométrico; centralizar paleta de colores; limpiar warnings de variables sin uso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 09:40 (haptic y check animado en encuestas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió haptic feedback al votar en encuestas (HapticFeedbackType.LongPress) y se reemplazó el círculo de radio por un icono de check animado con escala spring al estar votado. Se importó LocalHapticFeedback en PollMessageBubble. La opción votada ahora muestra CheckCircle con animación de entrada.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de micro-interacción premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, HapticFeedback, Iconos vectoriales.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): animar porcentaje con count-up; mejora de vista única con cuenta regresiva; búsqueda en conversación; modo silencioso biométrico; centralizar paleta de colores; limpiar warnings de variables sin uso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 09:40 (haptic y check animado en encuestas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió haptic feedback al votar en encuestas (HapticFeedbackType.LongPress) y se reemplazó el círculo de radio por un icono de check animado con escala spring al estar votado. Se importó LocalHapticFeedback en PollMessageBubble. La opción votada ahora muestra CheckCircle con animación de entrada.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de micro-interacción premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, HapticFeedback, Iconos vectoriales.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): animar porcentaje con count-up; mejora de vista única con cuenta regresiva; búsqueda en conversación; modo silencioso biométrico; centralizar paleta de colores; limpiar warnings de variables sin uso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:01 (ajustes UX premium: reacciones, favoritos, multiselección) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementaron múltiples mejoras solicitadas por Eduardo: contador de selección solo numérico; icono de reenviar cambiado a Icons.AutoMirrored.Filled.Forward para claridad; estrella en burbuja si mensaje fijado; botón de favoritos en barra multiselección que aplica toggle a seleccionados; popup de reacciones anclado debajo de burbuja seleccionada con posición capturada por onGloballyPositioned; botón "+" en popup que abre ventana extendida de emojis (ExtendedEmojiPicker) y reemplaza el menos usado en favoritos (ReactionFavorites). Se añadieron imports de positionInRoot y onGloballyPositioned.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de mejoras UX/premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Popup, onGloballyPositioned, HapticFeedback.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): búsqueda en conversación; mejora de vista única con cuenta regresiva; centralizar paleta de colores; limpiar warnings de variables sin uso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:05 (limpieza de barra superior: eliminado icono de selección múltiple) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó el IconButton con Icons.Filled.CheckCircle de la barra superior de ChatScreen. Ahora la multiselección se activa exclusivamente mediante long-press en una burbuja, manteniendo la barra superior limpia. No se afecta funcionalidad.
+¿ERA UN FIX DE ERROR?: no era fix; fue limpieza de UI solicitada por Eduardo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, TopAppBar sin icono extra.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): búsqueda en conversación; mejora de vista única con cuenta regresiva; centralizar paleta de colores; limpiar warnings de variables sin uso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:20 (restauración y limpieza de barra superior) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se restauró ChatScreen.kt al commit estable f09d4659 para corregir corrupción accidental. Se eliminó definitivamente el IconButton de selección múltiple (Icons.Filled.CheckCircle) de la barra superior. La multiselección sigue disponible vía long-press. Base restaurada compilando.
+¿ERA UN FIX DE ERROR?: sí; se corrigió archivo corrupto y se eliminó icono no deseado.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): la corrupción se debió a un script que no verificó el bloque y dejó llaves desbalanceadas; se optó por restaurar y reaplicar mejoras con scripts seguros.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, TopAppBar sin icono extra.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): reaplicar indicador de estado de mensaje; popup flotante de reacciones; haptic en encuestas; estrella en burbuja; contador numérico; icono de reenviar.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:21 (reaplicación: indicador de estado de mensaje) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reaplicó el indicador de estado de mensaje (enviado/entregado/leído) tras restaurar ChatScreen.kt. Se añadió status a MessageData y MessageMapper; se implementó icono Done/DoneAll con animación de color y escala en BubbleContent.
+¿ERA UN FIX DE ERROR?: no era fix; fue reaplicación de mejora premium previamente implementada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Iconos vectoriales.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): reaplicar popup flotante de reacciones; haptic en encuestas; estrella en burbuja; contador numérico; icono de reenviar.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente desde NetworkService; comunicación inter-dispositivo sin validar; warnings de KSP y deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:23 (ajustes UX multiselección: contador, forward, favoritos, estrella) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se restauró ChatScreen.kt a base f09d4659 y se aplicaron ajustes seguros: contador de selección solo numérico; icono de reenviar cambiado a Forward; botón de favoritos en barra multiselección con toggle a seleccionados; estrella dorada en burbuja para mensajes fijados. Sin tocar estructura de Row.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de mejoras UX/premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Iconos vectoriales.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): reaplicar popup flotante de reacciones; haptic en encuestas; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:28 (popup flotante de reacciones con favoritos y ventana extendida) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el ReactionPicker (ModalBottomSheet) por FloatingReactionPopup anclado a la burbuja seleccionada usando onGloballyPositioned y positionInRoot. Incluye haptic feedback, botón "+" que abre ExtendedEmojiPicker con catálogo amplio, y objeto ReactionFavorites con lista mutable y reemplazo del menos usado. Se añadieron imports necesarios (Popup, onGloballyPositioned, positionInRoot, HapticFeedback, IntOffset).
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de mejora premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Popup, HapticFeedback, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:34 (eliminación definitiva del icono de selección múltiple) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó el IconButton con Icons.Filled.CheckCircle de la barra superior de ChatScreen. Se verificó con grep que no quedaron usos; se eliminó también el import para evitar warnings. La multiselección sigue disponible solo con long-press.
+¿ERA UN FIX DE ERROR?: sí; se eliminó el botón no deseado que seguía visible.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, TopAppBar sin icono extra.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 10:44 (popup de reacciones se abre con long-press y barra normal) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se ajustó el comportamiento para que el popup flotante de reacciones se active directamente al mantener presionada una burbuja (long-press). Se captura la posición con onGloballyPositioned sin condicionar a isSelected, y se abre showReactionPicker en onLongClick. La condición de la top bar se modificó para mostrar la barra normal (avatar/menú) cuando el popup está activo.
+¿ERA UN FIX DE ERROR?: no era fix; fue ajuste de UX solicitado.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Long-press.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 11:01 (ventana flotante de reacciones premium con transiciones) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó la implementación anterior por un único Popup con AnimatedContent que alterna entre vista de favoritos y vista extendida. La transición usa slideInHorizontally + fadeIn con FastOutSlowInEasing. Se añadió sombra elevada, borde con gradiente, botón "+" con micro-animación, y botón de regreso en vista extendida. Se corrigieron errores de HapticFeedback y animateTo usando coroutineScope.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora premium solicitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Popup, AnimatedContent, HapticFeedback, Gradientes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-03 11:06 (fila de favoritos desplazable con botón "+") ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el Row de ReactionFavoritesRow por LazyRow para permitir desplazamiento horizontal de los emojis favoritos y garantizar que el botón "+" quede siempre accesible al final. Se añadió coroutineScope local. El popup mantiene su diseño premium.
+¿ERA UN FIX DE ERROR?: sí; el botón "+" no se veía por desbordamiento del Row.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, LazyRow, desplazamiento táctil.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 05:46 (vista previa de personalización: colores de burbuja corregidos) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazaron las burbujas de vista previa en ChatCustomizationDialog por Box con background explícito en lugar de Surface. Ahora el color de fondo de burbuja y el color de texto se diferencian correctamente. Se mantiene la interactividad y animaciones premium.
+¿ERA UN FIX DE ERROR?: sí; el color de burbuja no se percibía visualmente en la vista previa.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Box con background.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 06:05 (secciones de burbujas expandidas por defecto) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se modificó ExpandableSection para aceptar initiallyExpanded y se aplicó true a Burbujas propias y Burbujas del contacto. Ahora al abrir Personalizar chat se muestran directamente las opciones de color de burbuja y texto.
+¿ERA UN FIX DE ERROR?: sí; las secciones de color estaban colapsadas y no se veían.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, AnimatedVisibility.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 06:30 (rediseño integral de personalización de chat) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó ChatCustomizationDialog.kt por una versión optimizada: vista previa en vivo, chips de tema rápido, pestañas contextuales (Burbuja/Contacto/Fondo/Sonido), paleta reducida y botones de restablecer/listo. Se eliminaron secciones colapsables repetitivas. Estructura más limpia y premium.
+¿ERA UN FIX DE ERROR?: no era fix; fue rediseño solicitado por Eduardo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, TabRow, Slider.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 06:35 (temas rápidos como swatches de gradiente) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó la sección de temas rápidos de chips de texto por swatches circulares con gradiente representando combinaciones armoniosas (Oscuro, Claro, Azul, Verde). Al seleccionar uno, se aplican colores de burbuja propia/contacto, texto y fondo coherentes. Se añadió check animado y haptic.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora visual solicitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Gradientes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 06:45 (tema nocturno añadido) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió el tema Nocturno a los swatches de temas rápidos en ChatCustomizationDialog. Incluye burbujas gris oscuro, fondo negro azulado y texto blanco suave, ideal para uso nocturno y descanso visual.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora solicitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Gradientes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): haptic y check animado en encuestas; búsqueda en conversación; mejora de vista única; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:11 (búsqueda dentro de la conversación) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió la opción "Buscar mensajes" en el menú del chat (activando isSearchActive). Se implementó barra de búsqueda animada con AnimatedVisibility, campo BasicTextField, contador de resultados y botón cerrar. La lista de mensajes se filtra con filteredMessages y muestra solo coincidencias. Queda pendiente resaltado de texto.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de feature premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BasicTextField, AnimatedVisibility.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): resaltado de coincidencias; mejora de vista única con cuenta regresiva; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: búsqueda sin prueba real; status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:15 (barra de búsqueda con esquinas corregidas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el Surface de la barra de búsqueda por un Box con background, border, shadow y clip aplicados en orden correcto. Se corrigió el recorte visual en las esquinas superiores e inferiores de la barra de búsqueda.
+¿ERA UN FIX DE ERROR?: sí; la barra se veía recortada en las esquinas.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): el clip junto al padding del Surface causaba el corte; se solucionó usando Box.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Modifier.shadow y clip.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): resaltado de coincidencias; mejora de vista única con cuenta regresiva; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: búsqueda sin prueba real; status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:21 (vista única con cuenta regresiva premium) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió animación de candado (rotación y cambio de color) en ViewOnceMessageBubble al tocar para revelar. Se implementó overlay de cuenta regresiva con CircularProgressIndicator en el diálogo de imagen a pantalla completa, usando expiringViewOnceUri. Se añadió import LinearEasing. La imagen efímera ahora muestra un anillo de progreso de 5 segundos.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora premium solicitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, CircularProgressIndicator, Animatable.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpieza de warnings; centralizar paleta de colores; resaltado de coincidencias en búsqueda.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: deprecación de CircularProgressIndicator; status no se actualiza automáticamente; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:41 (vista única: ocultar miniatura y eliminar al cerrar) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió el comportamiento de vista única. Ahora los mensajes propios con viewOnce también se muestran como burbuja de un solo vistazo (sin miniatura). Al revelar la imagen, se guarda currentViewOnceMessageId. Al cerrar la imagen (tocando fondo o botón X), si era vista única, se elimina el mensaje inmediatamente. Se mantiene la cuenta regresiva de 5 segundos como respaldo.
+¿ERA UN FIX DE ERROR?: sí; la miniatura de vista única seguía visible en el historial y no se eliminaba al cerrar.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Dialog onDismissRequest.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpieza de warnings; centralizar paleta de colores; resaltado de coincidencias en búsqueda.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: deprecación de CircularProgressIndicator; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:43 (cierre automático de vista única a los 5 segundos) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió cierre automático del diálogo de imagen al terminar los 5 segundos de vista única. Al expirar, se elimina el mensaje y se cierra la imagen sin intervención del usuario. Se mantiene la cuenta regresiva visual.
+¿ERA UN FIX DE ERROR?: no era fix; fue ajuste de UX solicitado.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, coroutines.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpieza de warnings; centralizar paleta de colores; resaltado de coincidencias en búsqueda.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: deprecación de CircularProgressIndicator; comunicación inter-dispositivo sin validar; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-04 07:58 (fix import PopupProperties y consolidación) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió error de compilación por import faltante de PopupProperties en ChatScreen.kt. Se recompiló exitosamente y se preparó commit de consolidación de todas las mejoras premium acumuladas.
+¿ERA UN FIX DE ERROR?: ERROR: Unresolved reference: PopupProperties → SOLUCIÓN APLICADA: añadir import androidx.compose.ui.window.PopupProperties → ¿FUNCIONÓ?: sí, BUILD SUCCESSFUL
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; error directo de import.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, sin impacto visual.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta de colores, limpiar warnings KSP/deprecación, validación inter-dispositivo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: misma deuda que entradas anteriores; sin prueba real en dispositivo.
+──────────────────────────────
