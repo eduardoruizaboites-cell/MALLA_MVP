@@ -1,6 +1,7 @@
 package com.malla.mvp.di
 
 import android.content.Context
+import android.util.Log
 import com.malla.mvp.App
 import com.malla.mvp.core.data.*
 import com.malla.mvp.core.engine.DeviceProfile
@@ -137,7 +138,13 @@ object Injector {
                 }
             }
             override suspend fun getLastMessage(conversationId: String): MessageData? = null
-            override suspend fun updateMessageStatus(messageId: String, status: Int) {}
+            override suspend fun updateMessageStatus(messageId: String, status: Int) {
+                try {
+                    db?.messageDao()?.updateStatus(messageId, status)
+                } catch (e: Exception) {
+                    Log.e("Injector", "Error actualizando estado de mensaje", e)
+                }
+            }
             override suspend fun markConversationAsRead(conversationId: String) {}
             override suspend fun getUnreadMessages(conversationId: String): List<MessageData> = emptyList()
             override suspend fun getPendingMessages(): List<MessageData> = emptyList()

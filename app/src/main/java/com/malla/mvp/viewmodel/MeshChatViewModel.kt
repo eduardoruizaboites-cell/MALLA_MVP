@@ -245,15 +245,22 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             db?.messageDao()?.insertMessage(msg)
             if (convId != "self_chat") {
                 // Enviar dirigido al contactId correcto (convId)
-                NetworkService.sendMessageToContact(convId, MeshMessage(
-                    content = finalContent,
-                    senderId = IdentityManager.getIdentityId(),
-                    timestamp = System.currentTimeMillis(),
-                    quotedMessageId = quotedMessageId,
-                    quotedMessageContent = quotedMessageContent,
-                    expireAt = expireAt,
-                    viewOnce = viewOnce
-                ))
+                try {
+                    NetworkService.sendMessageToContact(convId, MeshMessage(
+                        content = finalContent,
+                        senderId = IdentityManager.getIdentityId(),
+                        timestamp = System.currentTimeMillis(),
+                        quotedMessageId = quotedMessageId,
+                        quotedMessageContent = quotedMessageContent,
+                        expireAt = expireAt,
+                        viewOnce = viewOnce
+                    ))
+                    db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
+                } catch (e: Exception) {
+                    // fallback: queda como enviado (0)
+                }
+            } else {
+                db?.messageDao()?.updateStatus(msg.id, 2)  // leído
             }
             _inputText.value = ""
             refreshMessages(convId)

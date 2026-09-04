@@ -26,7 +26,8 @@ object MessageMapper {
             isEdited = entity.isEdited,
             isDeleted = entity.isDeleted,
             pollId = entity.pollId,
-            isPinned = entity.isPinned
+            isPinned = entity.isPinned,
+            status = entity.status
         )
     }
 
@@ -49,7 +50,8 @@ object MessageMapper {
             isEdited = data.isEdited,
             isDeleted = data.isDeleted,
             pollId = data.pollId,
-            isPinned = data.isPinned
+            isPinned = data.isPinned,
+            status = data.status
         )
     }
 }

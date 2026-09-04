@@ -47,4 +47,7 @@ interface MessageDao {
 
     @Query("UPDATE messages SET isPinned = :pinned WHERE id = :messageId")
     suspend fun setPinned(messageId: String, pinned: Boolean)
+
+    @Query("UPDATE messages SET status = :newStatus WHERE conversationId = :conversationId AND isOwn = :isOwn")
+    suspend fun updateStatusForConversationAndOwn(conversationId: String, isOwn: Boolean, newStatus: Int)
 }

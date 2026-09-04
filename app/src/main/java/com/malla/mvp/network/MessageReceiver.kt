@@ -179,6 +179,13 @@ object MessageReceiver {
             )
             messageDao.insertMessage(msgEntity)
 
+            // Marcar como leídos los mensajes propios de esta conversación (palomita leída)
+            try {
+                messageDao.updateStatusForConversationAndOwn(conversationId, isOwn = true, newStatus = 2)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marcando leídos: ${e.message}")
+            }
+
             MallaEventBus.messageReceived.emit(meshMsg)
             if (meshMsg.type == "zumbido") {
                 MallaEventBus.zumbidoReceived.emit(meshMsg)

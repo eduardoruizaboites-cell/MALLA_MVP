@@ -810,3 +810,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ClickableText, LocalUriHandler, In
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar actualización de ubicación en tiempo real con FusedLocationProvider; palomitas de enviado/entregado/leído.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: ubicación depende de getLastKnownLocation; sin validación inter-dispositivo; palomitas.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 09:40 (palomitas de estado enviado/entregado/leído) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó la actualización dinámica del campo status de MessageData. MessageMapper ahora incluye status; updateMessageStatus en Injector actualiza BD; sendMessage asigna status=0 al enviar, status=1 si NetworkService responde, status=2 para self_chat; MessageReceiver marca como leídos (status=2) los mensajes propios al recibir mensaje del contacto.
+¿ERA UN FIX DE ERROR?: era una mejora pendiente; las palomitas no cambiaban porque status no se mapeaba y updateMessageStatus estaba vacío.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, StateFlow, NetworkService.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar ack real de entrega/lectura en protocolo de red; actualización de ubicación en tiempo real con FusedLocationProvider.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; ubicación aún depende de getLastKnownLocation; warnings KSP/deprecación.
+──────────────────────────────
