@@ -551,7 +551,7 @@ fun ChatScreen(
                                 pollId = msg.pollId!!,
                                 onVote = { optionId -> vm.votePoll(optionId, msg.pollId!!) },
                                 isOwn = msg.isOwn,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
                                 vm = vm
                             )
                         } else if (msg.viewOnce && !msg.isDeleted) {
@@ -578,7 +578,7 @@ fun ChatScreen(
                                 )
                             } else {
                                 Surface(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
                                     shape = RoundedCornerShape(16.dp),
                                     color = Color(0xFF1E2A38)
                                 ) {
@@ -1344,7 +1344,7 @@ fun ViewOnceMessageBubble(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         color = Color(0xFF1E2A38)
     ) {
@@ -1440,7 +1440,7 @@ fun MessageBubbleV2(
     }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp)
             .onGloballyPositioned { coordinates ->
                 onPositioned(coordinates.positionInRoot())
             }
@@ -1498,7 +1498,7 @@ fun MessageBubbleV2(
                             brush = Brush.verticalGradient(listOf(baseColor.lighten(0.15f), baseColor)),
                             shape = shape
                         )
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     BubbleContent(msg, textColor, fontSize, onImageClick)
                 }
@@ -1516,7 +1516,7 @@ private fun BubbleContent(
     fontSize: Float,
     onImageClick: (Uri) -> Unit
 ) {
-    Column {
+    Column(horizontalAlignment = if (msg.isOwn) Alignment.End else Alignment.Start) {
         if (!msg.quotedMessageContent.isNullOrBlank()) {
             Surface(
                 modifier = Modifier.padding(bottom = 4.dp),
@@ -1644,37 +1644,28 @@ private fun BubbleContent(
             )
             Spacer(Modifier.width(2.dp))
         }
-        Text(
-            text = buildString {
-                append(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)))
-                if (msg.isEdited && !msg.isDeleted) append(" · editado")
-            },
-            color = textColor.copy(alpha = 0.5f),
-            fontSize = 10.sp
-        )
+        Row(
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = buildString {
+                    append(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)))
+                    if (msg.isEdited && !msg.isDeleted) append(" · editado")
+                },
+                color = textColor.copy(alpha = 0.5f),
+                fontSize = 10.sp
+            )
+            if (msg.isOwn) {
+                Spacer(modifier = Modifier.width(3.dp))
+                when (msg.status) {
+                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
     }
-        if (msg.isOwn) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                when (msg.status) {
-                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
-        if (msg.isOwn) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                when (msg.status) {
-                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
 }
 
 fun Color.lighten(factor: Float = 0.1f): Color {
@@ -2128,7 +2119,7 @@ private fun MediaPreviewPanel(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                                 ) {
                                     Icon(Icons.Filled.Lock, null, tint = Color(0xFF4CE6FF), modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(6.dp))
@@ -2477,7 +2468,7 @@ private fun PinnedMessageBanner(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .clickable(onClick = onNavigate),
             color = Color(0xFF1A2A3A),

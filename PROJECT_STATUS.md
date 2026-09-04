@@ -856,3 +856,39 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, NetworkService TCP/WebRTC, Room.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; indicador de carga en ubicación; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del ack; warnings KSP/deprecación; ubicación sin prueba real.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 10:29 (fix palomitas y ubicación) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementaron palomitas de estado (enviado/entregado/leído) en BubbleContent para mensajes propios usando msg.status (0=D Done, 1=D DoneAll gris, 2=D DoneAll azul). Se corrigió duplicado de variables de ubicación. Se añadió timeout de 10s y prioridad balanceada en LocationProvider. Se reemplazó el envío automático de error por diálogo de carga y diálogo de reintento.
+¿ERA UN FIX DE ERROR?: sí; palomitas no visibles y ubicación fallaba con mensaje de error.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa era ausencia de UI y timeout.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, AlertDialog, Done/DoneAll.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): validar en dos dispositivos; indicador de carga real en ubicación ya añadido; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; reenvío de adjuntos sin implementar.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 10:40 (fix posición de palomitas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se alinearon las palomitas de estado de mensaje con la hora de envío dentro de BubbleContent. Se convirtió el bloque de hora en un Row con alineación centrada y fillMaxWidth, y se insertaron las palomitas en ese mismo Row. Se eliminaron los bloques duplicados de palomitas que estaban separados y causaban el encimado.
+¿ERA UN FIX DE ERROR?: sí; las palomitas estaban encimadas en el texto del mensaje.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Row, Alignment.CenterVertically.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): validar en dispositivo; centralizar paleta; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; reenvío de adjuntos sin implementar.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 11:01 (optimización de densidad visual en burbujas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se compactó el espaciado vertical de las burbujas de mensaje (padding exterior 6→3 dp, interior 6→4 dp) para reducir espacios muertos y mostrar más mensajes por pantalla. Se reescribió BubbleContent con Column(horizontalAlignment = if (msg.isOwn) Alignment.End else Alignment.Start) y la fila de hora/palomitas ahora se alinea sin forzar fillMaxWidth, evitando que las burbujas cortas se estiren al ancho máximo. Se corrigió el regex de enlaces a [^\\s]+.
+¿ERA UN FIX DE ERROR?: sí; las burbujas tenían espacios muertos y las palomitas encimadas por fillMaxWidth.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó usar fillMaxWidth en el Row de hora por estirar burbujas; se usó alineación condicional sin ancho forzado.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, Column alignment, Row sin fillMaxWidth.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): validar en dispositivo; centralizar paleta; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; reenvío de adjuntos sin implementar.
+──────────────────────────────
