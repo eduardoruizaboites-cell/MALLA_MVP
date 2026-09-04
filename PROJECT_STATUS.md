@@ -762,3 +762,51 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, sin impacto visual.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta de colores, limpiar warnings KSP/deprecación, validación inter-dispositivo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: misma deuda que entradas anteriores; sin prueba real en dispositivo.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 08:15 (panel de adjuntos adaptado al tema activo) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se adaptó el panel de adjuntos rediseñado para usar los colores del colorScheme activo en lugar de literales fijos. ModalBottomSheet, dragHandle, título y opciones ahora obtienen color de colorScheme.surface, onSurface, primary, secondary, primaryContainer y secondaryContainer.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de coherencia visual con tema activo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, temas claro/oscuro, todos los MallaColorScheme existentes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): ninguna nueva.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación en dispositivo de diseño y colores; pendiente mejora de ubicación; palomitas de estado.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 08:22 (unificación de color en panel de adjuntos) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se unificaron los colores de las cuatro opciones del panel de adjuntos (Galería, Documento, Encuesta, Ubicación) para que todas usen colorScheme.primary y tengan la misma luminosidad. Se eliminó la apariencia de opción inactiva en Encuesta.
+¿ERA UN FIX DE ERROR?: sí; Encuesta usaba primaryContainer (más oscuro) y parecía deshabilitada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, todos los temas MallaColorScheme.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): ninguna nueva.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación en dispositivo; mejora de ubicación; palomitas de estado.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 08:40 (enlaces clickeables en mensajes, incluida ubicación) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió soporte para enlaces clickeables en el contenido de mensajes. Se detectan URLs (http/https) con Regex y se renderizan con ClickableText; al tocar se abre con LocalUriHandler o Intent ACTION_VIEW. Con esto la opción de ubicación ya abre Google Maps correctamente.
+¿ERA UN FIX DE ERROR?: era una mejora pendiente; los enlaces no eran interactivos antes.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se corrigió escape de Regex (\S y \s ilegales) usando [^\\s]+.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ClickableText, LocalUriHandler, fallback con Intent.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar burbuja especial de ubicación con tarjeta y mapa estático; palomitas de estado.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación en dispositivo de ubicación; palomitas de enviado/entregado/leído.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 09:05 (panel de adjuntos compacto + enlaces clickeables + ubicación mejorada) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se restauró el panel de adjuntos compacto con colores del colorScheme activo y las cuatro opciones unificadas. Se implementó detección de URLs en mensajes con ClickableText y fallback a Intent. La opción de ubicación ahora envía latitud, longitud y enlace a Google Maps. Se corrigieron duplicaciones de @Composable y escapes de Regex.
+¿ERA UN FIX DE ERROR?: sí; el panel había revertido a la versión anterior y los enlaces no eran clickeables.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó usar escape \S o \s por no ser válidos en Kotlin; se usó [^\\s]+.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ClickableText, LocalUriHandler, Intent ACTION_VIEW.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar actualización de ubicación en tiempo real con FusedLocationProvider; palomitas de enviado/entregado/leído.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: ubicación depende de getLastKnownLocation; sin validación inter-dispositivo; palomitas.
+──────────────────────────────

@@ -22,6 +22,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -863,35 +868,78 @@ fun ChatScreen(
         ModalBottomSheet(
             onDismissRequest = { showAttachmentPanel = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = Color(0xFF1A1A2E),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            containerColor = colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp, bottom = 8.dp)
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(colorScheme.outline.copy(alpha = 0.4f))
+                )
+            }
         ) {
-            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp)) {
-                Text("Adjuntar archivo", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        AttachmentOptionPremium(icon = Icons.Default.Photo, label = "Galería", color = Color(0xFF4CE6FF), onClick = { showAttachmentPanel = false; showGalleryPanel = true })
-                        Spacer(modifier = Modifier.height(16.dp))
-                        AttachmentOptionPremium(icon = Icons.Default.InsertDriveFile, label = "Documento", color = Color(0xFF6C63FF), onClick = { /* TODO */ })
-                        Spacer(modifier = Modifier.height(16.dp))
-                        AttachmentOptionPremium(icon = Icons.Default.Poll, label = "Encuesta", color = Color(0xFF6C63FF), onClick = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    "Adjuntar",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AttachmentOptionCompact(
+                        icon = Icons.Default.Photo,
+                        label = "Galería",
+                        color = colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showAttachmentPanel = false; showGalleryPanel = true }
+                    )
+                    AttachmentOptionCompact(
+                        icon = Icons.Default.InsertDriveFile,
+                        label = "Documento",
+                        color = colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        onClick = { /* TODO */ }
+                    )
+                    AttachmentOptionCompact(
+                        icon = Icons.Default.Poll,
+                        label = "Encuesta",
+                        color = colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
                             showAttachmentPanel = false
                             showCreatePollDialog = true
-                        })
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-
-                        AttachmentOptionPremium(icon = Icons.Default.LocationOn, label = "Ubicación", color = Color(0xFF4CAF50), onClick = {
+                        }
+                    )
+                    AttachmentOptionCompact(
+                        icon = Icons.Default.LocationOn,
+                        label = "Ubicación",
+                        color = colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
                             showAttachmentPanel = false
                             val loc = getBestLocation(context)
                             if (loc != null) {
-                                val lat = loc.latitude; val lon = loc.longitude
-                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
+                                val lat = loc.latitude
+                                val lon = loc.longitude
+                                val mapsUrl = "https://maps.google.com/maps?q=$lat,$lon"
+                                vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\n$mapsUrl")
                             } else {
-                                vm.sendMessage("📍 No se pudo obtener la ubicación. Concede permisos.")
+                                vm.sendMessage("📍 No se pudo obtener la ubicación real. Concede permisos de ubicación y espera unos segundos.")
                             }
-                        })
-                    }
+                        }
+                    )
                 }
             }
         }
@@ -929,7 +977,7 @@ fun ChatScreen(
                             val loc = getBestLocation(context)
                             if (loc != null) {
                                 val lat = loc.latitude; val lon = loc.longitude
-                                vm.sendMessage("📍 Ubicación actual\nhttps://maps.google.com/maps?q=$lat,$lon")
+                                vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\nhttps://maps.google.com/maps?q=$lat,$lon")
                             } else {
                                 vm.sendMessage("📍 Ubicación no disponible. Concede permisos de ubicación.")
                             }
@@ -1432,7 +1480,30 @@ private fun BubbleContent(
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
             )
         } else if (msg.content.isNotBlank() && msg.content != "Imagen") {
-            Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+            val uriHandler = LocalUriHandler.current
+            val context = LocalContext.current
+            val linkRegex = Regex("https?://[^\\s]+")
+            val match = linkRegex.find(msg.content)
+            if (match != null) {
+                val url = match.value
+                val annotated = AnnotatedString(msg.content)
+                ClickableText(
+                    text = annotated,
+                    style = androidx.compose.ui.text.TextStyle(
+                        color = textColor,
+                        fontSize = fontSize.sp
+                    ),
+                    onClick = {
+                        try {
+                            uriHandler.openUri(url)
+                        } catch (e: Exception) {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                    }
+                )
+            } else {
+                Text(text = msg.content, color = textColor, fontSize = fontSize.sp)
+            }
         }
 
         if (!msg.isDeleted) {
@@ -1665,24 +1736,47 @@ fun ZumbidoOverlay(onDismiss: () -> Unit, colorScheme: MallaColorScheme) {
 
 
 @Composable
-fun AttachmentOptionPremium(icon: ImageVector, label: String, color: Color, onClick: () -> Unit) {
-    val scale = remember { Animatable(1f) }
-    Surface(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { onClick() }.scale(scale.value),
-        color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 4.dp
+fun AttachmentOptionCompact(
+    icon: ImageVector,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(color.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = label, tint = color, modifier = Modifier.size(32.dp))
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = color,
+                modifier = Modifier.size(22.dp)
+            )
         }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
-    LaunchedEffect(Unit) { scale.animateTo(1f, spring()) }
 }
+
 @Composable
 fun PollMessageBubble(
     pollId: String,
