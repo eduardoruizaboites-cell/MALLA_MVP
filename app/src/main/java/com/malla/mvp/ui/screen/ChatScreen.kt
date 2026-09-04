@@ -104,6 +104,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
+import com.malla.mvp.utils.LocationProvider
 import com.malla.mvp.ui.components.GalleryPickerPanel
 import com.malla.mvp.ui.components.ComposingBubble
 import com.malla.mvp.identity.IdentityManager
@@ -929,14 +930,16 @@ fun ChatScreen(
                         modifier = Modifier.weight(1f),
                         onClick = {
                             showAttachmentPanel = false
-                            val loc = getBestLocation(context)
-                            if (loc != null) {
-                                val lat = loc.latitude
-                                val lon = loc.longitude
-                                val mapsUrl = "https://maps.google.com/maps?q=$lat,$lon"
-                                vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\n$mapsUrl")
-                            } else {
-                                vm.sendMessage("📍 No se pudo obtener la ubicación real. Concede permisos de ubicación y espera unos segundos.")
+                            coroutineScope.launch {
+                                val loc = LocationProvider.getCurrentLocation(context)
+                                if (loc != null) {
+                                    val lat = loc.latitude
+                                    val lon = loc.longitude
+                                    val mapsUrl = "https://maps.google.com/maps?q=$lat,$lon"
+                                    vm.sendMessage("📍 Ubicación actual\nLat: $lat\nLon: $lon\n$mapsUrl")
+                                } else {
+                                    vm.sendMessage("📍 No se pudo obtener la ubicación real. Concede permisos de ubicación y espera unos segundos.")
+                                }
                             }
                         }
                     )

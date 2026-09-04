@@ -822,3 +822,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, StateFlow, NetworkService.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar ack real de entrega/lectura en protocolo de red; actualización de ubicación en tiempo real con FusedLocationProvider.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; ubicación aún depende de getLastKnownLocation; warnings KSP/deprecación.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 10:20 (ubicación en tiempo real con FusedLocationProvider) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó la obtención de ubicación actual mediante FusedLocationProviderClient (play-services-location). Se creó LocationProvider.kt con getCurrentLocation y fallback a lastLocation. Se actualizaron los botones de ubicación en ChatScreen para usarlo dentro de coroutine. Se añadió permiso ACCESS_COARSE_LOCATION y dependencia play-services-location.
+¿ERA UN FIX DE ERROR?: era una mejora pendiente; la ubicación dependía de getLastKnownLocation y podía estar desactualizada.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): el intento de usar tasks.await falló por falta de import; se reemplazó por suspendCancellableCoroutine sin dependencias extra.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Google Play Services, permisos de ubicación.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar indicador de carga mientras se obtiene la ubicación; implementar ack real de entrega/lectura en protocolo de red.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; protocolo de confirmación de entrega/lectura real pendiente.
+──────────────────────────────
