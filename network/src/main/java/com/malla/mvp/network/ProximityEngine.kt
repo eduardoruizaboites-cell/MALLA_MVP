@@ -43,11 +43,16 @@ object ProximityEngine {
                 }
             }
             // mDNS
-            DiscoveryService.onPeerResolved = { address ->
+            DiscoveryService.onPeerResolved = { addressWithName ->
+                    val parts = addressWithName.split("|")
+                    val address = parts.getOrElse(0) { addressWithName }
+                    val serviceName = parts.getOrElse(1) { "MALLA_${address.substringBefore(":")}" }
                     val localIp = DhtService.getLocalAddress() ?: "127.0.0.1"
                     val remoteIp = address.substringBefore(":")
                     if (remoteIp != localIp && remoteIp != "127.0.0.1") {
-                        addOrUpdate("mdns_$remoteIp", remoteIp, 0, SignalType.MDNS, 3)
+                        val token = "mdns_$remoteIp"
+                        val displayName = serviceName.removePrefix("MALLA_")
+                        addOrUpdate(token, displayName, 0, SignalType.MDNS, 3)
                     }
                 }
             DiscoveryService.start(context)

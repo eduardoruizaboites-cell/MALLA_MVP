@@ -988,3 +988,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, BLE, notificaciones,
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; integrar BleTransport en MeshChatService; mostrar estado de conexión en UI; reemplazar QrScanScreen por CameraX.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; escáner QR antiguo; nombre de peers mDNS sigue mostrando IP; avatar real no implementado; warnings de deprecación.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 07:12 (escáner QR con CameraX y nombre real en mDNS) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó QrScanScreen por implementación moderna con CameraX y ZXing. Se añadió dependencia camera-view. Se corrigió DiscoveryService para pasar el nombre del servicio junto con la IP. ProximityEngine ahora muestra el nombre real del peer mDNS en lugar de la IP.
+¿ERA UN FIX DE ERROR?: ERROR: el lector QR no funcionaba (usaba cámara antigua deprecada) y los peers mDNS mostraban IP en lugar de nombre. SOLUCIÓN APLICADA: migrar a CameraX y parsear serviceName. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, CameraX, Compose, mDNS.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar escáner en dispositivo; mejorar UI del escáner con overlay; continuar con avatar real; integrar BleTransport en MeshChatService.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; avatar real no implementado; notificaciones sin prueba real; warnings.
+──────────────────────────────

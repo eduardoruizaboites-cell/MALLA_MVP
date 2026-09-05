@@ -67,8 +67,9 @@ object DiscoveryService {
                         serviceInfo?.let {
                             val host = it.host?.hostAddress ?: return
                             val port = it.port
-                            Log.d(TAG, "Resuelto: $host:$port (${it.serviceName})")
-                            onPeerResolved?.invoke("$host:$port")
+                            val serviceName = it.serviceName ?: "MALLA_Desconocido"
+                            Log.d(TAG, "Resuelto: $host:$port (${serviceName})")
+                            onPeerResolved?.invoke("$host:$port|$serviceName")
                         }
                     }
                 })
@@ -89,9 +90,9 @@ object DiscoveryService {
             serviceInfo?.let {
                 val host = it.host?.hostAddress ?: return
                 val port = it.port
-                Log.d(TAG, "Resuelto: $host:$port (${it.serviceName})")
-                onPeerResolved?.invoke("$host:$port")
-                // Por ahora, solo logueamos
+                val serviceName = it.serviceName ?: "MALLA_Desconocido"
+                Log.d(TAG, "Resuelto: $host:$port (${serviceName})")
+                onPeerResolved?.invoke("$host:$port|$serviceName")
             }
         }
     }
