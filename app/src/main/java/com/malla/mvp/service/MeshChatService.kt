@@ -14,6 +14,7 @@ import com.malla.mvp.R
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.MessageReceiver
 import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.network.BleTransport
 import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,7 @@ class MeshChatService : Service() {
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             ProximityEngine.start(this@MeshChatService)
             com.malla.mvp.network.BleManager.start(this@MeshChatService)
+            BleTransport.start(this@MeshChatService)
             com.malla.mvp.network.MeshConnector.start()
         }
     }
@@ -57,6 +59,7 @@ class MeshChatService : Service() {
     override fun onDestroy() {
         MessageReceiver.stop()
         ProximityEngine.stop()
+        BleTransport.stop()
         NetworkService.stopServer()
         super.onDestroy()
     }

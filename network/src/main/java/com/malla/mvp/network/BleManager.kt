@@ -157,7 +157,7 @@ object BleManager {
             val settings = AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                .setConnectable(false)
+                .setConnectable(true)
                 .build()
 
             // Empaquetar datos en el campo de manufacturer specific data o service data

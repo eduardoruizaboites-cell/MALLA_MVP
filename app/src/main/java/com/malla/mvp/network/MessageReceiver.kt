@@ -11,6 +11,7 @@ import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.di.Injector
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.events.MallaEventBus
+import com.malla.mvp.network.BleTransport
 import kotlinx.coroutines.*
 import java.util.UUID
 
@@ -36,6 +37,23 @@ object MessageReceiver {
         // Mensajes globales WebRTC
         scope.launch {
             WebRtcDataManager.incomingMessages.collect { meshMsg ->
+                process(context, meshMsg)
+            }
+        }
+
+        // Mensajes BLE entrantes
+        scope.launch {
+            BleTransport.messages.collect { bytes ->
+                val raw = String(bytes, Charsets.UTF_8)
+                val parts = raw.split("|", limit = 2)
+                val sender = parts.getOrElse(0) { "unknown" }
+                val body = parts.getOrElse(1) { raw }
+                val meshMsg = MeshMessage(
+                    content = body,
+                    senderId = sender,
+                    timestamp = System.currentTimeMillis(),
+                    type = "chat"
+                )
                 process(context, meshMsg)
             }
         }

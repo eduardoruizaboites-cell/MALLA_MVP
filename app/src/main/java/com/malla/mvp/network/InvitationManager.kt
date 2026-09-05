@@ -22,6 +22,45 @@ object InvitationManager {
     val acceptanceReceived = _acceptanceReceived.asSharedFlow()
     val incomingInvitation = _incomingInvitation.asSharedFlow()
     private val invitationCharUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
+    private const val PREFS_NAME = "invitation_codes"
+    private const val EXPIRATION_MS = 24 * 60 * 60 * 1000L
+
+    /**
+     * Genera un código de invitación de 12 dígitos con expiración de 24h.
+     * Devuelve el código como String.
+     */
+    fun generateInvitationCode(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val code = java.util.UUID.randomUUID().toString()
+            .replace("-", "")
+            .take(12)
+            .uppercase()
+        val userId = IdentityManager.getIdentityId()
+        val timestamp = System.currentTimeMillis()
+        prefs.edit()
+            .putString("code_$code", userId)
+            .putLong("code_time_$code", timestamp)
+            .putString("last_user_id", userId)
+            .apply()
+        return code
+    }
+
+    /**
+     * Valida un código de invitación de 12 dígitos.
+     * Devuelve el userId asociado si es válido y no ha expirado, o null si es inválido/expirado.
+     */
+    fun validateInvitationCode(context: Context, code: String): String? {
+        val normalized = code.trim().uppercase()
+        if (normalized.length != 12) return null
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userId = prefs.getString("code_$normalized", null) ?: return null
+        val timestamp = prefs.getLong("code_time_$normalized", 0L)
+        if (System.currentTimeMillis() - timestamp > EXPIRATION_MS) {
+            prefs.edit().remove("code_$normalized").remove("code_time_$normalized").apply()
+            return null
+        }
+        return userId
+    }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
         val myId = IdentityManager.getIdentityId()

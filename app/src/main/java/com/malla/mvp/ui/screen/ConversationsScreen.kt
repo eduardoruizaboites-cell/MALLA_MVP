@@ -353,44 +353,33 @@ fun ConversationsScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (inviteCode.isNotBlank() && inviteCode.length >= 12) {
+                        val validatedUserId = InvitationManager.validateInvitationCode(context, inviteCode)
+                        if (validatedUserId != null) {
+                            val convId = validatedUserId
                             scope.launch {
-                                val convId = "invite_" + inviteCode.trim().take(12)
                                 val conv = ConversationEntity(
                                     id = convId,
-                                    title = "Invitación " + inviteCode.trim().take(12),
+                                    title = "Conversación", // luego se actualizará con el nombre real
                                     timestamp = System.currentTimeMillis()
                                 )
                                 conversationDao?.insertConversation(conv)
                                 showCodeDialog = false
-                                // Intentar conexión directa (IP encriptada en el código)
+                                // Guardar contacto (usuario real) para que los mensajes dirigidos funcionen
+                                val contact = com.malla.mvp.data.entity.ContactEntity(
+                                    contactUserId = convId,
+                                    displayName = "Invitación ${inviteCode.trim().take(12)}",
+                                    avatarSeed = 0,
+                                    publicKey = "", // se completará al recibir mensaje
+                                    addedAt = System.currentTimeMillis()
+                                )
                                 try {
-                                    val extra = inviteCode.trim().substring(8)
-                                    val myUserId = IdentityManager.getIdentityId() ?: ""
-                                    val ip = DhtWrapper.decryptIp(extra, myUserId)
-                                    if (ip.isNotBlank()) {
-                                        com.malla.mvp.network.NetworkService.connectToPeer(ip)
-                                        // Reintentar si falla
-                                        var retries = 0
-                                        while (retries < 5 && com.malla.mvp.network.NetworkService.connectedClientsCount.value == 0) {
-                                            delay(1000)
-                                            retries++
-                                            try { com.malla.mvp.network.NetworkService.connectToPeer(ip) } catch (_: Exception) {}
-                                        }
-                                        if (com.malla.mvp.network.NetworkService.connectedClientsCount.value > 0) {
-                                            Toast.makeText(context, "Conectado a $ip", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "No se pudo conectar. Verifica que el otro dispositivo esté en la misma red.", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Error al conectar. Código inválido o dispositivo no disponible.", Toast.LENGTH_LONG).show()
-                                }
-                                onChatClicked(convId, "Invitación " + inviteCode.trim().take(12))
+                                    db?.contactDao()?.insert(contact)
+                                } catch (_: Exception) {}
+                                onChatClicked(convId, "Invitación ${inviteCode.trim().take(12)}")
                                 Toast.makeText(context, "Código aceptado", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            Toast.makeText(context, "Código inválido (debe tener al menos 12 caracteres)", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Código inválido o expirado", Toast.LENGTH_SHORT).show()
                         }
                     }) { Text("Aceptar") }
                 },

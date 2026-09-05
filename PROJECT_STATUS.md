@@ -1012,3 +1012,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising, GATT server, Came
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar solicitudes BLE reales; mostrar avatar real; validar QR en dos dispositivos; integrar BleTransport en MeshChatService.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de solicitudes BLE; verificación de mensajes entre dos dispositivos; QR por validar; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:11 (código 12 dígitos real, BleTransport integrado y advertising conectable) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementaron generateInvitationCode y validateInvitationCode en InvitationManager. Se corrigió ConversationsScreen para usar userId real como conversationId y guardar contacto. Se integró BleTransport en MeshChatService, MessageReceiver y MeshChatViewModel (broadcast y recepción). Se cambió advertising BLE a conectable para recibir solicitudes.
+¿ERA UN FIX DE ERROR?: ERROR: las invitaciones no llegaban y los códigos no validaban. SOLUCIÓN APLICADA: implementar lógica real de código y transporte BLE para invitaciones/mensajes. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT server, advertising conectable, SharedPreferences.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos con logs; mostrar nombre real del contacto; añadir biometría en aceptación de solicitud; implementar reintentos y gestión de cola BLE.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR pendiente; mensajes sin confirmación de entrega; warnings de deprecación.
+──────────────────────────────

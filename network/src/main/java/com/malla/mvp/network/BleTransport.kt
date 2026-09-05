@@ -51,6 +51,24 @@ object BleTransport {
         }
     }
 
+    fun broadcast(data: ByteArray) {
+        connectedGatts.keys.forEach { address ->
+            connectedGatts[address]?.let { gatt ->
+                writeCharacteristic(gatt, data)
+            }
+        }
+    }
+
+    fun stop() {
+        connectedGatts.values.forEach { gatt ->
+            try { gatt.disconnect() } catch (_: Exception) {}
+            try { gatt.close() } catch (_: Exception) {}
+        }
+        connectedGatts.clear()
+        gattServer?.close()
+        gattServer = null
+    }
+
     fun connectAndSend(device: BluetoothDevice, data: ByteArray) {
         val context = appContext ?: return
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)

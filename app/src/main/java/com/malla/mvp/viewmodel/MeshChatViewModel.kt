@@ -18,6 +18,7 @@ import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.network.MeshMessage
 import com.malla.mvp.network.NetworkService
+import com.malla.mvp.network.BleTransport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.UUID
@@ -257,6 +258,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         expireAt = expireAt,
                         viewOnce = viewOnce
                     ))
+                    // Enviar también por BLE como respaldo
+                    val blePayload = "${IdentityManager.getIdentityId()}|$finalContent".toByteArray(Charsets.UTF_8)
+                    BleTransport.broadcast(blePayload)
                     db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
                 } catch (e: Exception) {
                     // fallback: queda como enviado (0)
