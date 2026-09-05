@@ -928,3 +928,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, scoped storage, carpeta Descargas.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar ruta del archivo en UI; rotar archivos para no crecer indefinidamente.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real; validación de escritura en Android 10+; rotación de logs.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 14:10 (código 12 dígitos + QR con identidad) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó generateInvitationCode y validateInvitationCode en InvitationManager con expiración de 24h. Se conectó la validación del código de 12 dígitos en ConversationsScreen. Se ajustó MainActivity para parsear payload QR userId|displayName|publicKey y crear conversación/contacto.
+¿ERA UN FIX DE ERROR?: sí; antes el código no validaba y el QR solo leía IP.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, SharedPreferences, QR parsing, Room.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar QR con identidad completa; rotación logs; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real de agregar por código/QR; validación inter-dispositivo.
+──────────────────────────────
