@@ -1,5 +1,6 @@
 package com.malla.mvp.network
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.core.engine.DiagnosticsLogger
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -212,11 +213,11 @@ object BleManager {
         val scanSettings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
-        val scanFilter = ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceUuid)).build()
         try {
-            scanner?.startScan(listOf(scanFilter), scanSettings, proximityScanCallbackWrapper)
+            scanner?.startScan(null, scanSettings, proximityScanCallbackWrapper)
             isProximityScanning = true
             LogBuffer.add("BLE", "Escaneo de proximidad iniciado")
+            DiagnosticsLogger.log("BLE", "Escaneo de proximidad BLE iniciado sin filtro estricto")
         } catch (e: SecurityException) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_SCAN denegado")
         }
@@ -241,6 +242,7 @@ object BleManager {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val record = result.scanRecord ?: return
             val serviceData = record.serviceData?.get(ParcelUuid(serviceUuid)) ?: return
+            DiagnosticsLogger.log("BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
             val payload = String(serviceData, Charsets.UTF_8)
             val parts = payload.split("|")
             if (parts.size >= 3) {
@@ -273,6 +275,7 @@ object BleManager {
     private val proximityAdvertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
             LogBuffer.add("BLE", "Advertising de proximidad iniciado correctamente")
+            DiagnosticsLogger.log("BLE", "Advertising de proximidad BLE activo")
         }
 
         override fun onStartFailure(errorCode: Int) {

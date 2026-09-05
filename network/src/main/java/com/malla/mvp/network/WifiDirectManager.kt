@@ -73,12 +73,16 @@ object WifiDirectManager : IWifiDirectManager {
                     }
                     WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         manager?.requestPeers(channel) { peerList ->
-                            _peers.value = peerList.deviceList?.map { WifiDirectPeer(it.deviceAddress, it.deviceName) } ?: emptyList()
-                            DiagnosticsLogger.log(TAG, "Peers encontrados: ${_peers.value.size}")
-                            if (_peers.value.isNotEmpty() && !isConnecting && _connectionState.value != WifiDirectConnectionState.CONNECTED) {
-                                val first = _peers.value.first()
-                                DiagnosticsLogger.log(TAG, "Auto-conectando al primer peer: ${first.address}")
+                            val allPeers = peerList.deviceList?.map { WifiDirectPeer(it.deviceAddress, it.deviceName) } ?: emptyList()
+                            _peers.value = allPeers
+                            DiagnosticsLogger.log(TAG, "Peers encontrados (${allPeers.size}): ${allPeers.joinToString(", ") { "${it.deviceName}" }}")
+                            val mallaPeers = allPeers.filter { it.deviceName?.startsWith("MALLA_") == true }
+                            if (mallaPeers.isNotEmpty() && !isConnecting && _connectionState.value != WifiDirectConnectionState.CONNECTED) {
+                                val first = mallaPeers.first()
+                                DiagnosticsLogger.log(TAG, "Auto-conectando al peer MALLA: ${first.deviceName} (${first.address})")
                                 connectToPeer(first.address)
+                            } else {
+                                DiagnosticsLogger.log(TAG, "No se encontraron peers MALLA para auto-conectar")
                             }
                         }
                     }

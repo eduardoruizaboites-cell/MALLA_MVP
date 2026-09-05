@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -49,6 +50,7 @@ object BleTransport {
             }
         }
         LogBuffer.add(TAG, "BleTransport iniciado (GATT server + auto-conexión)")
+        DiagnosticsLogger.log(TAG, "BleTransport iniciado (GATT server + auto-conexión)")
     }
 
     private fun connectGatt(device: BluetoothDevice) {
@@ -69,6 +71,7 @@ object BleTransport {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         connectedGatts[device.address] = gatt
                         LogBuffer.add("BleTransport", "GATT conectado a ${device.address}")
+                        DiagnosticsLogger.log("BleTransport", "GATT conectado a ${device.address}")
                     } else {
                         gatt.disconnect()
                     }
@@ -77,6 +80,7 @@ object BleTransport {
             // Mantener referencia para evitar GC
         } catch (e: SecurityException) {
             LogBuffer.add("BleTransport", "Permiso denegado para conectar GATT")
+            DiagnosticsLogger.log("BleTransport", "Permiso denegado para conectar GATT")
         }
     }
 

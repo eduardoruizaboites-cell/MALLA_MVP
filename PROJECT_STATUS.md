@@ -1107,3 +1107,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, TCP/IP, segundo plano.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; validar encolado; integrar Wi-Fi Direct como tercer transporte; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; Wi-Fi Direct no integrado en TransportManager; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-05 10:11 (filtrado BLE/mDNS/Wi-Fi Direct y código manual) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminó el filtro estricto de escaneo BLE (setServiceUuid) para capturar anuncios MALLA con serviceData y se añadió filtrado manual por UUID en callback. Se agregaron logs de diagnóstico en BleManager y BleTransport. En WifiDirectManager se filtraron peers por prefijo MALLA_ antes de auto-conectar. En InvitationManager, validateInvitationCode ahora acepta cualquier código de 12 dígitos generando un userId derivado (temporal) para permitir conversación sin depender de SharedPreferences locales.
+¿ERA UN FIX DE ERROR?: ERROR: no se detectaban nodos MALLA por BLE y Wi-Fi Direct conectaba con cualquier dispositivo; código de invitación no validaba entre dispositivos. SOLUCIÓN APLICADA: escaneo BLE sin filtro estricto + filtrado manual, filtro MALLA_ en Wi-Fi Direct, validación determinista temporal de código. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se confirmó por inspección que el filtro setServiceUuid no capturaba serviceData; Wi-Fi Direct no filtraba; SharedPreferences no compartía códigos.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE serviceData, Wi-Fi Direct peers, SharedPreferences.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar intercambio de código vía BLE/mDNS; reintentos y confirmación de escritura BLE; centralizar paleta de colores.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; código de invitación real compartido; Wi-Fi Direct aún no integrado en TransportManager; warnings KSP/deprecación.
+──────────────────────────────

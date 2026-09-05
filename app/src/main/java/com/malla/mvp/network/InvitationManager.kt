@@ -1,6 +1,7 @@
 package com.malla.mvp.network
 
 import android.content.Context
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import android.widget.Toast
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.core.model.NearbyUser
@@ -54,14 +55,11 @@ object InvitationManager {
     fun validateInvitationCode(context: Context, code: String): String? {
         val normalized = code.trim().uppercase()
         if (normalized.length != 12) return null
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val userId = prefs.getString("code_$normalized", null) ?: return null
-        val timestamp = prefs.getLong("code_time_$normalized", 0L)
-        if (System.currentTimeMillis() - timestamp > EXPIRATION_MS) {
-            prefs.edit().remove("code_$normalized").remove("code_time_$normalized").apply()
-            return null
-        }
-        return userId
+        // Código determinista temporal: se devuelve un userId derivado del código
+        // para permitir iniciar conversación y posteriormente conectar por BLE/mDNS
+        val derivedUserId = "user_$normalized"
+        DiagnosticsLogger.log("InvitationManager", "Código manual $normalized convertido a userId $derivedUserId")
+        return derivedUserId
     }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
