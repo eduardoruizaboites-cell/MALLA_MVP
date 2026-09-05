@@ -37,26 +37,34 @@ object TransportManager {
     }
 
     suspend fun send(contactId: String, message: MeshMessage) {
-        // 1. Intentar TCP/IP si hay clientes conectados
-        try {
+        // 1. Intentar TCP/IP si hay handler conectado
+        if (NetworkService.isContactConnected(contactId)) {
             NetworkService.sendMessageToContact(contactId, message)
             updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
             return
-        } catch (e: Exception) {
-            DiagnosticsLogger.log(TAG, "Error TCP: ${e.message}")
         }
 
-        // 2. Intentar BLE broadcast
+        // 2. Intentar BLE broadcast si no hay TCP
         try {
             val payload = "${message.senderId}|${message.content}".toByteArray(Charsets.UTF_8)
-            BleTransport.broadcast(payload)
-            updateStatus(TransportStatus.BLE_CONNECTED, "BLE")
-            return
+            val sentBle = BleTransport.broadcast(payload)
+            if (sentBle) {
+                updateStatus(TransportStatus.BLE_CONNECTED, "BLE")
+                return
+            }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
         }
 
-        // 3. Wi-Fi Direct (futuro: integración con socket)
-        updateStatus(TransportStatus.ERROR, "NONE")
+        // 3. Si no hay BLE, intentar Wi-Fi Direct (actualmente no implementado)
+        // Por ahora, encolar en NetworkService para entrega cuando TCP esté disponible
+        try {
+            NetworkService.sendMessageToContact(contactId, message)
+            updateStatus(TransportStatus.ERROR, "NONE")
+            DiagnosticsLogger.log(TAG, "Sin canal activo: mensaje encolado en TCP")
+        } catch (e: Exception) {
+            DiagnosticsLogger.log(TAG, "Error encolando mensaje: ${e.message}")
+            updateStatus(TransportStatus.ERROR, "NONE")
+        }
     }
 }

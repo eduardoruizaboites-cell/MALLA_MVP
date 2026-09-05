@@ -287,7 +287,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     put("pollId", pollId)
                     put("optionId", optionId)
                 }.toString()
-                NetworkService.sendMessageToContact(
+                TransportManager.send(
                     convId,
                     MeshMessage(content = json, senderId = IdentityManager.getIdentityId(), type = "poll_vote")
                 )
@@ -326,7 +326,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     put("question", question)
                     put("options", org.json.JSONArray(options.filter { it.isNotBlank() }))
                 }.toString()
-                NetworkService.sendMessageToContact(
+                TransportManager.send(
                     convId,
                     MeshMessage(content = json, senderId = IdentityManager.getIdentityId(), type = "poll_create")
                 )
@@ -339,7 +339,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             db?.messageDao()?.updateContent(messageId, newContent)
             val convId = _conversationId.value ?: return@launch
             if (convId != "self_chat") {
-                NetworkService.sendMessageToContact(convId, MeshMessage(
+                TransportManager.send(convId, MeshMessage(
                     content = newContent,
                     senderId = IdentityManager.getIdentityId(),
                     type = "edit",
@@ -356,7 +356,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             db?.messageDao()?.markAsDeleted(messageId)
             val convId = _conversationId.value ?: return@launch
             if (convId != "self_chat") {
-                NetworkService.sendMessageToContact(convId, MeshMessage(
+                TransportManager.send(convId, MeshMessage(
                     content = "",
                     senderId = IdentityManager.getIdentityId(),
                     type = "delete_for_all",
@@ -374,7 +374,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             db?.messageDao()?.updateReaction(messageId, emoji)
             refreshMessages(convId)
             if (convId != "self_chat") {
-                NetworkService.sendMessageToContact(convId, MeshMessage(
+                TransportManager.send(convId, MeshMessage(
                     content = emoji,
                     senderId = IdentityManager.getIdentityId(),
                     type = "reaction",
@@ -390,7 +390,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             db?.messageDao()?.updateReaction(messageId, null)
             refreshMessages(convId)
             if (convId != "self_chat") {
-                NetworkService.sendMessageToContact(convId, MeshMessage(
+                TransportManager.send(convId, MeshMessage(
                     content = "",
                     senderId = IdentityManager.getIdentityId(),
                     type = "reaction",
@@ -436,7 +436,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             }
             val last = messageIds.lastOrNull()?.let { messageDao.getMessageById(it) }
             if (targetConversationId != "self_chat" && last != null) {
-                NetworkService.sendMessageToContact(
+                TransportManager.send(
                     targetConversationId,
                     MeshMessage(
                         content = last.content,

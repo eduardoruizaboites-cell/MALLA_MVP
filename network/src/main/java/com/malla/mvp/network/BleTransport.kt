@@ -30,12 +30,16 @@ object BleTransport {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val incomingMessages = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
+    private var started = false
+    private var discoveryJob: Job? = null
 
     fun start(context: Context) {
+        if (started) return
+        started = true
         appContext = context.applicationContext
         startServer(context)
         // Observar dispositivos BLE detectados para conectar GATT automáticamente
-        scope.launch {
+        discoveryJob = scope.launch {
             BleManager.foundBluetoothDevices.collect { devices ->
                 devices.forEach { device ->
                     if (!connectedGatts.containsKey(device.address)) {
@@ -44,6 +48,7 @@ object BleTransport {
                 }
             }
         }
+        LogBuffer.add(TAG, "BleTransport iniciado (GATT server + auto-conexión)")
     }
 
     private fun connectGatt(device: BluetoothDevice) {
@@ -92,15 +97,21 @@ object BleTransport {
         }
     }
 
-    fun broadcast(data: ByteArray) {
+    fun broadcast(data: ByteArray): Boolean {
+        var sent = false
         connectedGatts.keys.forEach { address ->
             connectedGatts[address]?.let { gatt ->
                 writeCharacteristic(gatt, data)
+                sent = true
             }
         }
+        return sent
     }
 
     fun stop() {
+        discoveryJob?.cancel()
+        discoveryJob = null
+        started = false
         connectedGatts.values.forEach { gatt ->
             try { gatt.disconnect() } catch (_: Exception) {}
             try { gatt.close() } catch (_: Exception) {}
@@ -108,6 +119,7 @@ object BleTransport {
         connectedGatts.clear()
         gattServer?.close()
         gattServer = null
+        LogBuffer.add(TAG, "BleTransport detenido")
     }
 
     fun connectAndSend(device: BluetoothDevice, data: ByteArray) {

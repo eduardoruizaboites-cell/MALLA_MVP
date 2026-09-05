@@ -72,6 +72,10 @@ object NetworkService {
         }
     }
 
+    fun isContactConnected(contactId: String): Boolean {
+        return clients.containsKey(contactId)
+    }
+
     fun stopServer() {
         Log.d(TAG, "[NS:TCP] Deteniendo servidor (${clients.size} clientes)")
         serverJob.cancel()
