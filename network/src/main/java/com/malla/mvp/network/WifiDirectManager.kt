@@ -30,6 +30,7 @@ import java.io.OutputStreamWriter
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 
 @SuppressLint("MissingPermission")
 object WifiDirectManager : IWifiDirectManager {
@@ -47,6 +48,7 @@ object WifiDirectManager : IWifiDirectManager {
     private var manager: WifiP2pManager? = null
     private var channel: Channel? = null
     private var receiver: BroadcastReceiver? = null
+    private val connectedSockets = ConcurrentHashMap<String, Socket>()
     private var serverSocket: ServerSocket? = null
     private var groupOwnerIp: String? = null
     private var isRunning = false
@@ -119,6 +121,26 @@ object WifiDirectManager : IWifiDirectManager {
         isConnecting = false
         _connectionState.value = WifiDirectConnectionState.IDLE
         DiagnosticsLogger.log(TAG, "Wi-Fi Direct detenido")
+    }
+
+
+    /**
+     * Envía un payload de texto a todos los sockets Wi-Fi Direct conectados.
+     * Retorna true si al menos un envío se intentó.
+     */
+    fun broadcast(payload: String): Boolean {
+        var attempted = false
+        connectedSockets.values.forEach { socket ->
+            try {
+                val writer = OutputStreamWriter(socket.getOutputStream())
+                writer.write(payload + "\n")
+                writer.flush()
+                attempted = true
+            } catch (e: Exception) {
+                DiagnosticsLogger.log(TAG, "Error enviando por Wi-Fi Direct: ${e.message}")
+            }
+        }
+        return attempted
     }
 
     override fun connectToPeer(address: String) {
@@ -209,6 +231,9 @@ object WifiDirectManager : IWifiDirectManager {
     private fun handleSocket(socket: Socket) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
+                val address = socket.inetAddress?.hostAddress ?: "unknown"
+                connectedSockets[address] = socket
+                DiagnosticsLogger.log(TAG, "Socket Wi-Fi Direct activo: $address")
                 val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
                 val writer = OutputStreamWriter(socket.getOutputStream())
                 while (true) {
@@ -219,6 +244,7 @@ object WifiDirectManager : IWifiDirectManager {
                 reader.close()
                 writer.close()
                 socket.close()
+                connectedSockets.remove(address)
             } catch (e: Exception) {
                 DiagnosticsLogger.log(TAG, "Cierre de socket Wi-Fi Direct: ${e.message}")
             }

@@ -1118,3 +1118,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE serviceData, Wi-Fi Direct peer
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar intercambio de código vía BLE/mDNS; reintentos y confirmación de escritura BLE; centralizar paleta de colores.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; código de invitación real compartido; Wi-Fi Direct aún no integrado en TransportManager; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-05 10:13 (integración Wi-Fi Direct en TransportManager) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió a WifiDirectManager un mapa de sockets conectados y un método público broadcast(payload) que envía datos a todos los sockets activos. Se integró en TransportManager como tercer paso de la cascada de envío: si TCP no está conectado y BLE no tiene GATT, se usa Wi-Fi Direct. Los mensajes recibidos por socket se registran en diagnóstico (aún no se emiten al bus).
+¿ERA UN FIX DE ERROR?: sí; la cascada no incluía Wi-Fi Direct real. SOLUCIÓN APLICADA: broadcast desde sockets activos y paso nuevo en TransportManager. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct sockets, ConcurrentHashMap.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): emitir mensajes Wi-Fi Direct al MallaEventBus; reintentos; manejo de cola.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; mensajes Wi-Fi Direct aún no se integran al bus; warnings KSP/deprecación.
+──────────────────────────────

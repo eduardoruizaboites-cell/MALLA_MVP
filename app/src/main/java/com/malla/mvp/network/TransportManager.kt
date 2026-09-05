@@ -56,8 +56,19 @@ object TransportManager {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
         }
 
-        // 3. Si no hay BLE, intentar Wi-Fi Direct (actualmente no implementado)
-        // Por ahora, encolar en NetworkService para entrega cuando TCP esté disponible
+        // 3. Intentar Wi-Fi Direct broadcast
+        try {
+            val wfdPayload = "${message.senderId}|${message.content}"
+            val sentWfd = WifiDirectManager.broadcast(wfdPayload)
+            if (sentWfd) {
+                updateStatus(TransportStatus.WIFI_DIRECT_CONNECTED, "Wi-Fi Direct")
+                return
+            }
+        } catch (e: Exception) {
+            DiagnosticsLogger.log(TAG, "Error Wi-Fi Direct: ${e.message}")
+        }
+
+        // 4. Si no hay canal activo, encolar en NetworkService para entrega cuando TCP esté disponible
         try {
             NetworkService.sendMessageToContact(contactId, message)
             updateStatus(TransportStatus.ERROR, "NONE")
