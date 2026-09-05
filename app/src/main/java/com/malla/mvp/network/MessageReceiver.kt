@@ -179,9 +179,10 @@ object MessageReceiver {
 
             var conv = conversationDao.getConversationById(conversationId)
             if (conv == null) {
+                val peerName = NetworkService.connectedPeers[conversationId] ?: "Peer ${conversationId.take(8)}"
                 conv = ConversationEntity(
                     id = conversationId,
-                    title = "Peer ${conversationId.take(8)}",
+                    title = peerName,
                     lastMessage = meshMsg.content.take(30),
                     timestamp = meshMsg.timestamp,
                     unreadCount = 1

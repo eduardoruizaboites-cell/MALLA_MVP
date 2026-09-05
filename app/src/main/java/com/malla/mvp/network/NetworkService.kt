@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.*
 import java.net.ServerSocket
+import java.util.concurrent.ConcurrentHashMap
 import java.net.Socket
 import java.net.NetworkInterface
 import java.security.PublicKey
@@ -34,6 +35,7 @@ object NetworkService {
     // Mapa de clientes: contactId -> ClientHandler
     private val clients = mutableMapOf<String, ClientHandler>()
     private val clientsBySocket = mutableMapOf<Socket, ClientHandler>()
+    val connectedPeers = ConcurrentHashMap<String, String>()  // contactId -> displayName
     private val pendingMessages = mutableMapOf<String, MutableList<MeshMessage>>()
 
     // Clave efímera local para ECDH (se regenera en cada arranque)
@@ -213,6 +215,7 @@ object NetworkService {
 
                     // 7. Registrar cliente en el mapa global
                     clients[peerUserId] = handler
+                    connectedPeers[peerUserId] = peerDisplayName
                     clientsBySocket[socket] = handler
                     flushPendingMessages(peerUserId, handler)
                     _connectedClientsCount.value = clients.size

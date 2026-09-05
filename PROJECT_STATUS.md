@@ -1084,3 +1084,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BiometricPrompt, FragmentActivity.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo con biometría; añadir timeout en autenticación; mostrar animación de éxito al aceptar.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:50 (nombre real en conversaciones al recibir mensajes) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: NetworkService ahora expone connectedPeers (contactId → displayName). MessageReceiver usa ese nombre real al crear la conversación entrante, en lugar de “Peer <built-in function id>”.
+¿ERA UN FIX DE ERROR?: sí; las conversaciones entrantes se creaban con nombre genérico. SOLUCIÓN APLICADA: usar displayName del handshake. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, TCP handshake.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): actualizar nombre al recibir invitación; mostrar avatar real; probar en dos dispositivos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
+──────────────────────────────
