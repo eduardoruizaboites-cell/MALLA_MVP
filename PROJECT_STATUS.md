@@ -1096,3 +1096,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, TCP handshake.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): actualizar nombre al recibir invitación; mostrar avatar real; probar en dos dispositivos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-05 10:05 (BLE fallback operativo en segundo plano) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió isContactConnected en NetworkService; TransportManager.send ahora verifica TCP real antes de usar BLE; BleTransport.start se hizo idempotente y broadcast devuelve Boolean; MeshChatViewModel migró todos los envíos a TransportManager.
+¿ERA UN FIX DE ERROR?: ERROR: el fallback BLE nunca se ejecutaba porque NetworkService.sendMessageToContact no lanza excepción → SOLUCIÓN APLICADA: comprobar conexión TCP antes y usar BLE si no hay handler; encolar si BLE falla → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa identificada por inspección.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, TCP/IP, segundo plano.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; validar encolado; integrar Wi-Fi Direct como tercer transporte; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; Wi-Fi Direct no integrado en TransportManager; warnings KSP/deprecación.
+──────────────────────────────
