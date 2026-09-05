@@ -275,10 +275,26 @@ class MainActivity : FragmentActivity() {
                             } else if (showQrScanner) {
                                 BackHandler { showQrScanner = false }
                                 QrScanScreen(
-                                    onQrScanned = { ip ->
+                                    onQrScanned = { payload ->
                                         showQrScanner = false
-                                        connectToPeerAndCreateConversation(ip) { convId ->
-                                            currentConversationId = convId
+                                        val parts = payload.split("|")
+                                        if (parts.size >= 3) {
+                                            val userId = parts[0]
+                                            val displayName = parts[1]
+                                            val convId = userId
+                                            val conv = ConversationEntity(
+                                                id = convId,
+                                                title = displayName,
+                                                timestamp = System.currentTimeMillis()
+                                            )
+                                            MainScope().launch {
+                                                database?.conversationDao()?.insertConversation(conv)
+                                                Toast.makeText(this@MainActivity, "Contacto agregado por QR", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            connectToPeerAndCreateConversation(payload) { convId ->
+                                                currentConversationId = convId
+                                            }
                                         }
                                     },
                                     onBack = { showQrScanner = false }
