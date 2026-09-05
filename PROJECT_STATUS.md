@@ -1036,3 +1036,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, NetworkInterface.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; continuar con aceptación biométrica; mostrar nombre real en invitación; revisar QR.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:40 (TransportManager: selección automática de transporte) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se creó TransportManager para elegir automáticamente TCP/IP, BLE o Wi-Fi Direct al enviar mensajes. Se integró en MeshChatViewModel y se inició en MeshChatService y MainActivity. Expone estado del transporte activo.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de arquitectura de resiliencia.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, TCP/IP, BLE, Wi-Fi Direct.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar estado del transporte en UI; implementar reintentos y cola de mensajes; integrar Bluetooth Classic o SMS fallback.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings de deprecación.
+──────────────────────────────

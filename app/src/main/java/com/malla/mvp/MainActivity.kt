@@ -63,6 +63,7 @@ import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
+import com.malla.mvp.network.TransportManager
 import com.malla.mvp.ui.components.MainTopBar
 import com.malla.mvp.ui.components.StickerPickerDialog
 import com.malla.mvp.ui.components.StickerFullScreenDialog
@@ -115,6 +116,7 @@ class MainActivity : FragmentActivity() {
         if (hasRequiredPermissions()) {
             MainScope().launch(Dispatchers.Default) {
                 enableRadio()
+                TransportManager.start(this@MainActivity)
                 ProximityEngine.start(this@MainActivity)
                 BleManager.start(this@MainActivity)
                 MeshConnector.start()

@@ -18,6 +18,7 @@ import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
 import com.malla.mvp.network.MeshMessage
 import com.malla.mvp.network.NetworkService
+import com.malla.mvp.network.TransportManager
 import com.malla.mvp.network.BleTransport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -207,7 +208,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
             )
             if (convId != "self_chat") {
-                NetworkService.sendMessageToContact(convId, MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido"))
+                TransportManager.send(convId, MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido"))
             }
         }
     }
@@ -247,7 +248,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             if (convId != "self_chat") {
                 // Enviar dirigido al contactId correcto (convId)
                 try {
-                    NetworkService.sendMessageToContact(convId, MeshMessage(
+                    val meshMsg = MeshMessage(
                         content = finalContent,
                         senderId = IdentityManager.getIdentityId(),
                         timestamp = System.currentTimeMillis(),
@@ -257,10 +258,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         quotedMessageContent = quotedMessageContent,
                         expireAt = expireAt,
                         viewOnce = viewOnce
-                    ))
-                    // Enviar también por BLE como respaldo
-                    val blePayload = "${IdentityManager.getIdentityId()}|$finalContent".toByteArray(Charsets.UTF_8)
-                    BleTransport.broadcast(blePayload)
+                    )
+                    TransportManager.send(convId, meshMsg)
                     db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
                 } catch (e: Exception) {
                     // fallback: queda como enviado (0)
