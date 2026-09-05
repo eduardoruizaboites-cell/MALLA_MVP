@@ -36,11 +36,13 @@ object InvitationManager {
             .take(12)
             .uppercase()
         val userId = IdentityManager.getIdentityId()
+        val localIp = DhtService.getLocalAddress() ?: "unknown"
         val timestamp = System.currentTimeMillis()
         prefs.edit()
             .putString("code_$code", userId)
             .putLong("code_time_$code", timestamp)
             .putString("last_user_id", userId)
+            .putString("last_local_ip", localIp)
             .apply()
         return code
     }

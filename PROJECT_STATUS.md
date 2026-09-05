@@ -1024,3 +1024,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT server, advertising conec
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos con logs; mostrar nombre real del contacto; añadir biometría en aceptación de solicitud; implementar reintentos y gestión de cola BLE.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR pendiente; mensajes sin confirmación de entrega; warnings de deprecación.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:36 (mejoras de conectividad: IP local, BLE→Invitaciones) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se mejoró DhtService.getLocalAddress para priorizar interfaces WiFi y evitar IP 0.0.0.0. Se conectó BleManager con InvitationManager para que las solicitudes BLE entrantes emitan ContactInvitation. InvitationManager guarda la IP local al generar código.
+¿ERA UN FIX DE ERROR?: ERROR: IP local no se obtenía bien y las solicitudes BLE no se procesaban. SOLUCIÓN APLICADA: filtrado de interfaces y callback de invitación. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, NetworkInterface.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; continuar con aceptación biométrica; mostrar nombre real en invitación; revisar QR.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
+──────────────────────────────
