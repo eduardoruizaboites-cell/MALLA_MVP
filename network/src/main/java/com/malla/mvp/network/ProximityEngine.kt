@@ -4,6 +4,7 @@ import android.content.Context
 import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.model.SignalType
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -22,6 +23,7 @@ object ProximityEngine {
         appContext = context.applicationContext
         discoveryJob = scope.launch {
             LogBuffer.add("PROX", "ProximityEngine iniciado")
+            DiagnosticsLogger.log("PROX", "ProximityEngine iniciado")
             // Inicializar BleManager (adapter, scanner, advertiser)
             BleManager.start(context)
             // BLE scanning

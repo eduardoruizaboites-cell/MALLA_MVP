@@ -904,3 +904,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, NSD/mDNS, BLE, permisos runtime, p
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): implementar flujo de código de 24h; mostrar dispositivos BLE con conectar automático; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba en dispositivo real; código de 24h; validación inter-dispositivo de ack; warnings KSP/deprecación.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 13:20 (transporte Wi-Fi Direct) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó WifiDirectManager real con descubrimiento de peers, conexión y socket local para mensajería. Se integró en ProximityEngine y MainActivity (arranque). Se añadió envío por Wi-Fi Direct como fallback en MeshChatViewModel.sendMessage. Los mensajes recibidos por Wi-Fi Direct se emiten al MallaEventBus.
+¿ERA UN FIX DE ERROR?: sí; proporciona transporte alternativo sin infraestructura Wi-Fi común.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, sockets.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): flujo de código 24h; integración con BleTransport como prioridad; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real; validación inter-dispositivo; refactor de transporte múltiple.
+──────────────────────────────

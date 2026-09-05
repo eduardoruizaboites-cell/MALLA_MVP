@@ -51,6 +51,7 @@ import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.network.MeshConnector
+import com.malla.mvp.network.BleTransport
 import com.malla.mvp.util.RadioManager
 import com.malla.mvp.service.MeshChatService
 import com.malla.mvp.network.ProximityEngine
@@ -58,6 +59,7 @@ import com.malla.mvp.network.BleManager
 import com.malla.mvp.util.NotificationHelper
 import com.malla.mvp.service.CacheCleanerWorker
 import com.malla.mvp.core.engine.DeviceStateMonitor
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
@@ -76,6 +78,7 @@ import com.malla.mvp.R
 import com.malla.mvp.ui.theme.MallaTheme
 import com.malla.mvp.viewmodel.AppThemeState
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -92,6 +95,7 @@ class MainActivity : FragmentActivity() {
 
         // Inicializar identidad antes de cualquier operación criptográfica
         IdentityManager.init(this)
+        DiagnosticsLogger.init(this)
 
         // Iniciar componentes base
         ConnectivityMonitor.start(application)
@@ -107,10 +111,12 @@ class MainActivity : FragmentActivity() {
 
         // Iniciar descubrimiento y conexión mesh si los permisos ya están concedidos
         if (hasRequiredPermissions()) {
-            enableRadio()
-            ProximityEngine.start(this)
-            BleManager.start(this)
-            MeshConnector.start()
+            MainScope().launch(Dispatchers.Default) {
+                enableRadio()
+                ProximityEngine.start(this@MainActivity)
+                BleManager.start(this@MainActivity)
+                MeshConnector.start()
+            }
         }
         val permissionPrefs = getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)
         showPermissionExplanationState.value = !permissionPrefs.getBoolean("permission_explanation_shown", false)

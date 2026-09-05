@@ -3,6 +3,7 @@ package com.malla.mvp.network
 import android.util.Log
 import com.malla.mvp.App
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.crypto.CryptoEngine
 import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.identity.IdentityManager
@@ -80,6 +81,7 @@ object NetworkService {
 
     fun connectToPeer(address: String, expectedContactId: String? = null, expectedPublicKeyBase64: String? = null) {
         Log.d(TAG, "[NS:TCP] Intentando conectar a $address:$DEFAULT_PORT")
+        DiagnosticsLogger.log("NS", "Intentando conectar a $address:$DEFAULT_PORT")
         serverScope.launch {
             try {
                 val socket = Socket(address, DEFAULT_PORT)
@@ -92,8 +94,10 @@ object NetworkService {
                 )
                 handler.start()
                 Log.d(TAG, "[NS:TCP] Conectado a $address")
+                DiagnosticsLogger.log("NS", "Conectado a $address")
             } catch (e: Exception) {
                 Log.e(TAG, "[NS:ERR] Error conectando a $address: ${e.message}", e)
+                DiagnosticsLogger.log("NS", "Error conectando a $address: ${e.message}")
             }
         }
     }

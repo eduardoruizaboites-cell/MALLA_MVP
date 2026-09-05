@@ -15,6 +15,9 @@ import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.MessageReceiver
 import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.identity.IdentityManager
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MeshChatService : Service() {
     override fun onCreate() {
@@ -38,7 +41,11 @@ class MeshChatService : Service() {
         IdentityManager.init(this)
         NetworkService.startServer()
         MessageReceiver.start(this)
-        ProximityEngine.start(this)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            ProximityEngine.start(this@MeshChatService)
+            com.malla.mvp.network.BleManager.start(this@MeshChatService)
+            com.malla.mvp.network.MeshConnector.start()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
