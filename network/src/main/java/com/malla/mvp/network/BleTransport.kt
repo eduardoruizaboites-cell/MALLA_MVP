@@ -10,11 +10,13 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import com.malla.mvp.network.BleManager
 import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import com.malla.mvp.core.engine.LogBuffer
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -32,6 +34,45 @@ object BleTransport {
     fun start(context: Context) {
         appContext = context.applicationContext
         startServer(context)
+        // Observar dispositivos BLE detectados para conectar GATT automáticamente
+        scope.launch {
+            BleManager.foundBluetoothDevices.collect { devices ->
+                devices.forEach { device ->
+                    if (!connectedGatts.containsKey(device.address)) {
+                        connectGatt(device)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun connectGatt(device: BluetoothDevice) {
+        val context = appContext ?: return
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED) return
+        try {
+            val gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
+                override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                    if (newState == BluetoothProfile.STATE_CONNECTED) {
+                        gatt.discoverServices()
+                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                        connectedGatts.remove(device.address)
+                        gatt.close()
+                    }
+                }
+                override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        connectedGatts[device.address] = gatt
+                        LogBuffer.add("BleTransport", "GATT conectado a ${device.address}")
+                    } else {
+                        gatt.disconnect()
+                    }
+                }
+            })
+            // Mantener referencia para evitar GC
+        } catch (e: SecurityException) {
+            LogBuffer.add("BleTransport", "Permiso denegado para conectar GATT")
+        }
     }
 
     private fun startServer(context: Context) {

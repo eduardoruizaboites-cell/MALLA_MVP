@@ -1048,3 +1048,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, TCP/IP, BLE, Wi-Fi Direct.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar estado del transporte en UI; implementar reintentos y cola de mensajes; integrar Bluetooth Classic o SMS fallback.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings de deprecación.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:43 (conexión GATT automática y estado del transporte) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se mejoró BleTransport para conectar automáticamente GATT a los dispositivos BLE detectados y mantenerlos en connectedGatts. Se añadió indicador visual del transporte activo y su estado en PulsoScreen.
+¿ERA UN FIX DE ERROR?: no era fix; fue mejora de resiliencia y UX.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar mensajes de error; integrar Bluetooth Classic; continuar con biometría.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
+──────────────────────────────

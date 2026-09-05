@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.malla.mvp.ui.components.SmsFallbackSwitch
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.ProximityEngine
+import com.malla.mvp.network.TransportManager
 import com.malla.mvp.core.model.NearbyUser
 import androidx.compose.runtime.collectAsState
 import kotlin.math.roundToInt
@@ -72,6 +73,23 @@ fun PulsoScreen(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val transportStatus by TransportManager.status.collectAsState()
+                    val activeTransport by TransportManager.activeTransport.collectAsState()
+                    // Indicador de transporte activo
+                    Box(
+                        modifier = Modifier.size(10.dp).clip(CircleShape)
+                            .background(
+                                when (transportStatus) {
+                                    TransportManager.TransportStatus.TCP_CONNECTED -> MaterialTheme.colorScheme.primary
+                                    TransportManager.TransportStatus.BLE_CONNECTED -> Color(0xFF00E5FF)
+                                    TransportManager.TransportStatus.WIFI_DIRECT_CONNECTED -> Color(0xFF378ADD)
+                                    TransportManager.TransportStatus.ERROR -> Color(0xFFE24B4A)
+                                    else -> Color.Gray
+                                }
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Transporte: $activeTransport", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     val infiniteTransition = rememberInfiniteTransition(label = "dot")
                     val alpha by infiniteTransition.animateFloat(
                         initialValue = 1f, targetValue = 0.2f,
