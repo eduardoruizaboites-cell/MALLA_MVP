@@ -26,6 +26,7 @@ object ProximityEngine {
             DiagnosticsLogger.log("PROX", "ProximityEngine iniciado")
             // Inicializar BleManager (adapter, scanner, advertiser)
             BleManager.start(context)
+            BleTransport.start(context)
             // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
                 addOrUpdate(token, name, seed, SignalType.BLE, strength, device)

@@ -67,6 +67,11 @@ object WifiDirectManager : IWifiDirectManager {
                         manager?.requestPeers(channel) { peerList ->
                             _peers.value = peerList.deviceList?.map { it.deviceAddress } ?: emptyList()
                             DiagnosticsLogger.log(TAG, "Peers encontrados: ${_peers.value.size}")
+                            if (_peers.value.isNotEmpty()) {
+                                val first = _peers.value.first()
+                                DiagnosticsLogger.log(TAG, "Auto-conectando al primer peer: $first")
+                                connectToPeer(first)
+                            }
                         }
                     }
                     WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
@@ -123,6 +128,12 @@ object WifiDirectManager : IWifiDirectManager {
             }
             override fun onFailure(reason: Int) {
                 DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason")
+                // Reintentar después de 2 segundos
+                if (isRunning) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        discoverPeers()
+                    }, 2000)
+                }
             }
         })
     }
