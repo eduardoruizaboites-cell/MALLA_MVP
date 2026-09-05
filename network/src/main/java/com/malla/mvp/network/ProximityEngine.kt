@@ -30,7 +30,10 @@ object ProximityEngine {
             BleTransport.start(context)
             // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
-                addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
+                val myId = IdentityManager.getIdentityId()
+                if (token != myId && token != generateToken(myId)) {
+                    addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
+                }
             }
             // Iniciar advertising MALLA para que otros dispositivos nos detecten
             val myName = IdentityManager.getUserName(context)
@@ -107,15 +110,18 @@ object ProximityEngine {
     }
 
     private fun addWifiDirectPeer(peer: WifiDirectPeer) {
+        val deviceName = peer.deviceName ?: ""
+        // Solo agregar peers MALLA, ignorar dispositivos genéricos
+        if (!deviceName.startsWith("MALLA_") && !deviceName.contains("MALLA")) {
+            return
+        }
         val token = "wifi_${peer.address}"
-        val name = peer.deviceName ?: "Wi-Fi Direct ${peer.address.take(4)}"
-        // Si ya existe, no duplicar
+        val name = if (deviceName.startsWith("MALLA_")) deviceName.removePrefix("MALLA_") else deviceName
         val current = _nearbyUsers.value.toMutableList()
         val idx = current.indexOfFirst { it.token == token }
         if (idx == -1) {
             current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
             _nearbyUsers.value = current
-            // Notificar descubrimiento (se podría usar NotificationHelper)
         }
     }
 

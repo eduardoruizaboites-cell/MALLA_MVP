@@ -147,47 +147,13 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     }
 
     private suspend fun handleIncomingMessage(msg: MeshMessage) {
-        val convId = msg.senderId  // El senderId ahora es el contactId real
+        val convId = msg.senderId
+        // MessageReceiver ya inserta el mensaje en la BD;
+        // solo actualizamos la UI si la conversación actual está abierta.
         if (convId == _conversationId.value) {
-            // Mensaje para la conversación actual
-            val msgEntity = MessageEntity(
-                id = UUID.randomUUID().toString(),
-                conversationId = convId,
-                content = msg.content,
-                timestamp = System.currentTimeMillis(),
-                isOwn = false,
-                quotedMessageId = msg.quotedMessageId,
-                quotedMessageContent = msg.quotedMessageContent,
-                expireAt = msg.expireAt,
-                viewOnce = msg.viewOnce
-            )
-            db?.messageDao()?.insertMessage(msgEntity)
             refreshMessages(convId)
-        } else {
-            // Si no es la conversación actual, asegurar que exista la conversación
-            val conversationDao = db?.conversationDao()
-            val existing = conversationDao?.getConversationById(convId)
-            if (existing == null) {
-                val newConv = com.malla.mvp.data.entity.ConversationEntity(
-                    id = convId,
-                    title = convId,  // Temporal; se actualizará cuando se obtenga el nombre
-                    timestamp = System.currentTimeMillis()
-                )
-                conversationDao?.insertConversation(newConv)
-            }
-            val msgEntity = MessageEntity(
-                id = UUID.randomUUID().toString(),
-                conversationId = convId,
-                content = msg.content,
-                timestamp = System.currentTimeMillis(),
-                isOwn = false,
-                quotedMessageId = msg.quotedMessageId,
-                quotedMessageContent = msg.quotedMessageContent,
-                expireAt = msg.expireAt,
-                viewOnce = msg.viewOnce
-            )
-            db?.messageDao()?.insertMessage(msgEntity)
         }
+        // Si no es la conversación actual, MessageReceiver se encargó de guardarla.
     }
 
     fun updateInputText(text: String) {

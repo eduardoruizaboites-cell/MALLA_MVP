@@ -25,12 +25,15 @@ object BleTransport {
     private const val TAG = "BleTransport"
     val SERVICE_UUID = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
     val MESSAGE_CHAR_UUID = UUID.fromString("0000abcd-0003-1000-8000-00805f9b34fb")
+    val INVITE_CHAR_UUID = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
     private var appContext: Context? = null
     private var gattServer: BluetoothGattServer? = null
     private val connectedGatts = ConcurrentHashMap<String, BluetoothGatt>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val incomingMessages = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
+    private val incomingInvitationPayloads = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val invitationPayloads: SharedFlow<String> = incomingInvitationPayloads.asSharedFlow()
     private var started = false
     private var discoveryJob: Job? = null
 
@@ -96,7 +99,13 @@ object BleTransport {
                 BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
             )
+            val inviteChar = BluetoothGattCharacteristic(
+                INVITE_CHAR_UUID,
+                BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+            )
             service.addCharacteristic(char)
+            service.addCharacteristic(inviteChar)
             addService(service)
         }
     }
@@ -124,6 +133,43 @@ object BleTransport {
         gattServer?.close()
         gattServer = null
         LogBuffer.add(TAG, "BleTransport detenido")
+    }
+
+    fun sendInvitation(device: BluetoothDevice, payload: ByteArray) {
+        val context = appContext ?: return
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED) return
+        var gatt = connectedGatts[device.address]
+        if (gatt != null) {
+            writeInvitationCharacteristic(gatt, payload)
+            return
+        }
+        gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    gatt.discoverServices()
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    connectedGatts.remove(device.address)
+                    gatt.close()
+                }
+            }
+            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    connectedGatts[device.address] = gatt
+                    writeInvitationCharacteristic(gatt, payload)
+                } else {
+                    gatt.disconnect()
+                }
+            }
+        })
+    }
+
+    private fun writeInvitationCharacteristic(gatt: BluetoothGatt, data: ByteArray) {
+        val service = gatt.getService(SERVICE_UUID) ?: return
+        val char = service.getCharacteristic(INVITE_CHAR_UUID) ?: return
+        char.value = data
+        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        gatt.writeCharacteristic(char)
     }
 
     fun connectAndSend(device: BluetoothDevice, data: ByteArray) {
@@ -173,10 +219,22 @@ object BleTransport {
             offset: Int,
             value: ByteArray
         ) {
-            if (characteristic.uuid == MESSAGE_CHAR_UUID) {
-                incomingMessages.tryEmit(value)
-                if (responseNeeded) {
-                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
+            when (characteristic.uuid) {
+                MESSAGE_CHAR_UUID -> {
+                    incomingMessages.tryEmit(value)
+                    if (responseNeeded) {
+                        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
+                    }
+                }
+                INVITE_CHAR_UUID -> {
+                    val payload = String(value, Charsets.UTF_8)
+                    LogBuffer.add(TAG, "Invitación BLE recibida: $payload")
+                    DiagnosticsLogger.log(TAG, "Invitación BLE recibida: $payload")
+                    // Emitir para que InvitationManager lo procese desde el módulo :app
+                    incomingInvitationPayloads.tryEmit(payload)
+                    if (responseNeeded) {
+                        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
+                    }
                 }
             }
         }

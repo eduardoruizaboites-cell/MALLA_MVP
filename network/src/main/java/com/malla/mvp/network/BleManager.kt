@@ -63,75 +63,46 @@ object BleManager {
         }
         scanner = adapter!!.bluetoothLeScanner
         advertiser = adapter!!.bluetoothLeAdvertiser
-        val scanSettings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-        val scanFilter = ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceUuid)).build()
-        try {
-            scanner?.startScan(listOf(scanFilter), scanSettings, scanCallback)
-            isScanningActive = true
-            LogBuffer.add("BLE", "Escaneo BLE iniciado con filtro MALLA")
-        } catch (e: SecurityException) {
-            LogBuffer.add("BLE", "Permiso BLUETOOTH_SCAN denegado")
-        }
-        startGattServer()
+        LogBuffer.add("BLE", "BleManager inicializado")
     }
 
-    fun startAdvertising() {
+
+
+
+
+    fun startAdvertisingWithPayload(payload: String) {
         if (adapter == null || !adapter!!.isEnabled) {
             LogBuffer.add("BLE", "No se puede iniciar advertising: Bluetooth no disponible")
             return
         }
-        if (advertiser == null) {
-            advertiser = adapter!!.bluetoothLeAdvertiser
+        if (advertiser == null) advertiser = adapter!!.bluetoothLeAdvertiser
+        if (isProximityAdvertising) {
+            LogBuffer.add("BLE", "Advertising de proximidad ya activo")
+            return
         }
-        if (isAdvertising) return
-
         val context = appContext
         if (context != null && ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE)
             != PackageManager.PERMISSION_GRANTED) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
         }
-
         try {
             val settings = AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                .setConnectable(true)
+                .setConnectable(false)
                 .build()
-
             val data = AdvertiseData.Builder()
-                .setIncludeDeviceName(true)
-                .addServiceUuid(ParcelUuid(serviceUuid))
+                .addServiceData(ParcelUuid(serviceUuid), payload.toByteArray(Charsets.UTF_8))
                 .build()
-
-            advertiser?.startAdvertising(settings, data, advertiseCallback)
-            isAdvertising = true
-            LogBuffer.add("BLE", "Advertising BLE iniciado")
+            advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
+            isProximityAdvertising = true
+            DiagnosticsLogger.log("BLE", "Advertising con payload iniciado")
         } catch (e: SecurityException) {
             LogBuffer.add("BLE", "Error de seguridad al iniciar advertising")
         } catch (e: Exception) {
-            LogBuffer.add("BLE", "Error al iniciar advertising: ${e.message}")
+            LogBuffer.add("BLE", "Error al iniciar advertising con payload: ${e.message}")
         }
-    }
-
-    // ---------- Nuevo: advertising con datos personalizados ----------
-    fun startAdvertisingWithPayload(payload: String) {
-        if (adapter == null || !adapter!!.isEnabled) return
-        if (advertiser == null) advertiser = adapter!!.bluetoothLeAdvertiser
-        val settings = AdvertiseSettings.Builder()
-            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            .setConnectable(false)
-            .build()
-        val data = AdvertiseData.Builder()
-            .addServiceData(ParcelUuid(serviceUuid), payload.toByteArray(Charsets.UTF_8))
-            .build()
-        try {
-            advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
-            isProximityAdvertising = true
-        } catch (e: SecurityException) {}
     }
 
     fun startAdvertisingWithData(token: String, displayName: String, avatarSeed: Int) {
@@ -185,21 +156,13 @@ object BleManager {
         } catch (e: Exception) {}
     }
 
-    fun stopAdvertising() {
-        if (!isAdvertising) return
-        try {
-            advertiser?.stopAdvertising(advertiseCallback)
-            isAdvertising = false
-        } catch (e: Exception) {}
-    }
+
 
     fun stop() {
         scanner?.stopScan(scanCallback)
         isScanningActive = false
-        stopAdvertising()
         stopProximityAdvertising()
         stopProximityScanning()
-        stopGattServer()
     }
 
     // ---------- Nuevo: escaneo con callback ----------
@@ -243,6 +206,9 @@ object BleManager {
             val record = result.scanRecord ?: return
             val serviceData = record.serviceData?.get(ParcelUuid(serviceUuid)) ?: return
             DiagnosticsLogger.log("BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
+            if (!_foundBluetoothDevices.value.contains(result.device)) {
+                _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
+            }
             val payload = String(serviceData, Charsets.UTF_8)
             val parts = payload.split("|")
             if (parts.size >= 3) {
@@ -403,66 +369,7 @@ object BleManager {
         acceptanceCallback = callback
     }
 
-    // ---------- GATT Server para recibir solicitudes ----------
-    fun startGattServer() {
-        if (gattServer != null) return
-        val context = appContext ?: return
-        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        try {
-            gattServer = btManager.openGattServer(context, gattServerCallback)
-            val service = BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-            val characteristic = BluetoothGattCharacteristic(
-                invitationCharacteristicUuid,
-                BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
-            )
-            service.addCharacteristic(characteristic)
-            gattServer?.addService(service)
-            LogBuffer.add("BLE", "GATT Server iniciado para MALLA")
-        } catch (e: SecurityException) {
-            LogBuffer.add("BLE", "Permiso BLUETOOTH_CONNECT denegado para GATT server")
-        } catch (e: Exception) {
-            LogBuffer.add("BLE", "Error iniciando GATT server: ${e.message}")
-        }
-    }
 
-    fun stopGattServer() {
-        gattServer?.close()
-        gattServer = null
-    }
-
-    private val gattServerCallback = object : BluetoothGattServerCallback() {
-        override fun onCharacteristicWriteRequest(
-            device: BluetoothDevice,
-            requestId: Int,
-            characteristic: BluetoothGattCharacteristic,
-            preparedWrite: Boolean,
-            responseNeeded: Boolean,
-            offset: Int,
-            value: ByteArray
-        ) {
-            if (characteristic.uuid == invitationCharacteristicUuid) {
-                val payload = String(value, Charsets.UTF_8)
-                LogBuffer.add("BLE", "Solicitud recibida de ${device.address}: $payload")
-                // Enviar respuesta si es necesario
-                if (responseNeeded) {
-                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
-                }
-                // Aquí se procesaría la solicitud de amistad
-            }
-        }
-
-        override fun onCharacteristicReadRequest(
-            device: BluetoothDevice,
-            requestId: Int,
-            offset: Int,
-            characteristic: BluetoothGattCharacteristic
-        ) {
-            if (characteristic.uuid == invitationCharacteristicUuid) {
-                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf(0))
-            }
-        }
-    }
 
     suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =
         suspendCancellableCoroutine { continuation ->

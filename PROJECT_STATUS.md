@@ -1129,3 +1129,80 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct sockets, ConcurrentHa
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): emitir mensajes Wi-Fi Direct al MallaEventBus; reintentos; manejo de cola.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; mensajes Wi-Fi Direct aún no se integran al bus; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 1 conectividad BLE: eliminación GATT duplicado y advertising unificado) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se simplificó BleManager.start() para solo inicializar adapter/scanner/advertiser sin escaneo con filtro ni GATT server. Se eliminó startAdvertising() antiguo que no incluía serviceData, se reintrodujo startAdvertisingWithPayload para compatibilidad. Se corrigió stop() para no llamar a funciones eliminadas.
+¿ERA UN FIX DE ERROR?: ERROR: GATT servers duplicados con mismo UUID impedían recepción BLE; advertising sin serviceData no era detectado por escaneo sin filtro → SOLUCIÓN APLICADA: eliminar GATT server de BleManager, eliminar advertising sin serviceData, reintroducir startAdvertisingWithPayload → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): corregir BleTransport para incluir característica de invitación y conectar con InvitationManager; filtrar auto-detección; mover reintentos Wi-Fi Direct; evitar arranques múltiples.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; BleTransport aún sin característica de invitación; Wi-Fi Direct sin filtro MALLA_.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 2/3: BleTransport con característica de invitación y ProximityEngine filtrado) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: En BleTransport se añadió característica INVITE_CHAR_UUID al servidor GATT, flujo invitationPayloads para desacoplar de :app, y método sendInvitation. En ProximityEngine se filtró auto-detección BLE por token propio y se filtraron peers Wi-Fi Direct por prefijo MALLA_.
+¿ERA UN FIX DE ERROR?: ERROR: BleTransport no podía referenciar InvitationManager (módulo :network vs :app); auto-detección propia; Wi-Fi Direct agregaba dispositivos genéricos → SOLUCIÓN APLICADA: emitir invitaciones por flujo, filtrar token propio y prefijo MALLA_ → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): usar referencia directa a InvitationManager desde network (desechado por dependencia inversa).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, flujos Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): conectar InvitationManager a invitationPayloads; mover reintentos Wi-Fi Direct a IO; evitar arranques múltiples.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; WifiDirectManager aún sin filtro en auto-conexión y con reintentos en main thread.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 4: WifiDirectManager con reintentos en IO y filtro MALLA_ en auto-conexión) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió discoverPeers() para reintentar usando GlobalScope.launch(Dispatchers.Main) con delay en lugar de Handler postDelayed. Se añadió filtro de peers MALLA_ antes de auto-conectar.
+¿ERA UN FIX DE ERROR?: ERROR: WifiDirectManager auto-conectaba a cualquier peer y usaba Handler en main thread; withContext no importado → SOLUCIÓN APLICADA: filtro MALLA_, reintentos con GlobalScope + delay → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): withContext sin import (descartado por simplicidad).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, corrutinas.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar InvitationManager para usar BleTransport.sendInvitation; conectar InvitationManager a BleTransport.invitationPayloads; evitar arranques múltiples.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; arranques múltiples de ProximityEngine; InvitationManager aún no conectado a BleTransport.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 5: InvitationManager conectado a BleTransport y validación real de códigos) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió start/stop en InvitationManager para suscribirse a BleTransport.invitationPayloads y procesar invitaciones BLE entrantes. Se corrigió validateInvitationCode para leer SharedPreferences reales con expiración. Se reemplazó el envío de invitaciones por BleTransport.sendInvitation.
+¿ERA UN FIX DE ERROR?: ERROR: InvitationManager no escuchaba invitaciones BLE y validaba códigos de forma determinista temporal → SOLUCIÓN APLICADA: suscripción por flujo, validación real con expiración, uso de BleTransport → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, flujos, SharedPreferences.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): evitar arranques múltiples de ProximityEngine y servicios; revisar MessageReceiver para BLE; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; arranques múltiples; revisión integral de comunicación.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 6: foundBluetoothDevices alimentado desde proximidad) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se modificó proximityScanCallbackWrapper en BleManager para agregar result.device a foundBluetoothDevices al detectar serviceData MALLA. Corrige que BleTransport no tuviera dispositivos para auto-conectar GATT.
+¿ERA UN FIX DE ERROR?: ERROR: BleTransport observa foundBluetoothDevices pero ese flujo quedó vacío tras simplificar start() → SOLUCIÓN APLICADA: alimentar foundBluetoothDevices desde callback de proximidad → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar arranques múltiples en MainActivity/MeshChatService; probar en dos dispositivos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; arranques múltiples; revisión integral de comunicación.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 7: limpieza de arranques múltiples en MainActivity y MeshChatService) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se eliminaron las llamadas a ProximityEngine.start/BleManager.start/MeshConnector.start en MainActivity; ahora solo se piden permisos y se habilita radio. En MeshChatService se centralizó el arranque de ProximityEngine, TransportManager, MeshConnector e InvitationManager. Se añadió InvitationManager.stop() al onDestroy.
+¿ERA UN FIX DE ERROR?: ERROR: múltiples arranques de ProximityEngine/BLE desde MainActivity y MeshChatService causaban saturación y ANR → SOLUCIÓN APLICADA: único punto de arranque en MeshChatService; MainActivity solo permisos y habilitación de radio → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, ciclo de vida de servicios.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; revisar logs de diagnóstico; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings de KSP/deprecación; Broadcast BLE sin confirmación de escritura.
+──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (fase 8: eliminación de duplicados en recepción de mensajes) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se simplificó MeshChatViewModel.handleIncomingMessage para que solo refresque la conversación actual, delegando la inserción en BD a MessageReceiver. Evita mensajes duplicados cuando ambos componentes procesaban MallaEventBus.
+¿ERA UN FIX DE ERROR?: ERROR: mensajes entrantes se insertaban dos veces (MessageReceiver y MeshChatViewModel) → SOLUCIÓN APLICADA: eliminar inserción duplicada en ViewModel → ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Room, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; revisar logs; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings KSP/deprecación; confirmación de escritura BLE pendiente.
+──────────────────────────────

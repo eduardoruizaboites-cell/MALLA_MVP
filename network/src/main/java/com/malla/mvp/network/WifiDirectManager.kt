@@ -179,9 +179,10 @@ object WifiDirectManager : IWifiDirectManager {
                 DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason")
                 if (isRunning) {
                     val delay = minOf(5_000L * discoveryRetryCount, 30_000L)
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                        kotlinx.coroutines.delay(delay)
                         discoverPeers()
-                    }, delay)
+                    }
                 }
             }
         })

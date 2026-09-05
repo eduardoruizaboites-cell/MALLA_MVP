@@ -114,12 +114,9 @@ class MainActivity : FragmentActivity() {
 
         // Iniciar descubrimiento y conexión mesh si los permisos ya están concedidos
         if (hasRequiredPermissions()) {
+            // La comunicación mesh la inicia MeshChatService, no aquí
             MainScope().launch(Dispatchers.Default) {
                 enableRadio()
-                TransportManager.start(this@MainActivity)
-                ProximityEngine.start(this@MainActivity)
-                BleManager.start(this@MainActivity)
-                MeshConnector.start()
             }
 
             // Observar descubrimiento de nodos para notificación
@@ -147,11 +144,8 @@ class MainActivity : FragmentActivity() {
         ) { grants ->
             val allGranted = grants.values.all { it }
             if (allGranted) {
-                LogBuffer.add("MAIN", "Permisos concedidos, habilitando radio y descubrimiento")
+                LogBuffer.add("MAIN", "Permisos concedidos, habilitando radio")
                 enableRadio()
-                ProximityEngine.start(this)
-                BleManager.start(this)
-                MeshConnector.start()
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()

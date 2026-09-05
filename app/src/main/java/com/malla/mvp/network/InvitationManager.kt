@@ -6,9 +6,14 @@ import android.widget.Toast
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.identity.IdentityManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import android.bluetooth.BluetoothAdapter
@@ -18,6 +23,8 @@ import java.util.Date
 import java.util.Locale
 
 object InvitationManager {
+    private var appContext: Context? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _incomingInvitation = MutableSharedFlow<ContactInvitation>(replay = 0)
     private val _acceptanceReceived = MutableSharedFlow<Pair<String,Int>>(replay = 0)
     val acceptanceReceived = _acceptanceReceived.asSharedFlow()
@@ -25,6 +32,40 @@ object InvitationManager {
     private val invitationCharUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
     private const val PREFS_NAME = "invitation_codes"
     private const val EXPIRATION_MS = 24 * 60 * 60 * 1000L
+
+    /**
+     * Inicia la escucha de invitaciones BLE entrantes.
+     * Debe llamarse al arrancar la app.
+     */
+    fun start(context: Context) {
+        appContext = context.applicationContext
+        scope.launch {
+            BleTransport.invitationPayloads.collect { payload ->
+                processIncomingInvitationPayload(payload)
+            }
+        }
+    }
+
+    fun stop() {
+        scope.cancel()
+    }
+
+    private fun processIncomingInvitationPayload(payload: String) {
+        try {
+            val json = JSONObject(payload)
+            val invitation = ContactInvitation(
+                senderUserId = json.optString("senderUserId", ""),
+                senderDisplayName = json.optString("senderDisplayName", "Usuario Malla"),
+                senderAvatarSeed = json.optInt("senderAvatarSeed", 0),
+                senderPublicKey = json.optString("senderPublicKey", ""),
+                preferredChannels = listOf("BLE")
+            )
+            _incomingInvitation.tryEmit(invitation)
+            DiagnosticsLogger.log("InvitationManager", "Invitación procesada de ${invitation.senderDisplayName}")
+        } catch (e: Exception) {
+            DiagnosticsLogger.log("InvitationManager", "Error parseando invitación: ${e.message}")
+        }
+    }
 
     /**
      * Genera un código de invitación de 12 dígitos con expiración de 24h.
@@ -55,11 +96,17 @@ object InvitationManager {
     fun validateInvitationCode(context: Context, code: String): String? {
         val normalized = code.trim().uppercase()
         if (normalized.length != 12) return null
-        // Código determinista temporal: se devuelve un userId derivado del código
-        // para permitir iniciar conversación y posteriormente conectar por BLE/mDNS
-        val derivedUserId = "user_$normalized"
-        DiagnosticsLogger.log("InvitationManager", "Código manual $normalized convertido a userId $derivedUserId")
-        return derivedUserId
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userId = prefs.getString("code_$normalized", null) ?: return null
+        val timestamp = prefs.getLong("code_time_$normalized", 0L)
+        if (System.currentTimeMillis() - timestamp > EXPIRATION_MS) {
+            // Código expirado
+            prefs.edit().remove("code_$normalized").remove("code_time_$normalized").apply()
+            DiagnosticsLogger.log("InvitationManager", "Código $normalized expirado")
+            return null
+        }
+        DiagnosticsLogger.log("InvitationManager", "Código $normalized válido, userId=$userId")
+        return userId
     }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
@@ -88,17 +135,9 @@ object InvitationManager {
 
         if (user.bluetoothDevice != null) {
             withContext(Dispatchers.IO) {
-                val success = BleManager.connectAndWriteData(
-                    user.bluetoothDevice!!,
-                    invitationCharUuid,
-                    json.toByteArray(Charsets.UTF_8)
-                )
+                BleTransport.sendInvitation(user.bluetoothDevice!!, json.toByteArray(Charsets.UTF_8))
                 withContext(Dispatchers.Main) {
-                    if (success) {
-                        Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Error al enviar solicitud", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
