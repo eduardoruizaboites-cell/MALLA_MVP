@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.malla.mvp.core.model.ContactInvitation
+import com.malla.mvp.util.BiometricAuthHelper
 
 @Composable
 fun IncomingRequestDialog(
@@ -23,6 +24,9 @@ fun IncomingRequestDialog(
     onAccept: (ContactInvitation) -> Unit,
     onReject: (ContactInvitation) -> Unit
 ) {
+    var authenticating by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     Dialog(onDismissRequest = { onReject(invitation) }) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -62,12 +66,27 @@ fun IncomingRequestDialog(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { onAccept(invitation) },
+                    onClick = {
+                        if (!authenticating) {
+                            authenticating = true
+                            BiometricAuthHelper.authenticate(
+                                context = context,
+                                onSuccess = {
+                                    authenticating = false
+                                    onAccept(invitation)
+                                },
+                                onError = { error ->
+                                    authenticating = false
+                                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71)),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Aceptar", fontWeight = FontWeight.SemiBold)
+                    Text(if (authenticating) "Verificando..." else "Aceptar", fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(

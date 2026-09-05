@@ -1072,3 +1072,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, mDNS/BLE, TCP.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar nombre real al conectar; continuar con aceptación biométrica; QR.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:49 (aceptación biométrica de invitaciones) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió autenticación biométrica al aceptar invitaciones de contacto. IncomingRequestDialog ahora requiere biometría (huella/rostro) antes de llamar onAccept.
+¿ERA UN FIX DE ERROR?: no era fix; fue implementación de seguridad premium.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BiometricPrompt, FragmentActivity.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dispositivo con biometría; añadir timeout en autenticación; mostrar animación de éxito al aceptar.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
+──────────────────────────────
