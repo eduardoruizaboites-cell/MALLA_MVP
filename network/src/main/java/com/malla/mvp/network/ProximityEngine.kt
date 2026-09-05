@@ -6,6 +6,7 @@ import com.malla.mvp.core.model.SignalType
 import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.core.wifi.WifiDirectPeer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -33,6 +34,14 @@ object ProximityEngine {
             }
             // Wi‑Fi Direct (en modo descubrimiento)
             WifiDirectManager.start(context)
+            // Observar peers Wi-Fi Direct
+            scope.launch {
+                WifiDirectManager.peers.collect { peers ->
+                    peers.forEach { peer ->
+                        addWifiDirectPeer(peer)
+                    }
+                }
+            }
             // mDNS
             DiscoveryService.onPeerResolved = { address ->
                     val localIp = DhtService.getLocalAddress() ?: "127.0.0.1"
@@ -84,6 +93,19 @@ object ProximityEngine {
             current.add(NearbyUser(token, name, seed, type, strength, bluetoothDevice = device))
         }
         _nearbyUsers.value = current
+    }
+
+    private fun addWifiDirectPeer(peer: WifiDirectPeer) {
+        val token = "wifi_${peer.address}"
+        val name = peer.deviceName ?: "Wi-Fi Direct ${peer.address.take(4)}"
+        // Si ya existe, no duplicar
+        val current = _nearbyUsers.value.toMutableList()
+        val idx = current.indexOfFirst { it.token == token }
+        if (idx == -1) {
+            current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
+            _nearbyUsers.value = current
+            // Notificar descubrimiento (se podría usar NotificationHelper)
+        }
     }
 
     private fun generateToken(userId: String): String {

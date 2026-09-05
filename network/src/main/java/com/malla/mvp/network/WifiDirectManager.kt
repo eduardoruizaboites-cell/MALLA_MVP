@@ -17,6 +17,8 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.util.Log
 import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.core.wifi.IWifiDirectManager
+import com.malla.mvp.core.wifi.WifiDirectPeer
+import com.malla.mvp.core.wifi.WifiDirectConnectionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -36,8 +38,11 @@ object WifiDirectManager : IWifiDirectManager {
     private const val SERVICE_NAME = "MALLA_SERVICE"
     private const val PORT = 8889
 
-    private val _peers = MutableStateFlow<List<String>>(emptyList())
-    override val peers: StateFlow<List<String>> = _peers
+    private val _peers = MutableStateFlow<List<WifiDirectPeer>>(emptyList())
+    override val peers: StateFlow<List<WifiDirectPeer>> = _peers
+
+    private val _connectionState = MutableStateFlow(WifiDirectConnectionState.IDLE)
+    override val connectionState: StateFlow<WifiDirectConnectionState> = _connectionState
 
     private var manager: WifiP2pManager? = null
     private var channel: Channel? = null
@@ -46,6 +51,9 @@ object WifiDirectManager : IWifiDirectManager {
     private var groupOwnerIp: String? = null
     private var isRunning = false
     private var appContext: Context? = null
+    private var isDiscovering = false
+    private var isConnecting = false
+    private var discoveryRetryCount = 0
 
     override fun start(context: Context) {
         if (isRunning) return
@@ -65,12 +73,12 @@ object WifiDirectManager : IWifiDirectManager {
                     }
                     WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         manager?.requestPeers(channel) { peerList ->
-                            _peers.value = peerList.deviceList?.map { it.deviceAddress } ?: emptyList()
+                            _peers.value = peerList.deviceList?.map { WifiDirectPeer(it.deviceAddress, it.deviceName) } ?: emptyList()
                             DiagnosticsLogger.log(TAG, "Peers encontrados: ${_peers.value.size}")
-                            if (_peers.value.isNotEmpty()) {
+                            if (_peers.value.isNotEmpty() && !isConnecting && _connectionState.value != WifiDirectConnectionState.CONNECTED) {
                                 val first = _peers.value.first()
-                                DiagnosticsLogger.log(TAG, "Auto-conectando al primer peer: $first")
-                                connectToPeer(first)
+                                DiagnosticsLogger.log(TAG, "Auto-conectando al primer peer: ${first.address}")
+                                connectToPeer(first.address)
                             }
                         }
                     }
@@ -103,36 +111,51 @@ object WifiDirectManager : IWifiDirectManager {
         serverSocket?.close()
         serverSocket = null
         isRunning = false
+        isDiscovering = false
+        isConnecting = false
+        _connectionState.value = WifiDirectConnectionState.IDLE
         DiagnosticsLogger.log(TAG, "Wi-Fi Direct detenido")
     }
 
     override fun connectToPeer(address: String) {
-        if (manager == null || channel == null) return
+        if (manager == null || channel == null || isConnecting) return
+        isConnecting = true
+        _connectionState.value = WifiDirectConnectionState.CONNECTING
         val config = WifiP2pConfig().apply {
             deviceAddress = address
         }
         manager?.connect(channel, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
+                isConnecting = false
                 DiagnosticsLogger.log(TAG, "Conexión iniciada a $address")
             }
             override fun onFailure(reason: Int) {
+                isConnecting = false
+                _connectionState.value = WifiDirectConnectionState.ERROR
                 DiagnosticsLogger.log(TAG, "Fallo al conectar a $address: razón $reason")
             }
         })
     }
 
     private fun discoverPeers() {
+        if (isDiscovering) return
+        isDiscovering = true
+        _connectionState.value = WifiDirectConnectionState.DISCOVERING
         manager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
+                isDiscovering = false
+                discoveryRetryCount = 0
                 DiagnosticsLogger.log(TAG, "Descubrimiento de peers iniciado")
             }
             override fun onFailure(reason: Int) {
+                isDiscovering = false
+                discoveryRetryCount++
                 DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason")
-                // Reintentar después de 2 segundos
                 if (isRunning) {
+                    val delay = minOf(5_000L * discoveryRetryCount, 30_000L)
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         discoverPeers()
-                    }, 2000)
+                    }, delay)
                 }
             }
         })
@@ -140,6 +163,7 @@ object WifiDirectManager : IWifiDirectManager {
 
     private fun handleConnectionInfo(info: WifiP2pInfo) {
         groupOwnerIp = info.groupOwnerAddress?.hostAddress
+        _connectionState.value = WifiDirectConnectionState.CONNECTED
         DiagnosticsLogger.log(TAG, "Información de conexión: groupOwnerIp=$groupOwnerIp, isGroupOwner=${info.isGroupOwner}")
         if (info.isGroupOwner) {
             startServerSocket()

@@ -81,6 +81,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import java.util.UUID
 import androidx.compose.runtime.mutableStateOf
 
@@ -96,6 +97,7 @@ class MainActivity : FragmentActivity() {
         // Inicializar identidad antes de cualquier operación criptográfica
         IdentityManager.init(this)
         DiagnosticsLogger.init(this)
+        DiagnosticsLogger.logDeviceInfo(this)
 
         // Iniciar componentes base
         ConnectivityMonitor.start(application)
@@ -116,6 +118,19 @@ class MainActivity : FragmentActivity() {
                 ProximityEngine.start(this@MainActivity)
                 BleManager.start(this@MainActivity)
                 MeshConnector.start()
+            }
+
+            // Observar descubrimiento de nodos para notificación
+            MainScope().launch(Dispatchers.IO) {
+                var previousCount = 0
+                ProximityEngine.nearbyUsers.collect { users ->
+                    val count = users.size
+                    if (count > previousCount) {
+                        val latest = users.last()
+                        NotificationHelper.showDiscoveryNotification(this@MainActivity, latest.displayName)
+                    }
+                    previousCount = count
+                }
             }
         }
         val permissionPrefs = getSharedPreferences("malla_prefs", Context.MODE_PRIVATE)

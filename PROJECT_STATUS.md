@@ -976,3 +976,15 @@ COMPATIBILIDAD CONSIDERADA (R21): no aplica a este cierre.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar pruebas reales de auto-conexión; integrar BleTransport en MeshChatService; mostrar peers conectados; limpieza de warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; transporte BLE/Wi-Fi Direct pendiente de prueba real; código 12 dígitos y QR pendientes de prueba real.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 07:09 (refactor Wi-Fi Direct + diagnóstico enriquecido + notificación descubrimiento) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se refactorizó WifiDirectManager para manejar correctamente el estado BUSY con backoff exponencial; se añadió estado connectionState y lista de peers con nombre; se enriqueció DiagnosticsLogger con información del dispositivo, red y transportes; se añadió notificación local al detectar nuevos nodos; se integró Wi-Fi Direct en ProximityEngine para mostrar peers reales.
+¿ERA UN FIX DE ERROR?: ERROR: Wi-Fi Direct fallaba con "razón 2" (BUSY) por reintentos sin control y auto-conexión múltiple. SOLUCIÓN APLICADA: máquina de estados, bloqueo de reconexión, backoff exponencial. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó falta de permisos o incompatibilidad; la evidencia apuntaba a saturación del framework.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, BLE, notificaciones, estado de red.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; integrar BleTransport en MeshChatService; mostrar estado de conexión en UI; reemplazar QrScanScreen por CameraX.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; escáner QR antiguo; nombre de peers mDNS sigue mostrando IP; avatar real no implementado; warnings de deprecación.
+──────────────────────────────
