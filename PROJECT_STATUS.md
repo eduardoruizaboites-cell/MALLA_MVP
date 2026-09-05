@@ -952,3 +952,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, SharedPreferences, QR parsing, Roo
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar QR con identidad completa; rotación logs; limpieza warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real de agregar por código/QR; validación inter-dispositivo.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 01:20 (auto-conexión Wi-Fi Direct y BleTransport) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se activó BleTransport.start en ProximityEngine. Se añadió auto-conexión al primer peer detectado en WifiDirectManager. Se implementó reintento de discoverPeers con postDelayed de 2s si falla.
+¿ERA UN FIX DE ERROR?: sí; los logs mostraban que Celular 2 detectaba peers pero no conectaba, y Celular 1 fallaba al descubrir.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no era falta de permisos; era falta de auto-conexión y reintento.
+VERIFICADO EN: solo compilación; pendiente prueba real.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, BLE.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): integrar BleTransport en MeshChatService; mostrar peers conectados; limpieza warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real de auto-conexión; validación BLE.
+──────────────────────────────
