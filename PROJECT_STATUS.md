@@ -916,3 +916,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, sockets.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): flujo de código 24h; integración con BleTransport como prioridad; limpieza warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real; validación inter-dispositivo; refactor de transporte múltiple.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-04 13:35 (diagnóstico en carpeta Descargas) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se modificó DiagnosticsLogger para guardar malla_diagnostics.txt en la carpeta pública de Descargas (Environment.DIRECTORY_DOWNLOADS), con fallback a almacenamiento interno si no se puede crear. Se añadió permiso WRITE_EXTERNAL_STORAGE con maxSdkVersion 28.
+¿ERA UN FIX DE ERROR?: sí; antes guardaba en almacenamiento privado, difícil de acceder para el usuario.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación; pendiente prueba en dispositivo.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, scoped storage, carpeta Descargas.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mostrar ruta del archivo en UI; rotar archivos para no crecer indefinidamente.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real; validación de escritura en Android 10+; rotación de logs.
+──────────────────────────────

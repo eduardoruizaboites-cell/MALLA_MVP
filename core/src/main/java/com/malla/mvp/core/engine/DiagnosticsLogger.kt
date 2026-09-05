@@ -1,6 +1,7 @@
 package com.malla.mvp.core.engine
 
 import android.content.Context
+import android.os.Environment
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -12,7 +13,12 @@ object DiagnosticsLogger {
 
     fun init(context: Context) {
         if (logFile == null) {
-            val dir = context.getExternalFilesDir(null) ?: context.filesDir
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val dir = if (downloadsDir.exists() || downloadsDir.mkdirs()) {
+                downloadsDir
+            } else {
+                context.getExternalFilesDir(null) ?: context.filesDir
+            }
             logFile = File(dir, FILENAME)
         }
     }
