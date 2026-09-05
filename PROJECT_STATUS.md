@@ -964,3 +964,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Wi-Fi Direct, BLE.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): integrar BleTransport en MeshChatService; mostrar peers conectados; limpieza warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: prueba real de auto-conexión; validación BLE.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 01:30 (cierre de sesión) ──
+Compilación: BUILD SUCCESSFUL (última compilación verificada)
+QUÉ SE HIZO: Cierre formal de sesión. Se confirma que los cambios de auto-conexión Wi-Fi Direct y BleTransport quedaron commiteados y compilando. Bitácora actualizada.
+¿ERA UN FIX DE ERROR?: no; cierre administrativo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: compilación y revisión de git.
+COMPATIBILIDAD CONSIDERADA (R21): no aplica a este cierre.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): continuar pruebas reales de auto-conexión; integrar BleTransport en MeshChatService; mostrar peers conectados; limpieza de warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; transporte BLE/Wi-Fi Direct pendiente de prueba real; código 12 dígitos y QR pendientes de prueba real.
+──────────────────────────────
