@@ -127,7 +127,10 @@ class MainActivity : FragmentActivity() {
                     val count = users.size
                     if (count > previousCount) {
                         val latest = users.last()
-                        NotificationHelper.showDiscoveryNotification(this@MainActivity, latest.displayName)
+                        // Solo notificar si es un nodo MALLA real (BLE o mDNS), no Wi-Fi Direct
+                        if (latest.bluetoothDevice != null || latest.token.startsWith("mdns_")) {
+                            NotificationHelper.showDiscoveryNotification(this@MainActivity, latest.displayName)
+                        }
                     }
                     previousCount = count
                 }

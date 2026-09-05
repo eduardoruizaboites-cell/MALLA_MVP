@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.google.zxing.*
@@ -30,6 +31,7 @@ fun QrScanScreen(
 ) {
     BackHandler { onBack() }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var hasPermission by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -95,7 +97,7 @@ fun QrScanScreen(
                     try {
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(
-                            ctx as androidx.lifecycle.LifecycleOwner,
+                            lifecycleOwner,
                             cameraSelector,
                             preview,
                             imageAnalysis

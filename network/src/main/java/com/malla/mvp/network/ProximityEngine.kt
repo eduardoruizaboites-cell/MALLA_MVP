@@ -32,6 +32,12 @@ object ProximityEngine {
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
                 addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
             }
+            // Iniciar advertising MALLA para que otros dispositivos nos detecten
+            val myName = IdentityManager.getUserName(context)
+            val myUserId = IdentityManager.getIdentityId()
+            val myAvatarSeed = myUserId.hashCode()
+            BleManager.startAdvertisingWithData(myUserId, myName, myAvatarSeed)
+
             // Wi‑Fi Direct (en modo descubrimiento)
             WifiDirectManager.start(context)
             // Observar peers Wi-Fi Direct

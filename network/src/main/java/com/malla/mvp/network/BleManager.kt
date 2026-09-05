@@ -7,6 +7,8 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothGattServer
+import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.*
@@ -33,6 +35,7 @@ object BleManager {
     private var isAdvertising = false
     private var isScanningActive = false
     private var appContext: Context? = null
+    private var gattServer: BluetoothGattServer? = null
 
     private val _foundDevices = MutableStateFlow<List<String>>(emptyList())
     val foundDevices: StateFlow<List<String>> = _foundDevices
@@ -70,6 +73,7 @@ object BleManager {
         } catch (e: SecurityException) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_SCAN denegado")
         }
+        startGattServer()
     }
 
     fun startAdvertising() {
@@ -194,6 +198,7 @@ object BleManager {
         stopAdvertising()
         stopProximityAdvertising()
         stopProximityScanning()
+        stopGattServer()
     }
 
     // ---------- Nuevo: escaneo con callback ----------
@@ -393,6 +398,67 @@ object BleManager {
     }
     fun setAcceptanceCallback(callback: ((acceptorName: String, acceptorAvatarSeed: Int) -> Unit)?) {
         acceptanceCallback = callback
+    }
+
+    // ---------- GATT Server para recibir solicitudes ----------
+    fun startGattServer() {
+        if (gattServer != null) return
+        val context = appContext ?: return
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        try {
+            gattServer = btManager.openGattServer(context, gattServerCallback)
+            val service = BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            val characteristic = BluetoothGattCharacteristic(
+                invitationCharacteristicUuid,
+                BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+            )
+            service.addCharacteristic(characteristic)
+            gattServer?.addService(service)
+            LogBuffer.add("BLE", "GATT Server iniciado para MALLA")
+        } catch (e: SecurityException) {
+            LogBuffer.add("BLE", "Permiso BLUETOOTH_CONNECT denegado para GATT server")
+        } catch (e: Exception) {
+            LogBuffer.add("BLE", "Error iniciando GATT server: ${e.message}")
+        }
+    }
+
+    fun stopGattServer() {
+        gattServer?.close()
+        gattServer = null
+    }
+
+    private val gattServerCallback = object : BluetoothGattServerCallback() {
+        override fun onCharacteristicWriteRequest(
+            device: BluetoothDevice,
+            requestId: Int,
+            characteristic: BluetoothGattCharacteristic,
+            preparedWrite: Boolean,
+            responseNeeded: Boolean,
+            offset: Int,
+            value: ByteArray
+        ) {
+            if (characteristic.uuid == invitationCharacteristicUuid) {
+                val payload = String(value, Charsets.UTF_8)
+                LogBuffer.add("BLE", "Solicitud recibida de ${device.address}: $payload")
+                // Enviar respuesta si es necesario
+                if (responseNeeded) {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                }
+                // Aquí se procesaría la solicitud de amistad
+            }
+        }
+
+        override fun onCharacteristicReadRequest(
+            device: BluetoothDevice,
+            requestId: Int,
+            offset: Int,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            if (characteristic.uuid == invitationCharacteristicUuid) {
+                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, byteArrayOf(0))
+            }
+        }
     }
 
     suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =

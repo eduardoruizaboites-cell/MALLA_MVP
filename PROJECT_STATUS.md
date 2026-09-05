@@ -1000,3 +1000,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, CameraX, Compose, mDNS.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar escáner en dispositivo; mejorar UI del escáner con overlay; continuar con avatar real; integrar BleTransport en MeshChatService.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; avatar real no implementado; notificaciones sin prueba real; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 07:47 (publicidad MALLA con nombre real, GATT server y filtrado de notificaciones) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se activó advertising BLE con el nombre real del usuario, se añadió GATT server para recibir solicitudes entrantes, se corrigió el filtro de notificaciones para que solo se notifiquen nodos MALLA (BLE o mDNS) y se integró lifecycleOwner para CameraX en el escáner QR.
+¿ERA UN FIX DE ERROR?: ERROR: no se detectaban usuarios MALLA con su nombre real; las notificaciones saltaban con cualquier dispositivo Bluetooth; el escáner QR no abría. SOLUCIÓN APLICADA: advertising con identity, GATT server, filtro por BluetoothDevice, LocalLifecycleOwner. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; las causas eran de implementación y de cámara.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising, GATT server, CameraX lifecycle.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar solicitudes BLE reales; mostrar avatar real; validar QR en dos dispositivos; integrar BleTransport en MeshChatService.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación de solicitudes BLE; verificación de mensajes entre dos dispositivos; QR por validar; warnings.
+──────────────────────────────
