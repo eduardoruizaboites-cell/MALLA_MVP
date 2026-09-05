@@ -1060,3 +1060,15 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar mensajes de error; integrar Bluetooth Classic; continuar con biometría.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-05 08:46 (conexión automática tras validar código) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Al validar un código de invitación de 12 dígitos, además de crear conversación y contacto, ahora se observa nearbyUsers para localizar automáticamente al usuario validado y conectar TCP con expectedContactId. Se eliminó import duplicado de ProximityEngine.
+¿ERA UN FIX DE ERROR?: ERROR: al agregar por código no se intentaba conexión dirigida, por lo que los mensajes no llegaban al otro dispositivo. SOLUCIÓN APLICADA: búsqueda activa y conexión automática. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, mDNS/BLE, TCP.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): probar en dos dispositivos; mostrar nombre real al conectar; continuar con aceptación biométrica; QR.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR; mensajes con confirmación; warnings.
+──────────────────────────────

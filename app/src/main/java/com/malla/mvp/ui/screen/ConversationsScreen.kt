@@ -38,6 +38,7 @@ import java.util.UUID
 import com.malla.mvp.ui.components.NearbySection
 import com.malla.mvp.ui.screen.ContactsScreen
 import com.malla.mvp.core.model.NearbyUser
+import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.ui.components.NearbyPanel
 import com.malla.mvp.ui.components.IncomingRequestDialog
@@ -45,6 +46,7 @@ import com.malla.mvp.data.entity.ContactEntity
 import com.malla.mvp.util.BiometricAuthHelper
 import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.InvitationManager
+import com.malla.mvp.network.NetworkService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malla.mvp.viewmodel.ConversationsViewModel
 
@@ -377,6 +379,18 @@ fun ConversationsScreen(
                                 } catch (_: Exception) {}
                                 onChatClicked(convId, "Invitación ${inviteCode.trim().take(12)}")
                                 Toast.makeText(context, "Código aceptado", Toast.LENGTH_SHORT).show()
+                                // Iniciar búsqueda automática del usuario validado
+                                scope.launch {
+                                    ProximityEngine.nearbyUsers.collect { users ->
+                                        users.firstOrNull { it.token.endsWith(convId) || it.displayName == convId }?.let { user ->
+                                            val ip = user.token.removePrefix("mdns_")
+                                            if (ip != convId) {
+                                                NetworkService.connectToPeer(ip, expectedContactId = convId)
+                                                LogBuffer.add("UI", "Conectando automáticamente a $ip para $convId")
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             Toast.makeText(context, "Código inválido o expirado", Toast.LENGTH_SHORT).show()
