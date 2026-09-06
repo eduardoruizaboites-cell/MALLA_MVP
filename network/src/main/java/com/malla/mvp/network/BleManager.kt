@@ -15,6 +15,7 @@ import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.*
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -49,6 +50,14 @@ object BleManager {
     private var isProximityScanning = false
     private var isProximityAdvertising = false
 
+
+    private fun hasBlePermissions(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+    }
+
     fun start(context: Context) {
         appContext = context.applicationContext
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -81,8 +90,7 @@ object BleManager {
             return
         }
         val context = appContext
-        if (context != null && ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (context != null && !hasBlePermissions(context)) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
@@ -120,8 +128,7 @@ object BleManager {
         }
 
         val context = appContext
-        if (context != null && ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (context != null && !hasBlePermissions(context)) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return

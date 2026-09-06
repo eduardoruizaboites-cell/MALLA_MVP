@@ -1292,3 +1292,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, CameraX, ZXing, ECDSA, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): derivar userId con SHA-256 en lugar de hashCode; mostrar ruta de diagnóstico en UI; rotar logs; limpiar warnings; probar en dos dispositivos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del QR; userId derivado de hashCode podría variar entre fabricantes; warnings de deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-06 03:20 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió la verificación de permisos BLE para que en Android 11 (API 30) no solicite permisos que no existen. Se añadió helper hasBlePermissions en BleManager y BleTransport para devolver true en API < 31. Se añadieron logs de diagnóstico en QrScanScreen y se ajustó la inicialización de CameraX (modo COMPATIBLE y try/catch con logs) para detectar por qué no abre la cámara.
+¿ERA UN FIX DE ERROR?: ERROR: en Xiaomi (API 30) el advertising BLE no se iniciaba porque se pedían permisos BLUETOOTH_ADVERTISE/CONNECT/SCAN que solo existen en API 31+. La cámara QR no abría sin logs de error. SOLUCIÓN APLICADA: helper hasBlePermissions con comprobación de Build.VERSION.SDK_INT, logs en QrScanScreen y CameraX con ImplementationMode.COMPATIBLE. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en Xiaomi y Cubot.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el fallo fuera del hardware; era de permisos y falta de logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, API 30 y 31+, CameraX, BLE.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): rotar logs de diagnóstico; mostrar ruta del log en UI; centralizar paleta de colores.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del BLE y QR; warnings de deprecación; ruta de diagnóstico no visible.
+──────────────────────────────

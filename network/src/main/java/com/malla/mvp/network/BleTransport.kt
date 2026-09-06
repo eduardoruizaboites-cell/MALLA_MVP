@@ -13,6 +13,7 @@ import android.content.Context
 import android.util.Log
 import com.malla.mvp.network.BleManager
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
@@ -38,6 +39,14 @@ object BleTransport {
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
     private val incomingInvitationPayloads = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val invitationPayloads: SharedFlow<String> = incomingInvitationPayloads.asSharedFlow()
+
+    private fun hasBlePermissions(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+    }
+
     private var started = false
     private var discoveryJob: Job? = null
 
@@ -62,8 +71,7 @@ object BleTransport {
 
     private fun connectGatt(device: BluetoothDevice) {
         val context = appContext ?: return
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) return
+        if (!hasBlePermissions(context)) return
         try {
             Log.i("BleTransport", "Intentando conectar GATT a ${device.address}")
             val gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
@@ -94,8 +102,7 @@ object BleTransport {
     }
 
     private fun startServer(context: Context) {
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) return
+        if (!hasBlePermissions(context)) return
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = btManager.adapter ?: return
         gattServer = btManager.openGattServer(context, gattServerCallback).apply {
@@ -133,8 +140,7 @@ object BleTransport {
      */
     suspend fun sendWithRetry(device: BluetoothDevice, data: ByteArray, maxRetries: Int = 3): Boolean {
         val context = appContext ?: return false
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) return false
+        if (!hasBlePermissions(context)) return false
 
         var gatt = connectedGatts[device.address]
         if (gatt == null) {
@@ -221,8 +227,7 @@ object BleTransport {
 
     fun sendInvitation(device: BluetoothDevice, payload: ByteArray) {
         val context = appContext ?: return
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) return
+        if (!hasBlePermissions(context)) return
         var gatt = connectedGatts[device.address]
         if (gatt != null) {
             writeInvitationCharacteristic(gatt, payload)
@@ -258,8 +263,7 @@ object BleTransport {
 
     fun connectAndSend(device: BluetoothDevice, data: ByteArray) {
         val context = appContext ?: return
-        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED) return
+        if (!hasBlePermissions(context)) return
         var gatt = connectedGatts[device.address]
         if (gatt != null) {
             writeCharacteristic(gatt, data)

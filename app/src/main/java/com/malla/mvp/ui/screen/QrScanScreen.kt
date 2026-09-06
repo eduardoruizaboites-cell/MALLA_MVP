@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
@@ -41,6 +42,7 @@ fun QrScanScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
             hasPermission = granted
+            DiagnosticsLogger.log("QrScan", "Resultado permiso cámara: $granted")
             if (!granted) {
                 // Mostrar mensaje o volver atrás
             }
@@ -51,7 +53,10 @@ fun QrScanScreen(
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         hasPermission = granted
         if (!granted) {
+            DiagnosticsLogger.log("QrScan", "Solicitando permiso de cámara")
             launcher.launch(Manifest.permission.CAMERA)
+        } else {
+            DiagnosticsLogger.log("QrScan", "Permiso de cámara ya concedido")
         }
     }
 
@@ -66,64 +71,70 @@ fun QrScanScreen(
         TextButton(onClick = onBack) {
             Text("Cancelar")
         }
-        AndroidView(
-            factory = { ctx ->
-                val previewView = PreviewView(ctx)
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
+        Box(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx).apply {
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                     }
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                    imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                        val mediaImage = imageProxy.image ?: run { imageProxy.close(); return@setAnalyzer }
-                        val buffer = mediaImage.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
-                        buffer.get(bytes)
-                        val source = PlanarYUVLuminanceSource(
-                            bytes,
-                            mediaImage.width,
-                            mediaImage.height,
-                            0, 0,
-                            mediaImage.width,
-                            mediaImage.height,
-                            false
-                        )
-                        val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
-                        val reader = QRCodeReader()
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                    cameraProviderFuture.addListener({
                         try {
-                            val result = reader.decode(binaryBitmap)
-                            if (result != null) {
-                                imageProxy.close()
-                                scope.launch { onQrScanned(result.text) }
-                                return@setAnalyzer
+                            val cameraProvider = cameraProviderFuture.get()
+                            DiagnosticsLogger.log("QrScan", "CameraProvider obtenido")
+                            val preview = Preview.Builder().build().also {
+                                it.setSurfaceProvider(previewView.surfaceProvider)
                             }
-                        } catch (e: NotFoundException) {
-                            // No QR found
+                            val imageAnalysis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
+                            imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
+                                val mediaImage = imageProxy.image ?: run { imageProxy.close(); return@setAnalyzer }
+                                val buffer = mediaImage.planes[0].buffer
+                                val bytes = ByteArray(buffer.remaining())
+                                buffer.get(bytes)
+                                val source = PlanarYUVLuminanceSource(
+                                    bytes,
+                                    mediaImage.width,
+                                    mediaImage.height,
+                                    0, 0,
+                                    mediaImage.width,
+                                    mediaImage.height,
+                                    false
+                                )
+                                val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+                                val reader = QRCodeReader()
+                                try {
+                                    val result = reader.decode(binaryBitmap)
+                                    if (result != null) {
+                                        imageProxy.close()
+                                        scope.launch { onQrScanned(result.text) }
+                                        return@setAnalyzer
+                                    }
+                                } catch (e: NotFoundException) {
+                                    // No QR found
+                                } catch (e: Exception) {
+                                    DiagnosticsLogger.log("QrScan", "Error decodificando QR: ${e.message}")
+                                }
+                                imageProxy.close()
+                            }
+                            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                cameraSelector,
+                                preview,
+                                imageAnalysis
+                            )
+                            DiagnosticsLogger.log("QrScan", "Cámara vinculada al lifecycle")
                         } catch (e: Exception) {
-                            // Error decode
+                            DiagnosticsLogger.log("QrScan", "Error inicializando cámara: ${e.message}")
                         }
-                        imageProxy.close()
-                    }
-                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-                    try {
-                        cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            cameraSelector,
-                            preview,
-                            imageAnalysis
-                        )
-                    } catch (e: Exception) {
-                        // binding error
-                    }
-                }, ContextCompat.getMainExecutor(ctx))
-                previewView
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                    }, ContextCompat.getMainExecutor(ctx))
+                    previewView
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
