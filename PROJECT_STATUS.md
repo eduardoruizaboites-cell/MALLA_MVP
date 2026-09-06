@@ -1245,3 +1245,11 @@ DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin 
 - **Cambios en archivos:** `identity/src/main/java/com/malla/mvp/identity/IdentityManager.kt`.
 - **Estado:** Compilación exitosa. Pendiente prueba en dispositivos reales.
 - **Logs relevantes:** Se espera que cada dispositivo muestre solo el nodo remoto, no el propio.
+
+## Sesión 2026-09-06 01:49 - Desactivación automática de Wi-Fi Direct no soportado
+
+- Se añadió bandera `wifiDirectUnsupported` en `WifiDirectManager`.
+- Si `discoverPeers` o `createGroup` fallan con razón 2, se marca como no soportado y se detiene el manager.
+- `ProximityEngine` omite iniciar Wi-Fi Direct si la bandera está activa.
+- Esto evita ruido en logs y posibles duplicados de nodos en dispositivos sin soporte real (p. ej., CUBOT KINGKONG ES 5).
+- Pendiente prueba real para confirmar que BLE es suficiente en esos casos.
