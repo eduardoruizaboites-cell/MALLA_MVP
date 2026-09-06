@@ -114,7 +114,7 @@ object BleManager {
         }
     }
 
-    fun startAdvertisingWithData(token: String, displayName: String, avatarSeed: Int) {
+    fun startAdvertisingWithData(token: String, avatarSeed: Int) {
         if (adapter == null || !adapter!!.isEnabled) {
             LogBuffer.add("BLE", "No se puede iniciar advertising: Bluetooth no disponible")
             return
@@ -142,9 +142,11 @@ object BleManager {
                 .build()
 
             // Empaquetar datos en el campo de manufacturer specific data o service data
-            val payload = "$token|$displayName|$avatarSeed".toByteArray(Charsets.UTF_8)
+            // Payload reducido: token y seed (sin nombre) para cumplir límite de 31 bytes
+            val payload = "$token|$avatarSeed".toByteArray(Charsets.UTF_8)
             val data = AdvertiseData.Builder()
                 .addServiceData(ParcelUuid(serviceUuid), payload)
+                .setIncludeDeviceName(true)
                 .build()
 
             advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)

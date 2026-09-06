@@ -16,14 +16,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
@@ -35,7 +36,10 @@ fun QrScanScreen(
     BackHandler { onBack() }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var hasPermission by remember { mutableStateOf(false) }
+    var hasPermission by remember { mutableStateOf(
+        ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    ) }
+    var showRationale by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val launcher = rememberLauncherForActivityResult(
@@ -44,25 +48,32 @@ fun QrScanScreen(
             hasPermission = granted
             DiagnosticsLogger.log("QrScan", "Resultado permiso cámara: $granted")
             if (!granted) {
-                // Mostrar mensaje o volver atrás
+                showRationale = true
             }
         }
     )
 
     LaunchedEffect(Unit) {
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        hasPermission = granted
-        if (!granted) {
-            DiagnosticsLogger.log("QrScan", "Solicitando permiso de cámara")
+        DiagnosticsLogger.log("QrScan", "Iniciando QrScanScreen")
+        if (!hasPermission) {
             launcher.launch(Manifest.permission.CAMERA)
-        } else {
-            DiagnosticsLogger.log("QrScan", "Permiso de cámara ya concedido")
         }
     }
 
     if (!hasPermission) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Se necesita permiso de cámara")
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Se necesita permiso de cámara")
+                if (showRationale) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = {
+                        showRationale = false
+                        launcher.launch(Manifest.permission.CAMERA)
+                    }) {
+                        Text("Reintentar")
+                    }
+                }
+            }
         }
         return
     }
@@ -71,7 +82,7 @@ fun QrScanScreen(
         TextButton(onClick = onBack) {
             Text("Cancelar")
         }
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f)) {
             AndroidView(
                 factory = { ctx ->
                     val previewView = PreviewView(ctx).apply {
@@ -108,7 +119,10 @@ fun QrScanScreen(
                                     val result = reader.decode(binaryBitmap)
                                     if (result != null) {
                                         imageProxy.close()
-                                        scope.launch { onQrScanned(result.text) }
+                                        scope.launch {
+                                            DiagnosticsLogger.log("QrScan", "QR detectado: ${result.text.take(20)}...")
+                                            onQrScanned(result.text)
+                                        }
                                         return@setAnalyzer
                                     }
                                 } catch (e: NotFoundException) {

@@ -1303,3 +1303,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, API 30 y 31+, CameraX, BLE.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): rotar logs de diagnóstico; mostrar ruta del log en UI; centralizar paleta de colores.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del BLE y QR; warnings de deprecación; ruta de diagnóstico no visible.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-06 03:41 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se redujo el payload BLE de advertising a "token|seed" para cumplir el límite de 31 bytes y se añadió setIncludeDeviceName(true) para enviar el nombre real. Se actualizó QrScanScreen con manejo de permisos, logs de diagnóstico y PreviewView.ImplementationMode.COMPATIBLE.
+¿ERA UN FIX DE ERROR?: ERROR: BLE advertising fallaba en Xiaomi con "Datos demasiado grandes" y la cámara del QR no abría. SOLUCIÓN APLICADA: acortar payload BLE y añadir logs/permisos robustos al escáner QR. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en Xiaomi/Cubot.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising, CameraX, permisos runtime.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta; rotar logs; mostrar ruta de diagnóstico en UI.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del QR y BLE; warnings de deprecación.
+──────────────────────────────

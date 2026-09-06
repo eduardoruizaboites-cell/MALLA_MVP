@@ -40,11 +40,11 @@ object ProximityEngine {
                 }
             }
             // Iniciar advertising MALLA para que otros dispositivos nos detecten
-            val myName = IdentityManager.getUserName(context)
             val myUserId = IdentityManager.getIdentityId()
+            val myName = IdentityManager.getUserName(context)
             val myAvatarSeed = myUserId.hashCode()
             val token = generateToken(myUserId)
-            BleManager.startAdvertisingWithData(token, myName, myAvatarSeed)
+            BleManager.startAdvertisingWithData(token, myAvatarSeed)
 
             // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
             if (!WifiDirectManager.wifiDirectUnsupported) {
@@ -100,7 +100,7 @@ object ProximityEngine {
         if (advertising) return
         val userId = IdentityManager.getIdentityId()
         val token = generateToken(userId)
-        BleManager.startAdvertisingWithData(token, displayName, avatarSeed)
+        BleManager.startAdvertisingWithData(token, avatarSeed)
         advertising = true
     }
 
