@@ -54,6 +54,8 @@ object WifiDirectManager : IWifiDirectManager {
     private var isRunning = false
     private var appContext: Context? = null
     private var isDiscovering = false
+    var wifiDirectUnsupported = false
+        private set
     private var isConnecting = false
     private var discoveryRetryCount = 0
 
@@ -183,6 +185,11 @@ object WifiDirectManager : IWifiDirectManager {
                 }
                 override fun onFailure(reason: Int) {
                     DiagnosticsLogger.log(TAG, "Fallo al crear grupo: razón $reason")
+                    if (reason == 2) {
+                        wifiDirectUnsupported = true
+                        DiagnosticsLogger.log(TAG, "Creación de grupo no soportada. Wi-Fi Direct desactivado.")
+                        stop()
+                    }
                 }
             })
         }
@@ -202,6 +209,13 @@ object WifiDirectManager : IWifiDirectManager {
                 isDiscovering = false
                 discoveryRetryCount++
                 DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason")
+                if (reason == 2) {
+                    // P2P_UNSUPPORTED o BUSY persistente: desactivar Wi-Fi Direct
+                    wifiDirectUnsupported = true
+                    DiagnosticsLogger.log(TAG, "Wi-Fi Direct no soportado en este dispositivo. Se desactiva.")
+                    stop()
+                    return
+                }
                 if (isRunning) {
                     val delay = minOf(5_000L * discoveryRetryCount, 30_000L)
                     kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {

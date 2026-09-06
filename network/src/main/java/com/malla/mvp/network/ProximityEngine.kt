@@ -42,9 +42,13 @@ object ProximityEngine {
             val token = generateToken(myUserId)
             BleManager.startAdvertisingWithData(token, myName, myAvatarSeed)
 
-            // Wi‑Fi Direct (en modo descubrimiento)
-            val groupName = "MALLA_$myName"
-            WifiDirectManager.startWithGroupName(context, groupName)
+            // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
+            if (!WifiDirectManager.wifiDirectUnsupported) {
+                val groupName = "MALLA_$myName"
+                WifiDirectManager.startWithGroupName(context, groupName)
+            } else {
+                LogBuffer.add("PROX", "Wi-Fi Direct omitido (no soportado)")
+            }
             // Observar peers Wi-Fi Direct
             scope.launch {
                 WifiDirectManager.peers.collect { peers ->
