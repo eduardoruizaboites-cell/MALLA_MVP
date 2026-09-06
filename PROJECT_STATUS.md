@@ -1253,3 +1253,9 @@ DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin 
 - `ProximityEngine` omite iniciar Wi-Fi Direct si la bandera está activa.
 - Esto evita ruido en logs y posibles duplicados de nodos en dispositivos sin soporte real (p. ej., CUBOT KINGKONG ES 5).
 - Pendiente prueba real para confirmar que BLE es suficiente en esos casos.
+
+## Sesión 2026-09-06 01:53 - Corrección de compilación BLE
+
+- Se corrigió el tipo de `writeConfirmations` de `CompletableDeferred<Boolean>` a `CancellableContinuation<Boolean>`.
+- Compilación exitosa (`BUILD SUCCESSFUL`).
+- Pendiente prueba real de envío de mensajes BLE con reintentos.
