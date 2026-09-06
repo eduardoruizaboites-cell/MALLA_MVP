@@ -119,12 +119,28 @@ object ProximityEngine {
     }
 
     private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
+        if (isSelfUser(name, token)) return
         val current = _nearbyUsers.value.toMutableList()
-        val idx = current.indexOfFirst { it.token == token }
+        // Buscar por token exacto primero
+        var idx = current.indexOfFirst { it.token == token }
         if (idx != -1) {
-            current[idx] = current[idx].copy(displayName = name, signalStrength = strength)
+            current[idx] = current[idx].copy(displayName = name, signalStrength = maxOf(strength, current[idx].signalStrength), bluetoothDevice = device ?: current[idx].bluetoothDevice)
         } else {
-            current.add(NearbyUser(token, name, seed, type, strength, bluetoothDevice = device))
+            // Buscar por displayName (nombre real) para fusionar distintos transportes
+            idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
+            if (idx != -1) {
+                val existing = current[idx]
+                val preferredType = if (type == SignalType.MDNS) existing.signalType else type
+                val preferredToken = if (type == SignalType.MDNS) existing.token else token
+                current[idx] = existing.copy(
+                    token = preferredToken,
+                    signalType = preferredType,
+                    signalStrength = maxOf(strength, existing.signalStrength),
+                    bluetoothDevice = device ?: existing.bluetoothDevice
+                )
+            } else {
+                current.add(NearbyUser(token, name, seed, type, strength, bluetoothDevice = device))
+            }
         }
         _nearbyUsers.value = current
     }
@@ -137,12 +153,23 @@ object ProximityEngine {
         }
         val token = "wifi_${peer.address}"
         val name = if (deviceName.startsWith("MALLA_")) deviceName.removePrefix("MALLA_") else deviceName
+        if (isSelfUser(name, token)) return
         val current = _nearbyUsers.value.toMutableList()
-        val idx = current.indexOfFirst { it.token == token }
-        if (idx == -1) {
-            current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
-            _nearbyUsers.value = current
-        }
+        var idx = current.indexOfFirst { it.token == token }
+        if (idx != -1) return
+        idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
+        if (idx != -1) return // ya existe por otro transporte, no duplicar
+        current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
+        _nearbyUsers.value = current
+    }
+
+
+    private fun isSelfUser(displayName: String?, token: String): Boolean {
+        val myName = appContext?.let { IdentityManager.getUserName(it) }
+        if (displayName != null && myName != null && displayName.equals(myName, ignoreCase = true)) return true
+        val myId = IdentityManager.getIdentityId()
+        if (token == generateToken(myId)) return true
+        return false
     }
 
     private fun generateToken(userId: String): String {

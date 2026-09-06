@@ -689,7 +689,8 @@ fun MainApp(
                         currentContactName = name
                         onConversationChanged(convId)
                     },
-                    onProfileClicked = onProfileClicked
+                    onProfileClicked = onProfileClicked,
+                    onNavigateToQrScanner = onNavigateToQrScanner
                 )
                 1 -> PulsoScreen(
                     onNavigateToQrScanner = onNavigateToQrScanner,
