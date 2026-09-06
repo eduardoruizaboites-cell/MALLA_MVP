@@ -31,7 +31,7 @@ object BleTransport {
     private var appContext: Context? = null
     private var gattServer: BluetoothGattServer? = null
     private val connectedGatts = ConcurrentHashMap<String, BluetoothGatt>()
-    private val writeConfirmations = ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Boolean>>()
+    private val writeConfirmations = ConcurrentHashMap<String, kotlinx.coroutines.CancellableContinuation<Boolean>>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val incomingMessages = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
