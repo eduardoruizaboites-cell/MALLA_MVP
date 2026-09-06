@@ -31,7 +31,7 @@ object ProximityEngine {
             // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
                 val myId = IdentityManager.getIdentityId()
-                if (token != myId && token != generateToken(myId)) {
+                if (token != generateToken(myId)) {
                     addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
                 }
             }
@@ -39,10 +39,12 @@ object ProximityEngine {
             val myName = IdentityManager.getUserName(context)
             val myUserId = IdentityManager.getIdentityId()
             val myAvatarSeed = myUserId.hashCode()
-            BleManager.startAdvertisingWithData(myUserId, myName, myAvatarSeed)
+            val token = generateToken(myUserId)
+            BleManager.startAdvertisingWithData(token, myName, myAvatarSeed)
 
             // Wi‑Fi Direct (en modo descubrimiento)
-            WifiDirectManager.start(context)
+            val groupName = "MALLA_$myName"
+            WifiDirectManager.startWithGroupName(context, groupName)
             // Observar peers Wi-Fi Direct
             scope.launch {
                 WifiDirectManager.peers.collect { peers ->
@@ -74,6 +76,15 @@ object ProximityEngine {
         WifiDirectManager.stop()
         DiscoveryService.stop()
         _nearbyUsers.value = emptyList()
+    }
+
+    fun ensureAdvertising(context: Context) {
+        val myName = IdentityManager.getUserName(context)
+        val myUserId = IdentityManager.getIdentityId()
+        val myAvatarSeed = myUserId.hashCode()
+        if (!advertising) {
+            startAdvertising(myName, myAvatarSeed)
+        }
     }
 
     fun startAdvertising(displayName: String, avatarSeed: Int) {

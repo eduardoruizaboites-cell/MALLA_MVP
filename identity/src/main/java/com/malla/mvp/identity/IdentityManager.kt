@@ -17,6 +17,7 @@ import java.security.PublicKey
 import java.security.spec.ECGenParameterSpec
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import android.content.SharedPreferences
 
 object IdentityManager {
     private const val TAG = "IdentityManager"
@@ -25,6 +26,8 @@ object IdentityManager {
     private const val USER_STATUS_KEY = "user_status"
     private const val AVATAR_FILE = "avatar.jpg"
     private const val BANNER_FILE = "banner.jpg"
+    private const val ID_PREFS = "identity_id_prefs"
+    private const val PERSISTENT_ID_KEY = "persistent_id"
 
     val deviceId: String = java.util.UUID.randomUUID().toString().take(8)
 
@@ -84,8 +87,21 @@ object IdentityManager {
 
     fun getIdentityId(): String {
         val pubKey = getPublicKeyBase64()
-        val code = pubKey?.take(12)?.chunked(3)?.joinToString("-") ?: deviceId.chunked(3).joinToString("-")
-        return code
+        if (pubKey != null) {
+            return pubKey.take(12).chunked(3).joinToString("-")
+        }
+        // Fallback: usar ID persistente
+        return getOrCreatePersistentId()
+    }
+
+    private fun getOrCreatePersistentId(): String {
+        val prefs = android.app.Application().getSharedPreferences(ID_PREFS, Context.MODE_PRIVATE)
+        var id = prefs.getString(PERSISTENT_ID_KEY, null)
+        if (id == null) {
+            id = java.util.UUID.randomUUID().toString().take(8)
+            prefs.edit().putString(PERSISTENT_ID_KEY, id).apply()
+        }
+        return id.chunked(3).joinToString("-")
     }
 
     fun getPrivateKey(): PrivateKey {

@@ -84,6 +84,7 @@ object BleManager {
         if (context != null && ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE)
             != PackageManager.PERMISSION_GRANTED) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
+            DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
         }
         try {
@@ -122,6 +123,7 @@ object BleManager {
         if (context != null && ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE)
             != PackageManager.PERMISSION_GRANTED) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
+            DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
         }
 
@@ -255,6 +257,7 @@ object BleManager {
                 else -> "Error $errorCode"
             }
             LogBuffer.add("BLE", "Fallo advertising de proximidad: $errorMsg")
+            DiagnosticsLogger.log("BLE", "Fallo advertising de proximidad: $errorMsg")
         }
     }
 

@@ -86,6 +86,7 @@ object InvitationManager {
             .putString("last_user_id", userId)
             .putString("last_local_ip", localIp)
             .apply()
+        DiagnosticsLogger.log("InvitationManager", "Código generado: $code para userId=$userId")
         return code
     }
 
@@ -106,6 +107,7 @@ object InvitationManager {
             return null
         }
         DiagnosticsLogger.log("InvitationManager", "Código $normalized válido, userId=$userId")
+        // Nota: aquí se podría buscar dispositivo cercano con ese código
         return userId
     }
 

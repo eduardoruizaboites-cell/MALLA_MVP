@@ -58,6 +58,10 @@ object WifiDirectManager : IWifiDirectManager {
     private var discoveryRetryCount = 0
 
     override fun start(context: Context) {
+        startWithGroupName(context, null)
+    }
+
+    fun startWithGroupName(context: Context, groupName: String?) {
         if (isRunning) return
         appContext = context.applicationContext
         manager = context.getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager
@@ -105,6 +109,9 @@ object WifiDirectManager : IWifiDirectManager {
         }
         appContext?.registerReceiver(receiver, filter)
         discoverPeers()
+        if (groupName != null) {
+            createGroup(groupName)
+        }
         isRunning = true
         DiagnosticsLogger.log(TAG, "Wi-Fi Direct iniciado")
     }
@@ -161,6 +168,24 @@ object WifiDirectManager : IWifiDirectManager {
                 DiagnosticsLogger.log(TAG, "Fallo al conectar a $address: razón $reason")
             }
         })
+    }
+
+    private fun createGroup(groupName: String) {
+        if (manager == null || channel == null) return
+        manager?.requestGroupInfo(channel) { group ->
+            if (group != null) {
+                DiagnosticsLogger.log(TAG, "Ya existe un grupo, no se crea uno nuevo")
+                return@requestGroupInfo
+            }
+            manager?.createGroup(channel, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() {
+                    DiagnosticsLogger.log(TAG, "Grupo Wi-Fi Direct creado con nombre $groupName")
+                }
+                override fun onFailure(reason: Int) {
+                    DiagnosticsLogger.log(TAG, "Fallo al crear grupo: razón $reason")
+                }
+            })
+        }
     }
 
     private fun discoverPeers() {

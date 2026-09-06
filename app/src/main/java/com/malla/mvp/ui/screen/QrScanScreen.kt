@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.util.Size
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -35,14 +37,27 @@ fun QrScanScreen(
     var hasPermission by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasPermission = granted
+            if (!granted) {
+                // Mostrar mensaje o volver atrás
+            }
+        }
+    )
+
     LaunchedEffect(Unit) {
-        hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        hasPermission = granted
+        if (!granted) {
+            launcher.launch(Manifest.permission.CAMERA)
+        }
     }
 
     if (!hasPermission) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Se necesita permiso de cámara")
-            // En una app real aquí deberías solicitar el permiso con ActivityResult
         }
         return
     }
