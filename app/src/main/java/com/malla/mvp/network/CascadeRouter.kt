@@ -59,8 +59,20 @@ object CascadeRouter {
                     return@launch
                 }
 
-                // 3. Mesh local (BLE/NSD) – esto ya se maneja en ProximityEngine
-                //    No es necesario duplicar aquí.
+                // 3. Mesh local (BLE) – enviamos por BLE si hay peers disponibles
+                val nearbyUsers = ProximityEngine.nearbyUsers.value
+                val targetUser = nearbyUsers.firstOrNull { it.token == contactId } ?: nearbyUsers.firstOrNull()
+                if (targetUser?.bluetoothDevice != null) {
+                    val sent = BleTransport.sendWithRetry(targetUser.bluetoothDevice!!, content.toByteArray())
+                    if (sent) {
+                        LogBuffer.add(TAG, "Enviado por BLE a ${targetUser.displayName}")
+                        return@launch
+                    } else {
+                        LogBuffer.add(TAG, "BLE falló para ${targetUser.displayName}")
+                    }
+                } else {
+                    LogBuffer.add(TAG, "No hay peers BLE disponibles")
+                }
 
                 // 4. SMS
                 val phone = getContactPhone(contactId)

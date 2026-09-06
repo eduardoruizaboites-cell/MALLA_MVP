@@ -20,6 +20,8 @@ import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.core.engine.DiagnosticsLogger
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 object BleTransport {
     private const val TAG = "BleTransport"
@@ -29,6 +31,7 @@ object BleTransport {
     private var appContext: Context? = null
     private var gattServer: BluetoothGattServer? = null
     private val connectedGatts = ConcurrentHashMap<String, BluetoothGatt>()
+    private val writeConfirmations = ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Boolean>>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val incomingMessages = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
@@ -119,6 +122,84 @@ object BleTransport {
             }
         }
         return sent
+    }
+
+    /**
+     * Envía datos con confirmación de escritura y reintentos.
+     * Espera el callback onCharacteristicWrite con un timeout.
+     */
+    suspend fun sendWithRetry(device: BluetoothDevice, data: ByteArray, maxRetries: Int = 3): Boolean {
+        val context = appContext ?: return false
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED) return false
+
+        var gatt = connectedGatts[device.address]
+        if (gatt == null) {
+            gatt = connectGattAndWait(device) ?: return false
+        }
+
+        repeat(maxRetries) { attempt ->
+            val result = writeCharacteristicWithConfirmation(gatt, data)
+            if (result) return true
+            delay(1000L * (attempt + 1))
+        }
+        return false
+    }
+
+    private suspend fun connectGattAndWait(device: BluetoothDevice): BluetoothGatt? =
+        suspendCancellableCoroutine { continuation ->
+            val context = appContext ?: run { continuation.resume(null); return@suspendCancellableCoroutine }
+            val gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
+                override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                    if (newState == BluetoothProfile.STATE_CONNECTED) {
+                        gatt.discoverServices()
+                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                        if (!continuation.isCompleted) continuation.resume(null)
+                        connectedGatts.remove(device.address)
+                        gatt.close()
+                    }
+                }
+                override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        connectedGatts[device.address] = gatt
+                        if (!continuation.isCompleted) continuation.resume(gatt)
+                    } else {
+                        gatt.disconnect()
+                        if (!continuation.isCompleted) continuation.resume(null)
+                    }
+                }
+            })
+        }
+
+    private suspend fun writeCharacteristicWithConfirmation(gatt: BluetoothGatt, data: ByteArray): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            try {
+                val service = gatt.getService(SERVICE_UUID) ?: run {
+                    continuation.resume(false); return@suspendCancellableCoroutine
+                }
+                val char = service.getCharacteristic(MESSAGE_CHAR_UUID) ?: run {
+                    continuation.resume(false); return@suspendCancellableCoroutine
+                }
+                char.value = data
+                char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                val key = gatt.device.address
+                writeConfirmations[key] = continuation
+                val success = gatt.writeCharacteristic(char)
+                if (!success) {
+                    writeConfirmations.remove(key)
+                    continuation.resume(false)
+                }
+            } catch (e: Exception) {
+                continuation.resume(false)
+            }
+        }
+
+    private fun handleWriteConfirmation(address: String, success: Boolean) {
+        writeConfirmations.remove(address)?.let { cont ->
+            if (cont.isActive) {
+                cont.resume(success)
+            }
+        }
     }
 
     fun stop() {
