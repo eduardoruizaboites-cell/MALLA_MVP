@@ -142,8 +142,8 @@ object BleManager {
                 .build()
 
             // Empaquetar datos en el campo de manufacturer specific data o service data
-            // Payload reducido: token y seed (sin nombre) para cumplir límite de 31 bytes
-            val payload = "$token|$avatarSeed".toByteArray(Charsets.UTF_8)
+            // Payload mínimo: solo token (12 chars) para cumplir límite estricto de 31 bytes
+            val payload = token.toByteArray(Charsets.UTF_8)
             val data = AdvertiseData.Builder()
                 .addServiceData(ParcelUuid(serviceUuid), payload)
                 .setIncludeDeviceName(true)
@@ -221,26 +221,25 @@ object BleManager {
                 _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
             }
             val payload = String(serviceData, Charsets.UTF_8)
+            // Soporta formato token|seed o solo token
             val parts = payload.split("|")
-            if (parts.size >= 3) {
-                val token = parts[0]
-                val name = parts[1]
-                val seed = parts[2].toIntOrNull() ?: 0
-                val strength = result.rssi?.let { rssi ->
-                    when {
-                        rssi > -50 -> 3
-                        rssi > -70 -> 2
-                        rssi > -90 -> 1
-                        else -> 0
-                    }
-                } ?: 0
-                proximityScanCallback?.invoke(token, name, seed, strength, result.device)
-                // Comprobar si es un anuncio de aceptación
-                if (parts.size >= 4 && parts[0] == "ACCEPT") {
-                    val acceptorName = parts[2]
-                    val acceptorAvatarSeed = parts[3].toIntOrNull() ?: 0
-                    acceptanceCallback?.invoke(acceptorName, acceptorAvatarSeed)
+            val token = parts[0]
+            val seed = if (parts.size >= 2) parts[1].toIntOrNull() ?: 0 else 0
+            val deviceName = result.device.name ?: "MALLA_$token"
+            val strength = result.rssi?.let { rssi ->
+                when {
+                    rssi > -50 -> 3
+                    rssi > -70 -> 2
+                    rssi > -90 -> 1
+                    else -> 0
                 }
+            } ?: 0
+            proximityScanCallback?.invoke(token, deviceName, seed, strength, result.device)
+            // Comprobar si es un anuncio de aceptación
+            if (parts.size >= 4 && parts[0] == "ACCEPT") {
+                val acceptorName = parts[2]
+                val acceptorAvatarSeed = parts[3].toIntOrNull() ?: 0
+                acceptanceCallback?.invoke(acceptorName, acceptorAvatarSeed)
             }
         }
 

@@ -1314,3 +1314,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising, CameraX, permisos
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta; rotar logs; mostrar ruta de diagnóstico en UI.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del QR y BLE; warnings de deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-06 04:02 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se redujo aún más el payload BLE a solo token (12 bytes) para cumplir el límite estricto de Android. Se actualizó el parser de escaneo para aceptar token solo o token|seed, y obtener nombre desde BluetoothDevice.name.
+¿ERA UN FIX DE ERROR?: ERROR: BLE advertising fallaba con "Datos demasiado grandes". SOLUCIÓN APLICADA: payload mínimo sin semilla. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó incluir nombre o semilla en el payload por exceder el límite.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising, tamaño de payload.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): deduplicación de nodos, conectar QR UI, mostrar ruta de diagnóstico.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: auto-detección duplicada; QR sin funcionar; validación inter-dispositivo.
+──────────────────────────────
