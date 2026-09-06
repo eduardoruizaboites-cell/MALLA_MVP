@@ -1281,3 +1281,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Wi-Fi Direct, MIUI.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta; limpiar warnings; UI para ruta de diagnóstico; probar en dos dispositivos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings de deprecación; ruta de diagnóstico visible en UI.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-06 02:48 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se unificó el flujo QR: PerfilScreen ahora usa IdentityQrPayload.generate con firma ECDSA e incluye displayName e IP local opcional. MainActivity al escanear parsea y verifica el QR firmado, inserta ContactEntity con publicKey/displayName/avatarSeed y crea conversación; si hay IP local, conecta TCP automáticamente. Se corrigió import de KeystoreManager.
+¿ERA UN FIX DE ERROR?: ERROR: el QR era un enlace malla://connect?ip=... sin firma ni identidad real, y el escáner no agregaba contacto. SOLUCIÓN APLICADA: QR firmado con identidad, parseo robusto, alta de contacto real y auto-conexión TCP. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, CameraX, ZXing, ECDSA, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): derivar userId con SHA-256 en lugar de hashCode; mostrar ruta de diagnóstico en UI; rotar logs; limpiar warnings; probar en dos dispositivos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo del QR; userId derivado de hashCode podría variar entre fabricantes; warnings de deprecación.
+──────────────────────────────

@@ -49,6 +49,8 @@ import com.malla.mvp.core.transport.FlashlightTransport
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
+import com.malla.mvp.core.crypto.IdentityQrPayload
+import com.malla.mvp.data.entity.ContactEntity
 import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.network.MeshConnector
 import com.malla.mvp.network.BleTransport
@@ -83,6 +85,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import androidx.compose.runtime.mutableStateOf
 
@@ -292,23 +295,65 @@ class MainActivity : FragmentActivity() {
                                 QrScanScreen(
                                     onQrScanned = { payload ->
                                         showQrScanner = false
-                                        val parts = payload.split("|")
-                                        if (parts.size >= 3) {
-                                            val userId = parts[0]
-                                            val displayName = parts[1]
-                                            val convId = userId
-                                            val conv = ConversationEntity(
-                                                id = convId,
-                                                title = displayName,
-                                                timestamp = System.currentTimeMillis()
-                                            )
-                                            MainScope().launch {
+                                        MainScope().launch(Dispatchers.IO) {
+                                            val parsed = IdentityQrPayload.parseAndVerify(payload)
+                                            if (parsed != null) {
+                                                val userId = parsed.pubKeyBase64.hashCode().toUInt().toString(16).take(16)
+                                                val displayName = parsed.displayName ?: "Usuario MALLA"
+                                                val contact = ContactEntity(
+                                                    contactUserId = userId,
+                                                    displayName = displayName,
+                                                    avatarSeed = parsed.pubKeyBase64.hashCode(),
+                                                    publicKey = parsed.pubKeyBase64,
+                                                    addedAt = System.currentTimeMillis()
+                                                )
+                                                database?.contactDao()?.insert(contact)
+                                                val conv = ConversationEntity(
+                                                    id = userId,
+                                                    title = displayName,
+                                                    timestamp = System.currentTimeMillis()
+                                                )
                                                 database?.conversationDao()?.insertConversation(conv)
-                                                Toast.makeText(this@MainActivity, "Contacto agregado por QR", Toast.LENGTH_SHORT).show()
-                                            }
-                                        } else {
-                                            connectToPeerAndCreateConversation(payload) { convId ->
-                                                currentConversationId = convId
+                                                if (parsed.localIp != null) {
+                                                    connectToPeerAndCreateConversation(parsed.localIp!!) { convId ->
+                                                        currentConversationId = convId
+                                                    }
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        currentConversationId = userId
+                                                        Toast.makeText(this@MainActivity, "Contacto agregado por QR", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            } else {
+                                                // Intentar compatibilidad con formato anterior userId|displayName|publicKey
+                                                val parts = payload.split("|")
+                                                if (parts.size >= 3) {
+                                                    val userId = parts[0]
+                                                    val displayName = parts[1]
+                                                    val publicKey = parts[2]
+                                                    val contact = ContactEntity(
+                                                        contactUserId = userId,
+                                                        displayName = displayName,
+                                                        avatarSeed = publicKey.hashCode(),
+                                                        publicKey = publicKey,
+                                                        addedAt = System.currentTimeMillis()
+                                                    )
+                                                    database?.contactDao()?.insert(contact)
+                                                    val conv = ConversationEntity(
+                                                        id = userId,
+                                                        title = displayName,
+                                                        timestamp = System.currentTimeMillis()
+                                                    )
+                                                    database?.conversationDao()?.insertConversation(conv)
+                                                    withContext(Dispatchers.Main) {
+                                                        currentConversationId = userId
+                                                        Toast.makeText(this@MainActivity, "Contacto agregado", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    connectToPeerAndCreateConversation(payload) { convId ->
+                                                        currentConversationId = convId
+                                                    }
+                                                }
                                             }
                                         }
                                     },

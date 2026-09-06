@@ -38,6 +38,8 @@ import com.malla.mvp.network.ProximityEngine
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.ui.components.QrCodeDisplay
 import com.malla.mvp.core.crypto.InviteCodeGenerator
+import com.malla.mvp.core.crypto.IdentityQrPayload
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -106,14 +108,23 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
 
     fun generateQrAfterAuth() {
         performAfterBiometricAuth {
-            try {
-                val userId = IdentityManager.getIdentityId() ?: "Sin ID"
-                val ip = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
-                qrPayload = "malla://connect?ip=$ip&userId=$userId"
-                qrExpired = false
-                Toast.makeText(context, "QR generado", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                try {
+                    val km = com.malla.mvp.core.crypto.KeystoreManager(context)
+                    val payload = IdentityQrPayload.generate(
+                        keystoreManager = km,
+                        identityManager = IdentityManager,
+                        displayName = userName,
+                        localIp = DhtWrapper.getLocalAddress()
+                    )
+                    qrPayload = payload
+                    qrExpired = false
+                    DiagnosticsLogger.log("QR", "QR generado para $userName")
+                    Toast.makeText(context, "QR generado", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    DiagnosticsLogger.log("QR", "Error generando QR: ${e.message}")
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
