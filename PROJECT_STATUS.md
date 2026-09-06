@@ -1236,3 +1236,12 @@ VERIFICADO EN: solo compilación.
 COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Bluetooth LE, Wi-Fi Direct, CameraX, permisos runtime.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir logging más detallado en flujo de invitación y conexión; implementar reintentos y confirmación de escritura BLE; integrar código QR con código de 24h.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin probar; código 24h aún no se comparte entre dispositivos; warnings de deprecación.
+
+## Sesión 2026-09-06 01:46 - Corrección de auto-detección mesh
+
+- **Problema detectado:** Los dispositivos se auto-detectaban (aparecían como nodos duplicados).
+- **Causa raíz:** `IdentityManager.getOrCreatePersistentId()` usaba `android.app.Application().getSharedPreferences()` generando un UUID nuevo en cada llamada, por lo que `getIdentityId()` variaba y el filtro de auto-exclusión en `ProximityEngine` fallaba.
+- **Corrección aplicada:** Se modificó `IdentityManager` para cachear el contexto de aplicación (`appContext`) y el ID (`cachedIdentityId`). Ahora `getIdentityId()` devuelve un valor estable durante toda la sesión.
+- **Cambios en archivos:** `identity/src/main/java/com/malla/mvp/identity/IdentityManager.kt`.
+- **Estado:** Compilación exitosa. Pendiente prueba en dispositivos reales.
+- **Logs relevantes:** Se espera que cada dispositivo muestre solo el nodo remoto, no el propio.

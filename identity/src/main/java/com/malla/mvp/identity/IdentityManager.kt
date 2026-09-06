@@ -32,12 +32,15 @@ object IdentityManager {
     val deviceId: String = java.util.UUID.randomUUID().toString().take(8)
 
     @Volatile private var cachedPublicKeyBase64: String? = null
+    @Volatile private var cachedIdentityId: String? = null
+    private var appContext: Context? = null
 
     // Avatar reactivo
     private val _avatarBitmap = MutableStateFlow<Bitmap?>(null)
     val avatarBitmap: StateFlow<Bitmap?> = _avatarBitmap
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         try {
             val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
             if (!ks.containsAlias(KEY_ALIAS)) {
@@ -86,16 +89,20 @@ object IdentityManager {
     }
 
     fun getIdentityId(): String {
+        cachedIdentityId?.let { return it }
         val pubKey = getPublicKeyBase64()
-        if (pubKey != null) {
-            return pubKey.take(12).chunked(3).joinToString("-")
+        val id = if (pubKey != null) {
+            pubKey.take(12).chunked(3).joinToString("-")
+        } else {
+            getOrCreatePersistentId()
         }
-        // Fallback: usar ID persistente
-        return getOrCreatePersistentId()
+        cachedIdentityId = id
+        return id
     }
 
     private fun getOrCreatePersistentId(): String {
-        val prefs = android.app.Application().getSharedPreferences(ID_PREFS, Context.MODE_PRIVATE)
+        val context = appContext ?: return java.util.UUID.randomUUID().toString().take(8).chunked(3).joinToString("-")
+        val prefs = context.getSharedPreferences(ID_PREFS, Context.MODE_PRIVATE)
         var id = prefs.getString(PERSISTENT_ID_KEY, null)
         if (id == null) {
             id = java.util.UUID.randomUUID().toString().take(8)
