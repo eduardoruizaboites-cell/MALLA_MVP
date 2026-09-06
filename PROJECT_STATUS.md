@@ -1216,3 +1216,13 @@ VERIFICADO EN: solo compilación.
 COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Bluetooth LE, Wi-Fi Direct, CameraX, permisos runtime.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir logging más detallado en flujo de invitación y conexión; implementar reintentos y confirmación de escritura BLE; integrar código QR con código de 24h.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin probar; código 24h aún no se comparte entre dispositivos; warnings de deprecación.
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (correcciones de conectividad y monitoreo) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió IdentityManager para usar ID persistente si Keystore falla. Se ajustó ProximityEngine para usar generateToken(myUserId) en advertising y filtro. Se añadió startWithGroupName a WifiDirectManager y se creó grupo con nombre MALLA_<displayName>. Se modificó MainActivity para reiniciar advertising tras conceder permisos. Se actualizó QrScanScreen para solicitar permiso de cámara. Se añadieron logs de diagnóstico en InvitationManager y BleManager.
+¿ERA UN FIX DE ERROR?: ERROR: dispositivos no se detectaban, código 24h no funcionaba, QR no abría, nombre no se mostraba. SOLUCIÓN APLICADA: se corrigieron causas raíz identificadas (filtro de token, falta de grupo Wi-Fi Direct, permisos, advertising). ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó problema de hardware; causa era de implementación y permisos.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Bluetooth LE, Wi-Fi Direct, CameraX, permisos runtime.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir logging más detallado en flujo de invitación y conexión; implementar reintentos y confirmación de escritura BLE; integrar código QR con código de 24h.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin probar; código 24h aún no se comparte entre dispositivos; warnings de deprecación.
