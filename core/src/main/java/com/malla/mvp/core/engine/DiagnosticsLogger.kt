@@ -9,6 +9,7 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.IntentFilter
+import android.util.Log
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -20,13 +21,31 @@ object DiagnosticsLogger {
 
     fun init(context: Context) {
         if (logFile == null) {
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val dir = if (downloadsDir.exists() || downloadsDir.mkdirs()) {
-                downloadsDir
-            } else {
-                context.getExternalFilesDir(null) ?: context.filesDir
+            val candidates = mutableListOf<File>()
+            try {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (downloadsDir.exists() || downloadsDir.mkdirs()) candidates.add(downloadsDir)
+            } catch (_: Exception) {}
+            context.getExternalFilesDir(null)?.let { candidates.add(it) }
+            candidates.add(context.filesDir)
+
+            for (dir in candidates) {
+                try {
+                    val file = File(dir, FILENAME)
+                    if (!file.exists()) file.createNewFile()
+                    if (file.canWrite()) {
+                        logFile = file
+                        Log.i("MallaDiagnostics", "Archivo de diagnóstico: ${file.absolutePath}")
+                        break
+                    }
+                } catch (_: Exception) {}
             }
-            logFile = File(dir, FILENAME)
+            if (logFile == null) {
+                val fallback = File(context.cacheDir, FILENAME)
+                try { fallback.createNewFile() } catch (_: Exception) {}
+                logFile = fallback
+                Log.i("MallaDiagnostics", "Fallback de diagnóstico: ${fallback.absolutePath}")
+            }
         }
     }
 
@@ -36,7 +55,10 @@ object DiagnosticsLogger {
         val line = "[$timestamp] [$tag] $message\n"
         try {
             file.appendText(line)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.e("MallaDiagnostics", "No se pudo escribir log: ${e.message}")
+        }
+        Log.i("Malla", "[$tag] $message")
     }
 
     fun getLogFilePath(): String? = logFile?.absolutePath

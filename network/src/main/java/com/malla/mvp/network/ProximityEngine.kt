@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 object ProximityEngine {
+    @Volatile private var started = false
     private val _nearbyUsers = MutableStateFlow<List<NearbyUser>>(emptyList())
     val nearbyUsers: StateFlow<List<NearbyUser>> = _nearbyUsers.asStateFlow()
 
@@ -20,7 +21,10 @@ object ProximityEngine {
     private var appContext: Context? = null
 
     fun start(context: Context) {
-        if (discoveryJob?.isActive == true) return
+        synchronized(this) {
+            if (started) return
+            started = true
+        }
         appContext = context.applicationContext
         discoveryJob = scope.launch {
             LogBuffer.add("PROX", "ProximityEngine iniciado")
@@ -75,6 +79,7 @@ object ProximityEngine {
     }
 
     fun stop() {
+        synchronized(this) { started = false }
         discoveryJob?.cancel()
         BleManager.stopProximityScanning()
         WifiDirectManager.stop()

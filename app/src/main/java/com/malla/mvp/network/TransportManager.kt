@@ -1,6 +1,7 @@
 package com.malla.mvp.network
 
 import com.malla.mvp.core.engine.DiagnosticsLogger
+import com.malla.mvp.network.BleManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -46,8 +47,22 @@ object TransportManager {
 
         // 2. Intentar BLE broadcast si no hay TCP
         try {
-            val payload = "${message.senderId}|${message.content}".toByteArray(Charsets.UTF_8)
-            val sentBle = BleTransport.broadcast(payload)
+            val payload = org.json.JSONObject().apply {
+                put("senderId", message.senderId)
+                put("content", message.content)
+                put("messageId", message.messageId ?: "")
+                put("type", message.type ?: "chat")
+                put("timestamp", message.timestamp)
+            }.toString().toByteArray(Charsets.UTF_8)
+
+            var sentBle = BleTransport.broadcast(payload)
+            if (!sentBle) {
+                // Intentar conectar al primer dispositivo BLE MALLA detectado y enviar con reintentos
+                val device = BleManager.foundBluetoothDevices.value.firstOrNull()
+                if (device != null) {
+                    sentBle = BleTransport.sendWithRetry(device, payload)
+                }
+            }
             if (sentBle) {
                 updateStatus(TransportStatus.BLE_CONNECTED, "BLE")
                 return
@@ -58,7 +73,13 @@ object TransportManager {
 
         // 3. Intentar Wi-Fi Direct broadcast
         try {
-            val wfdPayload = "${message.senderId}|${message.content}"
+            val wfdPayload = org.json.JSONObject().apply {
+                put("senderId", message.senderId)
+                put("content", message.content)
+                put("messageId", message.messageId ?: "")
+                put("type", message.type ?: "chat")
+                put("timestamp", message.timestamp)
+            }.toString()
             val sentWfd = WifiDirectManager.broadcast(wfdPayload)
             if (sentWfd) {
                 updateStatus(TransportStatus.WIFI_DIRECT_CONNECTED, "Wi-Fi Direct")

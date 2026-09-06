@@ -45,16 +45,29 @@ object MessageReceiver {
         scope.launch {
             BleTransport.messages.collect { bytes ->
                 val raw = String(bytes, Charsets.UTF_8)
-                val parts = raw.split("|", limit = 2)
-                val sender = parts.getOrElse(0) { "unknown" }
-                val body = parts.getOrElse(1) { raw }
-                val meshMsg = MeshMessage(
-                    content = body,
-                    senderId = sender,
-                    timestamp = System.currentTimeMillis(),
-                    type = "chat"
-                )
-                process(context, meshMsg)
+                var meshMsg: MeshMessage? = null
+                try {
+                    val json = org.json.JSONObject(raw)
+                    meshMsg = MeshMessage(
+                        content = json.optString("content", raw),
+                        senderId = json.optString("senderId", "unknown"),
+                        timestamp = json.optLong("timestamp", System.currentTimeMillis()),
+                        type = json.optString("type", "chat"),
+                        messageId = json.optString("messageId", null)
+                    )
+                } catch (_: Exception) {
+                    // Formato antiguo: sender|content
+                    val parts = raw.split("|", limit = 2)
+                    val sender = parts.getOrElse(0) { "unknown" }
+                    val body = parts.getOrElse(1) { raw }
+                    meshMsg = MeshMessage(
+                        content = body,
+                        senderId = sender,
+                        timestamp = System.currentTimeMillis(),
+                        type = "chat"
+                    )
+                }
+                meshMsg?.let { process(context, it) }
             }
         }
 
@@ -212,6 +225,7 @@ object MessageReceiver {
 
             // Enviar ack real al emisor si el mensaje trae messageId
             if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
+                // Por TCP
                 try {
                     NetworkService.sendMessageToContact(
                         meshMsg.senderId,
@@ -223,7 +237,20 @@ object MessageReceiver {
                         )
                     )
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error enviando ack: ${e.message}")
+                    Log.e(TAG, "Error enviando ack TCP: ${e.message}")
+                }
+                // Por BLE (broadcast a todos los conectados)
+                try {
+                    val ackJson = org.json.JSONObject().apply {
+                        put("senderId", IdentityManager.getIdentityId())
+                        put("content", "2")
+                        put("messageId", meshMsg.messageId)
+                        put("type", "ack")
+                        put("timestamp", System.currentTimeMillis())
+                    }.toString()
+                    BleTransport.broadcast(ackJson.toByteArray(Charsets.UTF_8))
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error enviando ack BLE: ${e.message}")
                 }
             }
 

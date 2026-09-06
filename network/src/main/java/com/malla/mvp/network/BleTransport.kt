@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.util.Log
 import com.malla.mvp.network.BleManager
 import android.content.pm.PackageManager
 import android.os.ParcelUuid
@@ -64,8 +65,10 @@ object BleTransport {
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT)
             != PackageManager.PERMISSION_GRANTED) return
         try {
+            Log.i("BleTransport", "Intentando conectar GATT a ${device.address}")
             val gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
                 override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                    Log.i("BleTransport", "Estado GATT ${device.address}: $newState")
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
                         gatt.discoverServices()
                     } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {

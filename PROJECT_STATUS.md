@@ -1259,3 +1259,25 @@ DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún sin 
 - Se corrigió el tipo de `writeConfirmations` de `CompletableDeferred<Boolean>` a `CancellableContinuation<Boolean>`.
 - Compilación exitosa (`BUILD SUCCESSFUL`).
 - Pendiente prueba real de envío de mensajes BLE con reintentos.
+
+── ENTRADA — 2026-09-06 02:32 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se robusteció DiagnosticsLogger con múltiples rutas de escritura y logging a Logcat. Se migró el payload de mensajes BLE y Wi-Fi Direct a formato JSON para conservar messageId y permitir ACK real. Se implementó envío de ACK por BLE al recibir chat con messageId.
+¿ERA UN FIX DE ERROR?: ERROR: El Xiaomi no generaba malla_diagnostics.txt y la transferencia BLE no confirmaba entrega ni permitía ACK. SOLUCIÓN APLICADA: múltiples directorios fallback + Logcat; JSON en payloads BLE/Wi-Fi Direct; ACK BLE. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, scoped storage, MIUI, Bluetooth LE, Wi-Fi Direct.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): evitar arranques múltiples de ProximityEngine; broadcast BLE con reconexión automática; UI para mostrar ruta de diagnóstico; centralizar paleta de colores.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; arranques múltiples; warnings de deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-06 02:33 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió bloqueo @Volatile en ProximityEngine para evitar arranques dobles. Se mejoró TransportManager para que, si BleTransport.broadcast no envía, intente conectar al primer dispositivo BLE MALLA detectado y use sendWithRetry. Se robusteció diagnóstico y payloads JSON BLE/Wi-Fi Direct.
+¿ERA UN FIX DE ERROR?: ERROR: arranques múltiples de ProximityEngine saturaban BLE y broadcast BLE no reconectaba. SOLUCIÓN APLICADA: bandera @Volatile y reconexión con reintentos. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Wi-Fi Direct, MIUI.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): centralizar paleta; limpiar warnings; UI para ruta de diagnóstico; probar en dos dispositivos.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; warnings de deprecación; ruta de diagnóstico visible en UI.
+──────────────────────────────
