@@ -1413,3 +1413,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE JSON.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar envío BLE para usar siempre JSON válido; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional sin internet; detección BLE sin Wi-Fi; nombres reales en nodos.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 04:04 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se cambió generateToken para usar ANDROID_ID + día, evitando tokens idénticos entre dispositivos. Se incluyó el nombre de usuario truncado en el payload BLE (token|nombre) y se eliminó variable payload no usada.
+¿ERA UN FIX DE ERROR?: ERROR: ambos dispositivos generaban token 51cea2b0 y se ignoraban mutuamente como anuncio propio; nodos mostraban nombre Bluetooth. SOLUCIÓN APLICADA: token único por Android ID y payload con nombre MALLA. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real sin internet.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código 24h; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional sin internet; validación real de nodos con nombres.
+──────────────────────────────

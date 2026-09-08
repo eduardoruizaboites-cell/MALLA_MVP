@@ -1,6 +1,7 @@
 package com.malla.mvp.network
 
 import android.content.Context
+import android.provider.Settings
 import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.model.SignalType
 import com.malla.mvp.core.engine.LogBuffer
@@ -192,8 +193,9 @@ object ProximityEngine {
     }
 
     private fun generateToken(userId: String): String {
+        val androidId = appContext?.let { Settings.Secure.getString(it.contentResolver, Settings.Secure.ANDROID_ID) } ?: userId
         val day = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis())
-        val input = "$userId-$day-malla-proximity"
+        val input = "$androidId-$day-malla-proximity"
         return input.hashCode().toUInt().toString(16).take(8)
     }
 }

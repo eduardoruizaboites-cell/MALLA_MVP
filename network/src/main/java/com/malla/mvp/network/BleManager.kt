@@ -141,10 +141,11 @@ object BleManager {
                 .setConnectable(true)
                 .build()
 
-            // Payload mínimo: solo token truncado a 8 bytes, sin nombre para no exceder 31 bytes
-            val payload = token.take(8).toByteArray(Charsets.UTF_8)
+            // Payload compacto: token(8)|nombre(10) = 19 bytes
+            val shortToken = token.take(8)
+            val shortName = displayName.take(10)
             val data = AdvertiseData.Builder()
-                .addServiceData(ParcelUuid(serviceUuid), payload)
+                .addServiceData(ParcelUuid(serviceUuid), "$shortToken|$shortName".toByteArray(Charsets.UTF_8))
                 .build()
 
             advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
@@ -223,6 +224,7 @@ object BleManager {
             val token = parts[0]
             val seed = if (parts.size >= 3) parts[2].toIntOrNull() ?: 0 else 0
             val deviceName = if (parts.size >= 2 && parts[1].isNotBlank()) parts[1] else (result.device.name ?: "MALLA_$token")
+            Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
             Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
             val strength = result.rssi?.let { rssi ->
                 when {
