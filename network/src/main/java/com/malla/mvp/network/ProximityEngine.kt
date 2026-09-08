@@ -152,6 +152,7 @@ object ProximityEngine {
             }
         }
         _nearbyUsers.value = current
+        DiagnosticsLogger.log("PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
     }
 
     private fun addWifiDirectPeer(peer: WifiDirectPeer) {
@@ -170,6 +171,7 @@ object ProximityEngine {
         if (idx != -1) return // ya existe por otro transporte, no duplicar
         current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
         _nearbyUsers.value = current
+        DiagnosticsLogger.log("PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
     }
 
 
@@ -179,6 +181,11 @@ object ProximityEngine {
         val myId = IdentityManager.getIdentityId()
         if (token == generateToken(myId)) return true
         return false
+    }
+
+
+    private fun logNearbyUsers() {
+        DiagnosticsLogger.log("PROX", "Nodos actuales: ${_nearbyUsers.value.map { "${it.displayName}:${it.token}:${it.signalType}" }}")
     }
 
     private fun generateToken(userId: String): String {

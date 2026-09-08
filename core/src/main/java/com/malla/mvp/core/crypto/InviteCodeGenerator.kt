@@ -4,7 +4,7 @@ import kotlin.random.Random
 
 object InviteCodeGenerator {
 
-    private const val BASE_CODE_LENGTH = 8
+    private const val BASE_CODE_LENGTH = 12
     private const val VALIDITY_MS = 24 * 60 * 60 * 1000L
 
     private val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -14,7 +14,7 @@ object InviteCodeGenerator {
         val extra: String? = null,
         val expiresAt: Long
     ) {
-        val fullCode: String get() = if (extra != null) code + extra else code
+        val fullCode: String get() = code
     }
 
     fun generate(extra: String? = null): InviteCode {

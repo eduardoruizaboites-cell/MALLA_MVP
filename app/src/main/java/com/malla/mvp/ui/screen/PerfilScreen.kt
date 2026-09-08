@@ -131,10 +131,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
 
     fun generateCodeAfterAuth() {
         performAfterBiometricAuth {
-            val myUserId = IdentityManager.getIdentityId() ?: "unknown"
-                                val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
-                                val encryptedIp = DhtWrapper.encryptIp(myIp, myUserId)
-                                inviteCode = InviteCodeGenerator.generate(extra = encryptedIp)
+            inviteCode = InviteCodeGenerator.generate()
         }
     }
 
@@ -243,7 +240,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
                     Text("60 s", style = MaterialTheme.typography.labelSmall, color = Color(0xFF8899AA))
                     if (qrPayload != null && !qrExpired) {
                         Spacer(Modifier.height(8.dp))
-                        QrCodeDisplay(content = qrPayload!!, size = 100)
+                        QrCodeDisplay(content = qrPayload!!, size = 220)
                     } else {
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = { generateQrAfterAuth() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CE6FF)), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {

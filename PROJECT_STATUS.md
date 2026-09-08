@@ -1380,3 +1380,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, QR, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): instrumentar ProximityEngine para depurar detección; revisar InviteCodeGenerator y flujo de código 24h.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección sin internet no confirmada; QR sin lectura efectiva; código 24h inválido; duplicados de nodos.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 02:20 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió InviteCodeGenerator para generar 12 caracteres (antes 8) y se eliminó el extra de IP del fullCode. Se aumentó el tamaño del QR a 220dp. Se añadieron logs de nodos en ProximityEngine.
+¿ERA UN FIX DE ERROR?: ERROR: código de 24h siempre inválido porque generaba 8 caracteres y la validación esperaba 12. SOLUCIÓN APLICADA: base de 12 caracteres y fullCode limpio. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por inspección de longitud.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, QR.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar flujo de invitación BLE para confirmar escritura; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección sin internet; lectura QR; invitación BLE sin respuesta.
+──────────────────────────────
