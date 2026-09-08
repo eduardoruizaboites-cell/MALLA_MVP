@@ -1369,3 +1369,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, QR, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): intercambio real de código 24h por BLE; mostrar ruta de diagnóstico en UI; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; detección BLE sin internet aún sin prueba; QR requiere prueba con cámara.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 02:08 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se redujo payload BLE a solo token (8 bytes) y se eliminó setIncludeDeviceName. Se simplificó QR a formato "MALLA:userId|nombre|ip" sin firma. Se ajustó MainActivity para parsear nuevo QR. Se añadieron logs en BleTransport.sendInvitation.
+¿ERA UN FIX DE ERROR?: ERROR: advertising BLE "Datos demasiado grandes"; QR "llave privada no encontrada"; invitaciones sin confirmación. SOLUCIÓN APLICADA: payload mínimo, QR simple, logs. ¿FUNCIONÓ?: compilación exitosa; pendiente validación real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, QR, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): instrumentar ProximityEngine para depurar detección; revisar InviteCodeGenerator y flujo de código 24h.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección sin internet no confirmada; QR sin lectura efectiva; código 24h inválido; duplicados de nodos.
+──────────────────────────────
