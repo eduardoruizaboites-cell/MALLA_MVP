@@ -141,15 +141,10 @@ object BleManager {
                 .setConnectable(true)
                 .build()
 
-            // Empaquetar datos en el campo de manufacturer specific data o service data
-            // Payload mínimo: solo token (12 chars) para cumplir límite estricto de 31 bytes
-            // Token truncado a 8 + "|" + nombre truncado a 10 + "|" + seed truncado a 10 = 8+1+10+1+10=30 bytes
-            val shortToken = token.take(8)
-            val shortName = displayName.take(10)
-            val payload = "$shortToken|$shortName|$avatarSeed".toByteArray(Charsets.UTF_8)
+            // Payload mínimo: solo token truncado a 8 bytes, sin nombre para no exceder 31 bytes
+            val payload = token.take(8).toByteArray(Charsets.UTF_8)
             val data = AdvertiseData.Builder()
                 .addServiceData(ParcelUuid(serviceUuid), payload)
-                .setIncludeDeviceName(true)
                 .build()
 
             advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)

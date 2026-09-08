@@ -1358,3 +1358,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Keystore, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): intercambio real de código 24h por BLE; diagnóstico en UI; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR pendiente de prueba; warnings de deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 01:52 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se redujo el payload BLE a solo token (8 bytes) y se eliminó setIncludeDeviceName para evitar "Datos demasiado grandes". Se simplificó IdentityQrPayload a formato "MALLA:userId|nombre|ip" sin firma para evitar error de llave privada. Se adaptó MainActivity al nuevo QR. Se añadieron logs en BleTransport.sendInvitation.
+¿ERA UN FIX DE ERROR?: ERROR: advertising BLE fallaba por payload grande; QR daba "Llave privada no encontrada"; invitaciones no tenían logs. SOLUCIÓN APLICADA: payload mínimo, QR simple, logs de escritura. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por inspección.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, QR, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): intercambio real de código 24h por BLE; mostrar ruta de diagnóstico en UI; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; detección BLE sin internet aún sin prueba; QR requiere prueba con cámara.
+──────────────────────────────

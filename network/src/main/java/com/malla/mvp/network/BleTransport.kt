@@ -254,11 +254,19 @@ object BleTransport {
     }
 
     private fun writeInvitationCharacteristic(gatt: BluetoothGatt, data: ByteArray) {
-        val service = gatt.getService(SERVICE_UUID) ?: return
-        val char = service.getCharacteristic(INVITE_CHAR_UUID) ?: return
+        val service = gatt.getService(SERVICE_UUID) ?: run {
+            Log.e("BleTransport", "Servicio no encontrado")
+            return
+        }
+        val char = service.getCharacteristic(INVITE_CHAR_UUID) ?: run {
+            Log.e("BleTransport", "Característica de invitación no encontrada")
+            return
+        }
         char.value = data
         char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        gatt.writeCharacteristic(char)
+        val success = gatt.writeCharacteristic(char)
+        Log.i("BleTransport", "Escritura de invitación iniciada: $success")
+        DiagnosticsLogger.log("BleTransport", "Escritura de invitación iniciada: $success")
     }
 
     fun connectAndSend(device: BluetoothDevice, data: ByteArray) {

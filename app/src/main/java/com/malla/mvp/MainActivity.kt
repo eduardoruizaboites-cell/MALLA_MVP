@@ -298,13 +298,13 @@ class MainActivity : FragmentActivity() {
                                         MainScope().launch(Dispatchers.IO) {
                                             val parsed = IdentityQrPayload.parseAndVerify(payload)
                                             if (parsed != null) {
-                                                val userId = parsed.pubKeyBase64.hashCode().toUInt().toString(16).take(16)
+                                                val userId = parsed.pubKeyBase64  // en MVP, pubKeyBase64 contiene userId real
                                                 val displayName = parsed.displayName ?: "Usuario MALLA"
                                                 val contact = ContactEntity(
                                                     contactUserId = userId,
                                                     displayName = displayName,
-                                                    avatarSeed = parsed.pubKeyBase64.hashCode(),
-                                                    publicKey = parsed.pubKeyBase64,
+                                                    avatarSeed = userId.hashCode(),
+                                                    publicKey = "",
                                                     addedAt = System.currentTimeMillis()
                                                 )
                                                 database?.contactDao()?.insert(contact)
@@ -314,7 +314,7 @@ class MainActivity : FragmentActivity() {
                                                     timestamp = System.currentTimeMillis()
                                                 )
                                                 database?.conversationDao()?.insertConversation(conv)
-                                                if (parsed.localIp != null) {
+                                                if (parsed.localIp != null && parsed.localIp!!.isNotBlank()) {
                                                     connectToPeerAndCreateConversation(parsed.localIp!!) { convId ->
                                                         currentConversationId = convId
                                                     }
