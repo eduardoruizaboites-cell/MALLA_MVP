@@ -1,6 +1,8 @@
 package com.malla.mvp.network
 
 import com.malla.mvp.core.engine.DiagnosticsLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.malla.mvp.network.BleManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +39,7 @@ object TransportManager {
         DiagnosticsLogger.log(TAG, "Transporte activo: $transportName (${newStatus.name})")
     }
 
-    suspend fun send(contactId: String, message: MeshMessage) {
+    suspend fun send(contactId: String, message: MeshMessage) = withContext(Dispatchers.IO) {
         DiagnosticsLogger.log(TAG, "Enviando mensaje a $contactId; TCP conectado=${NetworkService.isContactConnected(contactId)}")
         // 1. Intentar BLE broadcast primero (más confiable en mesh sin infraestructura)
         try {
@@ -66,7 +68,7 @@ object TransportManager {
             }
             if (sentBle) {
                 updateStatus(TransportStatus.BLE_CONNECTED, "BLE")
-                return
+                return@withContext
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
@@ -77,7 +79,7 @@ object TransportManager {
             DiagnosticsLogger.log(TAG, "Enviando por TCP a $contactId")
             NetworkService.sendMessageToContact(contactId, message)
             updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
-            return
+            return@withContext
         }
 
         // 3. Intentar Wi-Fi Direct broadcast
@@ -92,7 +94,7 @@ object TransportManager {
             val sentWfd = WifiDirectManager.broadcast(wfdPayload)
             if (sentWfd) {
                 updateStatus(TransportStatus.WIFI_DIRECT_CONNECTED, "Wi-Fi Direct")
-                return
+                return@withContext
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error Wi-Fi Direct: ${e.message}")

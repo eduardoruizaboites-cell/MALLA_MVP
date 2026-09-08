@@ -92,8 +92,20 @@ import androidx.compose.runtime.mutableStateOf
 enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
+    private val notifiedNodes = mutableSetOf<String>()
+    @Volatile private var isForeground = false
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     private val showPermissionExplanationState = mutableStateOf(true)
+
+    override fun onResume() {
+        super.onResume()
+        isForeground = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        isForeground = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -124,17 +136,15 @@ class MainActivity : FragmentActivity() {
 
             // Observar descubrimiento de nodos para notificación
             MainScope().launch(Dispatchers.IO) {
-                var previousCount = 0
                 ProximityEngine.nearbyUsers.collect { users ->
-                    val count = users.size
-                    if (count > previousCount) {
-                        val latest = users.last()
-                        // Solo notificar si es un nodo MALLA real (BLE o mDNS), no Wi-Fi Direct
-                        if (latest.bluetoothDevice != null || latest.token.startsWith("mdns_")) {
-                            NotificationHelper.showDiscoveryNotification(this@MainActivity, latest.displayName)
+                    users.forEach { user ->
+                        if (user.token !in notifiedNodes) {
+                            notifiedNodes.add(user.token)
+                            if (!isForeground && (user.bluetoothDevice != null || user.token.startsWith("mdns_"))) {
+                                NotificationHelper.showDiscoveryNotification(this@MainActivity, user.displayName)
+                            }
                         }
                     }
-                    previousCount = count
                 }
             }
         }

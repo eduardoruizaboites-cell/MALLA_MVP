@@ -1446,3 +1446,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings; copiar código de invitación; mapear BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional BLE sin internet; validación final.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 23:21 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigieron notificaciones de nodos para que solo se muestren una vez por token y no estando en primer plano. Se movió el envío de TransportManager.send a withContext(Dispatchers.IO) para no bloquear UI. Se corrigieron return@withContext y llave de cierre.
+¿ERA UN FIX DE ERROR?: ERROR: notificaciones repetidas al abrir la app; envío de mensajes parecía retrasarse o bloquear la UI. SOLUCIÓN APLICADA: notificación única por token y solo en background; envío en IO. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por inspección de ciclo de vida y threading.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, corrutinas, notificaciones.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código de invitación; limpiar warnings; mapear BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de mensajería bidireccional sin internet.
+──────────────────────────────
