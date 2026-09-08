@@ -308,21 +308,21 @@ class MainActivity : FragmentActivity() {
                                                     addedAt = System.currentTimeMillis()
                                                 )
                                                 database?.contactDao()?.insert(contact)
+                                                // Crear conversación con el userId real del QR, nunca con IP
                                                 val conv = ConversationEntity(
                                                     id = userId,
                                                     title = displayName,
                                                     timestamp = System.currentTimeMillis()
                                                 )
                                                 database?.conversationDao()?.insertConversation(conv)
-                                                if (parsed.localIp != null && parsed.localIp!!.isNotBlank()) {
-                                                    connectToPeerAndCreateConversation(parsed.localIp!!) { convId ->
-                                                        currentConversationId = convId
-                                                    }
-                                                } else {
-                                                    withContext(Dispatchers.Main) {
-                                                        currentConversationId = userId
-                                                        Toast.makeText(this@MainActivity, "Contacto agregado por QR", Toast.LENGTH_SHORT).show()
-                                                    }
+                                                withContext(Dispatchers.Main) {
+                                                    currentConversationId = userId
+                                                    Toast.makeText(this@MainActivity, "Contacto agregado por QR", Toast.LENGTH_SHORT).show()
+                                                }
+                                                // Opcional: intentar conexión TCP en segundo plano si IP existe
+                                                val ip = parsed.localIp
+                                                if (ip != null && ip.isNotBlank()) {
+                                                    try { NetworkService.connectToPeer(ip) } catch (_: Exception) {}
                                                 }
                                             } else {
                                                 // Intentar compatibilidad con formato anterior userId|displayName|publicKey

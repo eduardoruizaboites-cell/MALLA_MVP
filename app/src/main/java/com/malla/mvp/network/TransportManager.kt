@@ -38,14 +38,8 @@ object TransportManager {
     }
 
     suspend fun send(contactId: String, message: MeshMessage) {
-        // 1. Intentar TCP/IP si hay handler conectado
-        if (NetworkService.isContactConnected(contactId)) {
-            NetworkService.sendMessageToContact(contactId, message)
-            updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
-            return
-        }
-
-        // 2. Intentar BLE broadcast si no hay TCP
+        DiagnosticsLogger.log(TAG, "Enviando mensaje a $contactId; TCP conectado=${NetworkService.isContactConnected(contactId)}")
+        // 1. Intentar BLE broadcast primero (más confiable en mesh sin infraestructura)
         try {
             val payload = org.json.JSONObject().apply {
                 put("senderId", message.senderId)
@@ -54,13 +48,15 @@ object TransportManager {
                 put("type", message.type ?: "chat")
                 put("timestamp", message.timestamp)
             }.toString().toByteArray(Charsets.UTF_8)
-
+            DiagnosticsLogger.log(TAG, "Intentando enviar por BLE: ${message.content.take(30)}")
             var sentBle = BleTransport.broadcast(payload)
+            DiagnosticsLogger.log(TAG, "BLE broadcast resultado=$sentBle")
             if (!sentBle) {
-                // Intentar conectar al primer dispositivo BLE MALLA detectado y enviar con reintentos
                 val device = BleManager.foundBluetoothDevices.value.firstOrNull()
                 if (device != null) {
+                    DiagnosticsLogger.log(TAG, "Reintentando BLE a ${device.address}")
                     sentBle = BleTransport.sendWithRetry(device, payload)
+                    DiagnosticsLogger.log(TAG, "BLE sendWithRetry resultado=$sentBle")
                 }
             }
             if (sentBle) {
@@ -69,6 +65,14 @@ object TransportManager {
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
+        }
+
+        // 2. Intentar TCP/IP si hay handler conectado
+        if (NetworkService.isContactConnected(contactId)) {
+            DiagnosticsLogger.log(TAG, "Enviando por TCP a $contactId")
+            NetworkService.sendMessageToContact(contactId, message)
+            updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
+            return
         }
 
         // 3. Intentar Wi-Fi Direct broadcast

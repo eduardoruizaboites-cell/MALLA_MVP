@@ -1424,3 +1424,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código 24h; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional sin internet; validación real de nodos con nombres.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 22:25 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió MainActivity para que al escanear QR cree conversación con userId real y no con IP (evita chat fantasma Peer). Se reordenó TransportManager para intentar BLE antes que TCP y se añadieron logs de envío/recepción BLE. Se añadió log en MessageReceiver al recibir BLE.
+¿ERA UN FIX DE ERROR?: ERROR: se creaba chat fantasma Peer <IP> al escanear QR; mensajes encolados en TCP sin canal; sin logs BLE. SOLUCIÓN APLICADA: conversación por userId, prioridad BLE, logs. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, TCP, QR.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings; copiar código de invitación; mejorar mapeo BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional BLE sin internet; validación final.
+──────────────────────────────
