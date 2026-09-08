@@ -57,6 +57,11 @@ object TransportManager {
                     DiagnosticsLogger.log(TAG, "Reintentando BLE a ${device.address}")
                     sentBle = BleTransport.sendWithRetry(device, payload)
                     DiagnosticsLogger.log(TAG, "BLE sendWithRetry resultado=$sentBle")
+                    if (!sentBle) {
+                        DiagnosticsLogger.log(TAG, "Intentando connectAndWriteData a ${device.address}")
+                        sentBle = BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                        DiagnosticsLogger.log(TAG, "BLE connectAndWriteData resultado=$sentBle")
+                    }
                 }
             }
             if (sentBle) {

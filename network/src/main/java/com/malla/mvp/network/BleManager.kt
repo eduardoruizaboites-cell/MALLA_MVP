@@ -28,6 +28,7 @@ import kotlin.coroutines.resume
 object BleManager {
     private const val TAG = "BleManager"
     private val serviceUuid = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
+    val MESSAGE_CHAR_UUID = UUID.fromString("0000abcd-0003-1000-8000-00805f9b34fb")
     private val ipCharacteristicUuid = UUID.fromString("0000abcd-0001-1000-8000-00805f9b34fb")
     private val invitationCharacteristicUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
     private var adapter: BluetoothAdapter? = null
@@ -218,6 +219,7 @@ object BleManager {
             DiagnosticsLogger.log("BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
             if (!_foundBluetoothDevices.value.contains(result.device)) {
                 _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
+                DiagnosticsLogger.log("BleManager", "Dispositivo BLE añadido: ${result.device.address}, total=${_foundBluetoothDevices.value.size}")
             }
             val payload = String(serviceData, Charsets.UTF_8)
             val parts = payload.split("|")
