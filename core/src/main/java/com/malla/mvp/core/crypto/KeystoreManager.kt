@@ -14,7 +14,7 @@ import java.security.spec.ECGenParameterSpec
 class KeystoreManager(private val context: Context) {
 
     companion object {
-        private const val KEY_ALIAS = "malla_identity_key_v1"
+        private const val KEY_ALIAS = "malla_identity"
         private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
         private const val AUTH_VALIDITY_SECONDS = 30

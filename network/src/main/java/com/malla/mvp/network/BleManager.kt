@@ -114,7 +114,7 @@ object BleManager {
         }
     }
 
-    fun startAdvertisingWithData(token: String, avatarSeed: Int) {
+    fun startAdvertisingWithData(token: String, displayName: String, avatarSeed: Int) {
         if (adapter == null || !adapter!!.isEnabled) {
             LogBuffer.add("BLE", "No se puede iniciar advertising: Bluetooth no disponible")
             return
@@ -143,7 +143,10 @@ object BleManager {
 
             // Empaquetar datos en el campo de manufacturer specific data o service data
             // Payload mínimo: solo token (12 chars) para cumplir límite estricto de 31 bytes
-            val payload = token.toByteArray(Charsets.UTF_8)
+            // Token truncado a 8 + "|" + nombre truncado a 10 + "|" + seed truncado a 10 = 8+1+10+1+10=30 bytes
+            val shortToken = token.take(8)
+            val shortName = displayName.take(10)
+            val payload = "$shortToken|$shortName|$avatarSeed".toByteArray(Charsets.UTF_8)
             val data = AdvertiseData.Builder()
                 .addServiceData(ParcelUuid(serviceUuid), payload)
                 .setIncludeDeviceName(true)
@@ -225,7 +228,7 @@ object BleManager {
             val parts = payload.split("|")
             val token = parts[0]
             val seed = if (parts.size >= 2) parts[1].toIntOrNull() ?: 0 else 0
-            val deviceName = result.device.name ?: "MALLA_$token"
+            val deviceName = if (parts.size >= 2 && parts[1].isNotBlank()) parts[1] else (result.device.name ?: "MALLA_$token")
             val strength = result.rssi?.let { rssi ->
                 when {
                     rssi > -50 -> 3

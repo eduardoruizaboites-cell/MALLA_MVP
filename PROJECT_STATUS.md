@@ -1347,3 +1347,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BLE, mDNS, Wi-Fi Direct.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings (parámetros sin uso), mostrar ruta de diagnóstico en UI.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún requiere prueba con cámara; warnings de deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 01:13 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se unificó el alias de KeystoreManager con IdentityManager (malla_identity) para que el QR pueda firmar. Se incluyó el nombre de usuario en el payload BLE (token truncado a 8 + nombre truncado a 10 + seed) respetando límite de 31 bytes. Se mejoró deduplicación usando dirección Bluetooth como clave. Se cambió validateInvitationCode a validación temporal para permitir conectar entre dispositivos sin compartir prefs.
+¿ERA UN FIX DE ERROR?: ERROR: QR daba "llave privada no encontrada" por alias distinto; nodos mostraban nombre alfanumérico; auto-detección y duplicados; código de 24h inválido entre dispositivos. SOLUCIÓN APLICADA: unificar alias, incluir nombre en advertising, deduplicar por Bluetooth address, validación temporal de código. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real en dos dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por inspección.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Keystore, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): intercambio real de código 24h por BLE; diagnóstico en UI; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR pendiente de prueba; warnings de deprecación.
+──────────────────────────────

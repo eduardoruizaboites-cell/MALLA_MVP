@@ -44,7 +44,7 @@ object ProximityEngine {
             val myName = IdentityManager.getUserName(context)
             val myAvatarSeed = myUserId.hashCode()
             val token = generateToken(myUserId)
-            BleManager.startAdvertisingWithData(token, myAvatarSeed)
+            BleManager.startAdvertisingWithData(token, myName, myAvatarSeed)
 
             // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
             if (!WifiDirectManager.wifiDirectUnsupported) {
@@ -100,7 +100,7 @@ object ProximityEngine {
         if (advertising) return
         val userId = IdentityManager.getIdentityId()
         val token = generateToken(userId)
-        BleManager.startAdvertisingWithData(token, avatarSeed)
+        BleManager.startAdvertisingWithData(token, displayName, avatarSeed)
         advertising = true
     }
 
@@ -121,12 +121,21 @@ object ProximityEngine {
     private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
         if (isSelfUser(name, token)) return
         val current = _nearbyUsers.value.toMutableList()
-        // Buscar por token exacto primero
+        // Buscar por token exacto
         var idx = current.indexOfFirst { it.token == token }
+        // Si no, buscar por dirección Bluetooth
+        if (idx == -1 && device != null) {
+            idx = current.indexOfFirst { it.bluetoothDevice?.address == device.address }
+        }
         if (idx != -1) {
-            current[idx] = current[idx].copy(displayName = name, signalStrength = maxOf(strength, current[idx].signalStrength), bluetoothDevice = device ?: current[idx].bluetoothDevice)
+            current[idx] = current[idx].copy(
+                displayName = name,
+                signalStrength = maxOf(strength, current[idx].signalStrength),
+                signalType = if (type == SignalType.MDNS) current[idx].signalType else type,
+                bluetoothDevice = device ?: current[idx].bluetoothDevice
+            )
         } else {
-            // Buscar por displayName (nombre real) para fusionar distintos transportes
+            // Buscar por displayName para fusionar transportes distintos
             idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
             if (idx != -1) {
                 val existing = current[idx]
@@ -175,6 +184,6 @@ object ProximityEngine {
     private fun generateToken(userId: String): String {
         val day = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis())
         val input = "$userId-$day-malla-proximity"
-        return input.hashCode().toUInt().toString(16).take(12)
+        return input.hashCode().toUInt().toString(16).take(8)
     }
 }

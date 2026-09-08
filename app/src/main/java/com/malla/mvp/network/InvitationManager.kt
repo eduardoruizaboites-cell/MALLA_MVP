@@ -97,18 +97,11 @@ object InvitationManager {
     fun validateInvitationCode(context: Context, code: String): String? {
         val normalized = code.trim().uppercase()
         if (normalized.length != 12) return null
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val userId = prefs.getString("code_$normalized", null) ?: return null
-        val timestamp = prefs.getLong("code_time_$normalized", 0L)
-        if (System.currentTimeMillis() - timestamp > EXPIRATION_MS) {
-            // Código expirado
-            prefs.edit().remove("code_$normalized").remove("code_time_$normalized").apply()
-            DiagnosticsLogger.log("InvitationManager", "Código $normalized expirado")
-            return null
-        }
-        DiagnosticsLogger.log("InvitationManager", "Código $normalized válido, userId=$userId")
-        // Nota: aquí se podría buscar dispositivo cercano con ese código
-        return userId
+        // Para MVP, aceptamos el código y derivamos un userId temporal que permita establecer contacto.
+        // El intercambio real de códigos se hará vía BLE en cuanto conecten.
+        val derivedUserId = "user_" + normalized.lowercase()
+        DiagnosticsLogger.log("InvitationManager", "Código $normalized aceptado temporalmente, userId=$derivedUserId")
+        return derivedUserId
     }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
