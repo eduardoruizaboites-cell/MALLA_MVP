@@ -3,6 +3,7 @@ package com.malla.mvp.network
 import android.content.Context
 import android.util.Log
 import com.malla.mvp.core.engine.LogBuffer
+import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.data.entity.MessageEntity
@@ -48,13 +49,15 @@ object MessageReceiver {
                 var meshMsg: MeshMessage? = null
                 try {
                     val json = org.json.JSONObject(raw)
+                    val extractedContent = json.optString("content", "")
                     meshMsg = MeshMessage(
-                        content = json.optString("content", raw),
-                        senderId = json.optString("senderId", "unknown"),
+                        content = if (extractedContent.isNotBlank()) extractedContent else raw,
+                        senderId = json.optString("senderId", json.optString("senderld", "unknown")),
                         timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                         type = json.optString("type", "chat"),
                         messageId = json.optString("messageId", null)
                     )
+                    DiagnosticsLogger.log(TAG, "BLE JSON recibido: senderId=${meshMsg.senderId}, content=${meshMsg.content.take(30)}")
                 } catch (_: Exception) {
                     // Formato antiguo: sender|content
                     val parts = raw.split("|", limit = 2)

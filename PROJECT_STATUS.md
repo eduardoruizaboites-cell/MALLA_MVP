@@ -1402,3 +1402,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar TransferManager para envío BLE con confirmación; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección BLE sin internet; mensajes entre dispositivos; nombres reales en nodos.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 03:55 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió hotfix en MessageReceiver para extraer content del JSON BLE y usar raw como fallback; se añadió log de BLE JSON recibido. Se corrigió import de DiagnosticsLogger.
+¿ERA UN FIX DE ERROR?: ERROR: mensaje BLE entrante mostraba JSON crudo en lugar del texto. SOLUCIÓN APLICADA: extracción robusta de content y log. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre Cubot y Xiaomi.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó error tipográfico senderld en código; no se encontró.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE JSON.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar envío BLE para usar siempre JSON válido; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: comunicación bidireccional sin internet; detección BLE sin Wi-Fi; nombres reales en nodos.
+──────────────────────────────
