@@ -1336,3 +1336,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BLE, mDNS, Wi-Fi Direct.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings (parámetros sin uso), mostrar ruta de diagnóstico en UI.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún requiere prueba con cámara; warnings de deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 00:38 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se conectó onNavigateToQrScanner desde MainApp a ConversationsScreen (el botón de escanear QR no hacía nada). Se implementó deduplicación de nodos en ProximityEngine fusionando por displayName o token, y se añadió filtro isSelfUser para evitar auto-detección.
+¿ERA UN FIX DE ERROR?: ERROR: botón QR desconectado y nodos duplicados por transporte. SOLUCIÓN APLICADA: pasar callback a ConversationsScreen; fusionar usuarios por nombre o token y filtrar propio. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BLE, mDNS, Wi-Fi Direct.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings (parámetros sin uso), mostrar ruta de diagnóstico en UI.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; QR aún requiere prueba con cámara; warnings de deprecación.
+──────────────────────────────
