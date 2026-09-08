@@ -219,11 +219,11 @@ object BleManager {
                 _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
             }
             val payload = String(serviceData, Charsets.UTF_8)
-            // Soporta formato token|seed o solo token
             val parts = payload.split("|")
             val token = parts[0]
-            val seed = if (parts.size >= 2) parts[1].toIntOrNull() ?: 0 else 0
+            val seed = if (parts.size >= 3) parts[2].toIntOrNull() ?: 0 else 0
             val deviceName = if (parts.size >= 2 && parts[1].isNotBlank()) parts[1] else (result.device.name ?: "MALLA_$token")
+            Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
             val strength = result.rssi?.let { rssi ->
                 when {
                     rssi > -50 -> 3

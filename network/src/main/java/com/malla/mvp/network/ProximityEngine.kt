@@ -35,8 +35,11 @@ object ProximityEngine {
             // BLE scanning
             BleManager.startScanningWithCallback { token, name, seed, strength, device ->
                 val myId = IdentityManager.getIdentityId()
+                DiagnosticsLogger.log("PROX", "Callback BLE: token=$token, name=$name, seed=$seed, device=${device.address}")
                 if (token != generateToken(myId)) {
                     addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
+                } else {
+                    DiagnosticsLogger.log("PROX", "Ignorando anuncio propio: $token")
                 }
             }
             // Iniciar advertising MALLA para que otros dispositivos nos detecten

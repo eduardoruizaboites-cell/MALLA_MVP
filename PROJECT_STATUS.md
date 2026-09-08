@@ -1391,3 +1391,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, QR.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar flujo de invitación BLE para confirmar escritura; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección sin internet; lectura QR; invitación BLE sin respuesta.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-08 02:48 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se corrigió payload BLE a token(8)|nombre truncado(10) = 19 bytes, sin setIncludeDeviceName. Se ajustó parser para extraer nombre del payload. Se añadieron logs de callback BLE en ProximityEngine para depurar por qué no se agregan nodos BLE.
+¿ERA UN FIX DE ERROR?: ERROR: nodos BLE detectados en scan pero no aparecían en UI; advertising excedía tamaño. SOLUCIÓN APLICADA: payload compacto y logs de callback. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real sin Wi-Fi.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa probable: callback no invocado o filtro propio.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE advertising.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): revisar TransferManager para envío BLE con confirmación; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: detección BLE sin internet; mensajes entre dispositivos; nombres reales en nodos.
+──────────────────────────────
