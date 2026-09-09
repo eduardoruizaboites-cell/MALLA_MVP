@@ -38,4 +38,6 @@ object MallaEventBus {
     // ── UI ────────────────────────────────────────────────────────
     /** Solicitud de mostrar un Toast desde cualquier módulo */
     val showToast = MutableSharedFlow<String>(extraBufferCapacity = 3)
+    /** Usuario remoto está escribiendo */
+    val typingReceived = MutableSharedFlow<Pair<String, Boolean>>(extraBufferCapacity = 5)
 }

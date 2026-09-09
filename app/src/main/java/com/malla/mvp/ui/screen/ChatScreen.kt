@@ -232,6 +232,15 @@ fun ChatScreen(
     var showLocationError by remember { mutableStateOf(false) }
 
 
+
+    LaunchedEffect(typingText) {
+        vm.sendTyping(typingText.isNotEmpty())
+        if (typingText.isNotEmpty()) {
+            delay(2000)  // debounce: después de 2s sin escribir, envía false
+            if (typingText.isEmpty()) vm.sendTyping(false)
+        }
+    }
+
     LaunchedEffect(conversationId) {
         vm.loadConversation(conversationId)
     }
@@ -626,9 +635,9 @@ fun ChatScreen(
                 }
 
                 // Auto-scroll al último mensaje
-                LaunchedEffect(messages.size) {
-                    if (messages.isNotEmpty()) {
-                        listState.animateScrollToItem(messages.size - 1)
+                LaunchedEffect(filteredMessages.size) {
+                    if (filteredMessages.isNotEmpty()) {
+                        listState.scrollToItem(filteredMessages.size - 1)
                     }
                 }
 

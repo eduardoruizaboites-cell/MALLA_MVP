@@ -1,6 +1,7 @@
 package com.malla.mvp.network
 
 import com.malla.mvp.core.engine.DiagnosticsLogger
+import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.malla.mvp.network.BleManager
@@ -113,4 +114,23 @@ object TransportManager {
             updateStatus(TransportStatus.ERROR, "NONE")
         }
     }
+    suspend fun sendTyping(contactId: String, isTyping: Boolean) = withContext(Dispatchers.IO) {
+        try {
+            val payload = org.json.JSONObject().apply {
+                put("senderId", IdentityManager.getIdentityId())
+                put("type", "typing")
+                put("content", if (isTyping) "1" else "0")
+                put("timestamp", System.currentTimeMillis())
+            }.toString().toByteArray(Charsets.UTF_8)
+            val device = BleManager.foundBluetoothDevices.value.firstOrNull()
+            if (device != null) {
+                BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+            } else {
+                BleTransport.broadcast(payload)
+            }
+        } catch (e: Exception) {
+            DiagnosticsLogger.log(TAG, "Error enviando typing: ${e.message}")
+        }
+    }
+
 }

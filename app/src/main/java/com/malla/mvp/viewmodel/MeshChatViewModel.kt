@@ -49,6 +49,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private val _pinnedMessage = MutableStateFlow<MessageData?>(null)
     val pinnedMessage: StateFlow<MessageData?> = _pinnedMessage.asStateFlow()
 
+    private val _remoteTyping = MutableStateFlow(false)
+    val remoteTyping: StateFlow<Boolean> = _remoteTyping.asStateFlow()
+
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
@@ -61,6 +64,14 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             MallaEventBus.messageReceived.collect { msg ->
                 if (msg.senderId != "self") {  // Evitar procesar mensajes propios (se guardan localmente al enviar)
                     handleIncomingMessage(msg)
+                }
+            }
+        }
+        // Observar estado de escribiendo remoto
+        viewModelScope.launch {
+            MallaEventBus.typingReceived.collect { (sender, isTyping) ->
+                if (sender != "self" && sender == _conversationId.value) {
+                    _remoteTyping.value = isTyping
                 }
             }
         }
@@ -165,6 +176,15 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
 
     fun isMessageNew(timestamp: Long): Boolean {
         return timestamp > lastMessageTimestamp
+    }
+
+
+    fun sendTyping(isTyping: Boolean) {
+        val convId = _conversationId.value ?: return
+        if (convId == "self_chat") return
+        viewModelScope.launch {
+            TransportManager.sendTyping(convId, isTyping)
+        }
     }
 
     fun sendZumbido() {

@@ -1479,3 +1479,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, corrutinas.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código de invitación; limpiar warnings; mapear BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de mensajería bidireccional sin internet.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 02:28 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió evento typingReceived y TransportManager.sendTyping. MessageReceiver ahora maneja type=typing y no lo guarda como mensaje. ChatScreen muestra burbuja de escribiendo remoto y envía estado de typing con debounce. Se corrigió auto-scroll a filteredMessages.
+¿ERA UN FIX DE ERROR?: ERROR: no había indicador de escribiendo remoto; auto-scroll no siempre bajaba al último; la burbuja de escribiendo se activaba con el texto propio. SOLUCIÓN APLICADA: flujo typing, debounce y scroll correcto. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; eran funcionalidades no implementadas.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BLE/TCP.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings; copiar código de invitación; mejorar mapeo BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de typing y scroll; posible chat fantasma aún por confirmar.
+──────────────────────────────
