@@ -1522,3 +1522,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de imágenes, typing y notificaciones.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 03:28 ──
+Compilación: BUILD SUCCESSFUL (estado final de sesión)
+QUÉ SE HIZO: Cierre formal. Se consolidaron las correcciones de duplicados, unificación de MeshMessage, imágenes Base64, auto-scroll, typing remoto y notificaciones. Se verifica que todo compila y queda listo para pruebas reales.
+¿ERA UN FIX DE ERROR?: Se resolvieron múltiples errores durante la sesión. Último fix: NoSuchMethodError typingReceived por duplicado de MallaEventBus. SOLUCIÓN APLICADA: unificación y limpieza de imports. ¿FUNCIONÓ?: compilación exitosa.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó APK antigua; era duplicado de clases.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings; mapear BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de imágenes, typing y notificaciones; posible chat fantasma residual.
+──────────────────────────────
