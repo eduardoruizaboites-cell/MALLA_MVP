@@ -96,12 +96,24 @@ object InvitationManager {
      */
     fun validateInvitationCode(context: Context, code: String): String? {
         val normalized = code.trim().uppercase()
-        if (normalized.length != 12) return null
-        // Para MVP, aceptamos el código y derivamos un userId temporal que permita establecer contacto.
-        // El intercambio real de códigos se hará vía BLE en cuanto conecten.
-        val derivedUserId = "user_" + normalized.lowercase()
-        DiagnosticsLogger.log("InvitationManager", "Código $normalized aceptado temporalmente, userId=$derivedUserId")
-        return derivedUserId
+        if (normalized.length != 12) {
+            DiagnosticsLogger.log("InvitationManager", "Código inválido: longitud incorrecta")
+            return null
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userId = prefs.getString("code_$normalized", null)
+        val timestamp = prefs.getLong("code_time_$normalized", 0L)
+        if (userId == null) {
+            DiagnosticsLogger.log("InvitationManager", "Código no encontrado: $normalized")
+            return null
+        }
+        val expired = System.currentTimeMillis() - timestamp > EXPIRATION_MS
+        if (expired) {
+            DiagnosticsLogger.log("InvitationManager", "Código expirado: $normalized")
+            return null
+        }
+        DiagnosticsLogger.log("InvitationManager", "Código válido: $normalized, userId=$userId")
+        return userId
     }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
@@ -128,6 +140,7 @@ object InvitationManager {
             put("senderLocalIp", myIp)
         }.toString()
 
+        DiagnosticsLogger.log("InvitationManager", "Enviando invitación a ${user.displayName} (userId=${user.userId}, device=${user.bluetoothDevice?.address ?: "sin BLE"})")
         if (user.bluetoothDevice != null) {
             withContext(Dispatchers.IO) {
                 BleTransport.sendInvitation(user.bluetoothDevice!!, json.toByteArray(Charsets.UTF_8))

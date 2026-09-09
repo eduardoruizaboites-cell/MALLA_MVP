@@ -1555,3 +1555,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising, mDNS, Wi-Fi Di
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): botón copiar código de invitación; fragmentación de imágenes; mapear BLE→contacto automáticamente al detectar nodo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional BLE sin internet; fragmentación; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 17:55 (notificaciones de mensajes, invitaciones con biometría y diagnóstico ampliado) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió notificación de mensaje entrante en MessageReceiver cuando la app no está en primer plano. Se implementó diálogo de invitación con aceptación biométrica en MainActivity. Se corrigió validateInvitationCode para usar códigos reales con expiración. Se unificó advertising BLE con userId en ProximityEngine. Se ampliaron logs de TransportManager e InvitationManager para monitorear dispositivos BLE, nodos y envíos.
+¿ERA UN FIX DE ERROR?: ERROR: no había notificación de mensajes entrantes; las invitaciones no se mostraban; validación de código era temporal; advertising en algunos flujos no incluía userId. SOLUCIÓN APLICADA: NotificationHelper en MessageReceiver; AlertDialog + BiometricPrompt en MainActivity; validación real; startAdvertisingWithUserData en ProximityEngine. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, notificaciones, BiometricPrompt, AlertDialog, BLE.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR; mapear BLE→contacto al detectar nodo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional; fragmentación; warnings KSP/deprecación.
+──────────────────────────────

@@ -107,7 +107,7 @@ object ProximityEngine {
         if (advertising) return
         val userId = IdentityManager.getIdentityId()
         val token = generateToken(userId)
-        BleManager.startAdvertisingWithData(token, displayName, avatarSeed)
+        BleManager.startAdvertisingWithUserData(userId, token, displayName)
         advertising = true
     }
 

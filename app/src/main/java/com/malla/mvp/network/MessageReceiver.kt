@@ -14,6 +14,7 @@ import com.malla.mvp.di.Injector
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.network.BleTransport
+import com.malla.mvp.util.NotificationHelper
 import kotlinx.coroutines.*
 import java.util.UUID
 
@@ -227,6 +228,13 @@ object MessageReceiver {
                 viewOnce = meshMsg.viewOnce
             )
             messageDao.insertMessage(msgEntity)
+
+            // Notificar mensaje si la app no está en primer plano
+            if (!com.malla.mvp.MainActivity.appForeground) {
+                val senderName = NetworkService.connectedPeers[conversationId] ?: conv?.title ?: "Nuevo mensaje"
+                NotificationHelper.showMessageNotification(context, conversationId, senderName, meshMsg.content)
+                DiagnosticsLogger.log(TAG, "Notificación de mensaje mostrada para $conversationId")
+            }
 
             // Enviar ack real al emisor si el mensaje trae messageId
             if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {

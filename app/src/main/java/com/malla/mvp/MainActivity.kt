@@ -24,6 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.biometric.BiometricPrompt
+import androidx.biometric.BiometricManager
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +53,7 @@ import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.core.crypto.IdentityQrPayload
+import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.data.entity.ContactEntity
 import com.malla.mvp.network.ConnectivityMonitor
 import com.malla.mvp.network.MeshConnector
@@ -66,6 +70,7 @@ import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.TransportManager
+import com.malla.mvp.network.InvitationManager
 import com.malla.mvp.ui.components.MainTopBar
 import com.malla.mvp.ui.components.StickerPickerDialog
 import com.malla.mvp.ui.components.StickerFullScreenDialog
@@ -92,19 +97,32 @@ import androidx.compose.runtime.mutableStateOf
 enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
-    private val notifiedNodes = mutableSetOf<String>()
+    companion object {
+        @Volatile var appForeground = false
+            private set
+        @Volatile var instanceForeground = false
+            private set
+    }
+
     @Volatile private var isForeground = false
+        private set
+
+    private val notifiedNodes = mutableSetOf<String>()
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     private val showPermissionExplanationState = mutableStateOf(true)
 
     override fun onResume() {
         super.onResume()
         isForeground = true
+        MainActivity.appForeground = true
+        MainActivity.instanceForeground = true
     }
 
     override fun onPause() {
         super.onPause()
         isForeground = false
+        MainActivity.appForeground = false
+        MainActivity.instanceForeground = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -223,6 +241,68 @@ class MainActivity : FragmentActivity() {
             var showTutorial by remember { mutableStateOf(false) }
             var showPermissionExplanation by showPermissionExplanationState
             val flashlight = remember { FlashlightTransport(context) }
+            var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
+            var showInvitationDialog by remember { mutableStateOf(false) }
+
+            LaunchedEffect(Unit) {
+                InvitationManager.incomingInvitation.collect { invitation ->
+                    incomingInvitation = invitation
+                    showInvitationDialog = true
+                }
+            }
+
+            if (showInvitationDialog && incomingInvitation != null) {
+                val invitation = incomingInvitation!!
+                AlertDialog(
+                    onDismissRequest = { showInvitationDialog = false; incomingInvitation = null },
+                    title = { Text("Solicitud de contacto") },
+                    text = { Text("${invitation.senderDisplayName} (${invitation.senderUserId}) quiere agregarte a sus contactos.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            // Autenticación biométrica antes de aceptar
+                            val biometricManager = BiometricManager.from(context)
+                            if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS) {
+                                val executor = ContextCompat.getMainExecutor(context)
+                                val biometricPrompt = BiometricPrompt(
+                                    context as FragmentActivity,
+                                    executor,
+                                    object : BiometricPrompt.AuthenticationCallback() {
+                                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                            MainScope().launch(Dispatchers.IO) {
+                                                InvitationManager.sendAcceptance(context, invitation)
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(context, "Solicitud aceptada", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                            Toast.makeText(context, "Autenticación cancelada", Toast.LENGTH_SHORT).show()
+                                        }
+                                        override fun onAuthenticationFailed() {
+                                            Toast.makeText(context, "Autenticación fallida", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                )
+                                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                    .setTitle("Verificación biométrica")
+                                    .setSubtitle("Confirma tu identidad para aceptar la solicitud")
+                                    .setNegativeButtonText("Cancelar")
+                                    .build()
+                                biometricPrompt.authenticate(promptInfo)
+                            } else {
+                                MainScope().launch(Dispatchers.IO) {
+                                    InvitationManager.sendAcceptance(context, invitation)
+                                }
+                            }
+                            showInvitationDialog = false
+                            incomingInvitation = null
+                        }) { Text("Aceptar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showInvitationDialog = false; incomingInvitation = null }) { Text("Rechazar") }
+                    }
+                )
+            }
 
             val effectiveScheme by appThemeState.currentTheme.collectAsState()
             val isOnline by ConnectivityMonitor.isOnline.collectAsState()
