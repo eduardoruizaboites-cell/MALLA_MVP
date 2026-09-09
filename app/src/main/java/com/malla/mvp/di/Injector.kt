@@ -1,4 +1,5 @@
 package com.malla.mvp.di
+import com.malla.mvp.data.entity.MeshMessage
 
 import android.content.Context
 import android.util.Log
@@ -50,7 +51,7 @@ object Injector {
             override val connectionState: Flow<Boolean> = NetworkService.connectedClientsCount.map { it > 0 }
             override suspend fun sendMeshMessage(message: CoreMeshMessage): Result<Unit> {
                 return try {
-                    val nsMessage = com.malla.mvp.network.MeshMessage(
+                    val nsMessage = com.malla.mvp.data.entity.MeshMessage(
                         content = message.content,
                         senderId = message.senderId,
                         timestamp = message.timestamp,

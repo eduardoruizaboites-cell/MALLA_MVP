@@ -21,7 +21,7 @@ import com.malla.mvp.core.data.MessageData
 import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.data.entity.PollEntity
 import com.malla.mvp.data.entity.PollOptionEntity
-import com.malla.mvp.network.MeshMessage
+import com.malla.mvp.data.entity.MeshMessage
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.TransportManager
 import com.malla.mvp.network.BleTransport

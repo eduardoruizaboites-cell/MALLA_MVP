@@ -6,7 +6,12 @@ data class MeshMessage(
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
     val isOwn: Boolean = false,
-    val status: Int = 0,  // 0=enviado, 1=entregado, 2=leído
-    val type: Int = 0,    // 0=normal, 1=ACK entrega, 2=ACK lectura
-    val originalMessageId: String? = null // para ACKs, el id del mensaje original
+    val status: Int = 0,                  // 0=enviado, 1=entregado, 2=leído
+    val type: String = "chat",            // "chat", "ack", "poll_create", "typing", etc.
+    val messageId: String? = null,
+    val quotedMessageId: String? = null,
+    val quotedMessageContent: String? = null,
+    val expireAt: Long? = null,
+    val viewOnce: Boolean = false,
+    val originalMessageId: String? = null
 )

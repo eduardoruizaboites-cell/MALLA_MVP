@@ -1,4 +1,5 @@
 package com.malla.mvp.network
+import com.malla.mvp.data.entity.MeshMessage
 
 import android.content.Context
 import android.util.Log

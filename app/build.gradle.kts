@@ -40,6 +40,7 @@ android {
 
 dependencies {
     implementation(project(":network"))
+    implementation(project(":events"))
     implementation(project(":identity"))
     implementation(project(":crypto"))
     implementation(project(":emoji"))

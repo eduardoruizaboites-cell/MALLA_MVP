@@ -1,4 +1,5 @@
 package com.malla.mvp.network
+import com.malla.mvp.data.entity.MeshMessage
 
 import com.malla.mvp.core.network.INetworkService
 import com.malla.mvp.core.network.MeshMessage as CoreMeshMessage

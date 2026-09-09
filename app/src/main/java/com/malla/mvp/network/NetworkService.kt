@@ -1,4 +1,5 @@
 package com.malla.mvp.network
+import com.malla.mvp.data.entity.MeshMessage
 
 import android.util.Log
 import com.malla.mvp.App
@@ -297,14 +298,4 @@ object NetworkService {
     }
 }
 
-data class MeshMessage(
-    val content: String,
-    val senderId: String = "self",
-    val timestamp: Long = System.currentTimeMillis(),
-    val type: String = "chat",
-    val messageId: String? = null,
-    val quotedMessageId: String? = null,
-    val quotedMessageContent: String? = null,
-    val expireAt: Long? = null,
-    val viewOnce: Boolean = false
-)
+

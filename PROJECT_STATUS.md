@@ -1511,3 +1511,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes, copiar código 24h, limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de typing e imágenes.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 03:25 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se unificó la clase MeshMessage en data/entity. Se eliminó duplicado de MallaEventBus (quedó solo events). Se corrigieron imports en Injector, MessageReceiver, TransportManager, etc. Se añadió typingReceived. Quedan compilando las mejoras de imágenes Base64, auto-scroll y typing.
+¿ERA UN FIX DE ERROR?: ERROR: NoSuchMethodError typingReceived por duplicado de MallaEventBus y conflictos de MeshMessage. SOLUCIÓN APLICADA: unificación canónica y limpieza de imports. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó error de versión APK; era duplicado de clases.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de imágenes, typing y notificaciones.
+──────────────────────────────

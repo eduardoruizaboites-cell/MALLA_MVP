@@ -1,4 +1,5 @@
 package com.malla.mvp.network
+import com.malla.mvp.data.entity.MeshMessage
 
 import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.identity.IdentityManager
