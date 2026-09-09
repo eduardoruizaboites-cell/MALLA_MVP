@@ -34,11 +34,11 @@ object ProximityEngine {
             BleManager.start(context)
             BleTransport.start(context)
             // BLE scanning
-            BleManager.startScanningWithCallback { token, name, seed, strength, device ->
+            BleManager.startScanningWithCallback { token, userId, name, seed, strength, device ->
                 val myId = IdentityManager.getIdentityId()
-                DiagnosticsLogger.log("PROX", "Callback BLE: token=$token, name=$name, seed=$seed, device=${device.address}")
+                DiagnosticsLogger.log("PROX", "Callback BLE: token=$token, userId=$userId, name=$name, seed=$seed, device=${device.address}")
                 if (token != generateToken(myId)) {
-                    addOrUpdate(token, name, seed, SignalType.BLE, strength, device)
+                    addOrUpdate(token, userId, name, seed, SignalType.BLE, strength, device)
                 } else {
                     DiagnosticsLogger.log("PROX", "Ignorando anuncio propio: $token")
                 }
@@ -48,7 +48,7 @@ object ProximityEngine {
             val myName = IdentityManager.getUserName(context)
             val myAvatarSeed = myUserId.hashCode()
             val token = generateToken(myUserId)
-            BleManager.startAdvertisingWithData(token, myName, myAvatarSeed)
+            BleManager.startAdvertisingWithUserData(myUserId, token, myName)
 
             // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
             if (!WifiDirectManager.wifiDirectUnsupported) {
@@ -72,10 +72,13 @@ object ProximityEngine {
                     val serviceName = parts.getOrElse(1) { "MALLA_${address.substringBefore(":")}" }
                     val localIp = DhtService.getLocalAddress() ?: "127.0.0.1"
                     val remoteIp = address.substringBefore(":")
-                    if (remoteIp != localIp && remoteIp != "127.0.0.1") {
+                    // Ignorar IPs de rango Wi-Fi Direct para evitar auto-detección del propio grupo
+                    if (remoteIp.startsWith("192.168.49.")) {
+                        DiagnosticsLogger.log("PROX", "Ignorando IP Wi-Fi Direct: $remoteIp")
+                    } else if (remoteIp != localIp && remoteIp != "127.0.0.1") {
                         val token = "mdns_$remoteIp"
                         val displayName = serviceName.removePrefix("MALLA_")
-                        addOrUpdate(token, displayName, 0, SignalType.MDNS, 3)
+                        addOrUpdate(token, null, displayName, 0, SignalType.MDNS, 3)
                     }
                 }
             DiscoveryService.start(context)
@@ -122,7 +125,7 @@ object ProximityEngine {
         // En el futuro se guardará en persistencia
     }
 
-    private fun addOrUpdate(token: String, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
+    private fun addOrUpdate(token: String, userId: String? = null, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
         if (isSelfUser(name, token)) return
         val current = _nearbyUsers.value.toMutableList()
         // Buscar por token exacto
@@ -133,6 +136,7 @@ object ProximityEngine {
         }
         if (idx != -1) {
             current[idx] = current[idx].copy(
+                userId = userId ?: current[idx].userId,
                 displayName = name,
                 signalStrength = maxOf(strength, current[idx].signalStrength),
                 signalType = if (type == SignalType.MDNS) current[idx].signalType else type,
@@ -152,7 +156,7 @@ object ProximityEngine {
                     bluetoothDevice = device ?: existing.bluetoothDevice
                 )
             } else {
-                current.add(NearbyUser(token, name, seed, type, strength, bluetoothDevice = device))
+                current.add(NearbyUser(token = token, userId = userId, displayName = name, avatarSeed = seed, signalType = type, signalStrength = strength, bluetoothDevice = device))
             }
         }
         _nearbyUsers.value = current
@@ -173,7 +177,7 @@ object ProximityEngine {
         if (idx != -1) return
         idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
         if (idx != -1) return // ya existe por otro transporte, no duplicar
-        current.add(NearbyUser(token, name, 0, SignalType.WIFI_DIRECT, 0))
+        current.add(NearbyUser(token = token, userId = null, displayName = name, avatarSeed = 0, signalType = SignalType.WIFI_DIRECT, signalStrength = 0))
         _nearbyUsers.value = current
         DiagnosticsLogger.log("PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
     }

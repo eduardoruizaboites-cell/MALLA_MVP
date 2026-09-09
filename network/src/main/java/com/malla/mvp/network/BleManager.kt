@@ -46,13 +46,13 @@ object BleManager {
     val foundBluetoothDevices: StateFlow<List<BluetoothDevice>> = _foundBluetoothDevices
 
     // ---------- Nuevo: callbacks para ProximityEngine ----------
-    private var proximityScanCallback: ((token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit)? = null
+    private var proximityScanCallback: ((token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit)? = null
     private var acceptanceCallback: ((acceptorName: String, acceptorAvatarSeed: Int) -> Unit)? = null
     private var isProximityScanning = false
     private var isProximityAdvertising = false
 
 
-    private fun hasBlePermissions(context: Context): Boolean {
+    fun hasBlePermissions(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
@@ -112,6 +112,45 @@ object BleManager {
             LogBuffer.add("BLE", "Error de seguridad al iniciar advertising")
         } catch (e: Exception) {
             LogBuffer.add("BLE", "Error al iniciar advertising con payload: ${e.message}")
+        }
+    }
+
+    fun startAdvertisingWithUserData(userId: String, token: String, displayName: String) {
+        if (adapter == null || !adapter!!.isEnabled) {
+            LogBuffer.add("BLE", "No se puede iniciar advertising: Bluetooth no disponible")
+            return
+        }
+        if (advertiser == null) advertiser = adapter!!.bluetoothLeAdvertiser
+        if (isProximityAdvertising) {
+            LogBuffer.add("BLE", "Advertising de proximidad ya activo")
+            return
+        }
+        val context = appContext
+        if (context != null && !hasBlePermissions(context)) {
+            LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
+            DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
+            return
+        }
+        try {
+            val settings = AdvertiseSettings.Builder()
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+                .setConnectable(true)
+                .build()
+            val shortToken = token.take(8)
+            val shortUserId = userId.take(12)
+            val shortName = displayName.take(8)
+            val data = AdvertiseData.Builder()
+                .addServiceData(ParcelUuid(serviceUuid), "$shortToken|$shortUserId|$shortName".toByteArray(Charsets.UTF_8))
+                .build()
+            advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
+            isProximityAdvertising = true
+            LogBuffer.add("BLE", "Advertising con userId iniciado: $userId")
+            DiagnosticsLogger.log("BLE", "Advertising con userId iniciado: $userId")
+        } catch (e: SecurityException) {
+            LogBuffer.add("BLE", "Error de seguridad al iniciar advertising")
+        } catch (e: Exception) {
+            LogBuffer.add("BLE", "Error al iniciar advertising con userId: ${e.message}")
         }
     }
 
@@ -177,8 +216,14 @@ object BleManager {
     }
 
     // ---------- Nuevo: escaneo con callback ----------
-    fun startScanningWithCallback(callback: (token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
+    fun startScanningWithCallback(callback: (token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         if (adapter == null || !adapter!!.isEnabled) return
+        val ctx = appContext ?: return
+        if (!hasBlePermissions(ctx)) {
+            LogBuffer.add("BLE", "Sin permisos BLUETOOTH_SCAN para iniciar escaneo")
+            DiagnosticsLogger.log("BLE", "Sin permisos BLUETOOTH_SCAN para iniciar escaneo")
+            return
+        }
         if (scanner == null) {
             scanner = adapter?.bluetoothLeScanner
         }
@@ -204,7 +249,7 @@ object BleManager {
         proximityScanCallback = null
     }
 
-    fun startScanning(context: Context, callback: (token: String, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
+    fun startScanning(context: Context, callback: (token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         appContext = context.applicationContext
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         adapter = btManager.adapter
@@ -224,9 +269,9 @@ object BleManager {
             val payload = String(serviceData, Charsets.UTF_8)
             val parts = payload.split("|")
             val token = parts[0]
-            val seed = if (parts.size >= 3) parts[2].toIntOrNull() ?: 0 else 0
-            val deviceName = if (parts.size >= 2 && parts[1].isNotBlank()) parts[1] else (result.device.name ?: "MALLA_$token")
-            Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
+            val userIdFromAd = if (parts.size >= 3 && parts[1].isNotBlank()) parts[1] else null
+            val seed = if (parts.size >= 4) parts[3].toIntOrNull() ?: 0 else 0
+            val deviceName = if (parts.size >= 4) parts[2] else if (parts.size == 3) parts[1] else (result.device.name ?: "MALLA_$token")
             Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
             val strength = result.rssi?.let { rssi ->
                 when {
@@ -236,7 +281,7 @@ object BleManager {
                     else -> 0
                 }
             } ?: 0
-            proximityScanCallback?.invoke(token, deviceName, seed, strength, result.device)
+            proximityScanCallback?.invoke(token, userIdFromAd, deviceName, seed, strength, result.device)
             // Comprobar si es un anuncio de aceptación
             if (parts.size >= 4 && parts[0] == "ACCEPT") {
                 val acceptorName = parts[2]

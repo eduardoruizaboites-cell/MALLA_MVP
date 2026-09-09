@@ -96,7 +96,11 @@ object DhtService {
         return try {
             java.net.NetworkInterface.getNetworkInterfaces().asSequence()
                 .flatMap { it.inetAddresses.asSequence() }
-                .firstOrNull { !it.isLoopbackAddress && it.hostAddress?.contains(":") == false }
+                .firstOrNull { addr ->
+                    !addr.isLoopbackAddress &&
+                    addr.hostAddress?.contains(":") == false &&
+                    !addr.hostAddress!!.startsWith("192.168.49.")
+                }
                 ?.hostAddress
         } catch (e: Exception) { null }
     }

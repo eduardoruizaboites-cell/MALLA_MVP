@@ -6,6 +6,7 @@ enum class SignalType { BLE, WIFI_DIRECT, MDNS }
 
 data class NearbyUser(
     val token: String,
+    val userId: String? = null,
     val displayName: String,
     val avatarSeed: Int,
     val signalType: SignalType,

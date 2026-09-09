@@ -58,6 +58,7 @@ object WifiDirectManager : IWifiDirectManager {
         private set
     private var isConnecting = false
     private var discoveryRetryCount = 0
+    private var consecutiveCreateFailures = 0
 
     override fun start(context: Context) {
         startWithGroupName(context, null)
@@ -184,7 +185,14 @@ object WifiDirectManager : IWifiDirectManager {
                     DiagnosticsLogger.log(TAG, "Grupo Wi-Fi Direct creado con nombre $groupName")
                 }
                 override fun onFailure(reason: Int) {
-                    DiagnosticsLogger.log(TAG, "Fallo al crear grupo: razón $reason")
+                    consecutiveCreateFailures++
+                    DiagnosticsLogger.log(TAG, "Fallo al crear grupo: razón $reason (fallo $consecutiveCreateFailures)")
+                    if (consecutiveCreateFailures >= 3) {
+                        wifiDirectUnsupported = true
+                        DiagnosticsLogger.log(TAG, "Wi-Fi Direct deshabilitado por fallos repetidos")
+                        stop()
+                        return
+                    }
                     if (reason == 2) {
                         wifiDirectUnsupported = true
                         DiagnosticsLogger.log(TAG, "Creación de grupo no soportada. Wi-Fi Direct desactivado.")
@@ -203,12 +211,20 @@ object WifiDirectManager : IWifiDirectManager {
             override fun onSuccess() {
                 isDiscovering = false
                 discoveryRetryCount = 0
+                consecutiveCreateFailures = 0
                 DiagnosticsLogger.log(TAG, "Descubrimiento de peers iniciado")
             }
             override fun onFailure(reason: Int) {
                 isDiscovering = false
                 discoveryRetryCount++
-                DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason")
+                consecutiveCreateFailures++
+                DiagnosticsLogger.log(TAG, "Fallo al descubrir peers: razón $reason (fallo $consecutiveCreateFailures)")
+                if (consecutiveCreateFailures >= 3) {
+                    wifiDirectUnsupported = true
+                    DiagnosticsLogger.log(TAG, "Wi-Fi Direct deshabilitado por fallos repetidos")
+                    stop()
+                    return
+                }
                 if (reason == 2) {
                     // P2P_UNSUPPORTED o BUSY persistente: desactivar Wi-Fi Direct
                     wifiDirectUnsupported = true

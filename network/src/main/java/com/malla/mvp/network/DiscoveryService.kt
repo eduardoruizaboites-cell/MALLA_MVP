@@ -35,7 +35,7 @@ object DiscoveryService {
 
     private fun registerService(context: Context) {
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = "MALLA_${IdentityManager.deviceId}"
+            serviceName = "MALLA_${IdentityManager.getUserName(context).take(20)}"
             serviceType = SERVICE_TYPE
             port = 8888
             // La IP se asigna automáticamente al registrarse

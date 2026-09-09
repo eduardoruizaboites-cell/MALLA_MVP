@@ -54,7 +54,9 @@ object TransportManager {
             }.toString().toByteArray(Charsets.UTF_8)
             DiagnosticsLogger.log(TAG, "Intentando enviar por BLE: ${message.content.take(30)}")
             var sentBle = false
-            val device = BleManager.foundBluetoothDevices.value.firstOrNull()
+            val nearby = ProximityEngine.nearbyUsers.value.firstOrNull { it.userId == contactId }
+            val device = nearby?.bluetoothDevice ?: BleManager.foundBluetoothDevices.value.firstOrNull()
+            DiagnosticsLogger.log(TAG, "Dispositivo BLE seleccionado: ${device?.address ?: "null"} para contacto $contactId")
             if (device != null) {
                 // Método directo más confiable: conectar y escribir característica
                 DiagnosticsLogger.log(TAG, "Intentando connectAndWriteData a ${device.address}")
@@ -123,7 +125,9 @@ object TransportManager {
                 put("content", if (isTyping) "1" else "0")
                 put("timestamp", System.currentTimeMillis())
             }.toString().toByteArray(Charsets.UTF_8)
-            val device = BleManager.foundBluetoothDevices.value.firstOrNull()
+            val nearby = ProximityEngine.nearbyUsers.value.firstOrNull { it.userId == contactId }
+            val device = nearby?.bluetoothDevice ?: BleManager.foundBluetoothDevices.value.firstOrNull()
+            DiagnosticsLogger.log(TAG, "Dispositivo BLE seleccionado: ${device?.address ?: "null"} para contacto $contactId")
             if (device != null) {
                 BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
             } else {

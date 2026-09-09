@@ -29,7 +29,10 @@ object DhtWrapper {
                 while (addresses.hasMoreElements()) {
                     val address = addresses.nextElement()
                     if (!address.isLoopbackAddress && address.hostAddress?.contains(":") == false) {
-                        return address.hostAddress
+                        val ip = address.hostAddress
+                        if (ip != null && !ip.startsWith("192.168.49.")) {
+                            return ip
+                        }
                     }
                 }
             }

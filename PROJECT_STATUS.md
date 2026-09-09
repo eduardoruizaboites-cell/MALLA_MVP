@@ -1533,3 +1533,25 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings; mapear BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de imágenes, typing y notificaciones; posible chat fantasma residual.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 16:20 (mejora permisos BLE y robustez Wi-Fi Direct) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se hizo público BleManager.hasBlePermissions y se usó en startScanningWithCallback para evitar escaneo sin permisos en Android 12+. Se añadió contador de fallos consecutivos en WifiDirectManager (discoverPeers y createGroup) y se desactiva automáticamente tras 3 fallos. Se corrigió DhtWrapper.getLocalAddress y DhtService.getLocalAddress para ignorar IPs de rango Wi-Fi Direct 192.168.49.x.
+¿ERA UN FIX DE ERROR?: ERROR: CUBOT (Android 16) no descubría nodos BLE y Wi-Fi Direct fallaba sin desactivarse, generando ruido. SOLUCIÓN APLICADA: verificación real de permisos BLE antes de escanear; desactivación automática de Wi-Fi Direct tras fallos repetidos; filtrado de IPs Wi-Fi Direct no propias. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre Xiaomi y Cubot.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE, Wi-Fi Direct, obtención de IP local.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir botón para copiar código de invitación al portapapeles; mapear BLE→contacto al detectar nodo; fragmentación de imágenes grandes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional BLE sin internet; fragmentación de imágenes; warnings KSP/deprecación.
+──────────────────────────────
+
+── ENTRADA — 2026-09-09 17:15 (identificación BLE por userId y selección de transporte por contacto) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió userId a NearbyUser y al advertising BLE (token|userId|nombre). ProximityEngine ahora propaga userId al detectar nodos. TransportManager elige el BluetoothDevice correcto según contactId en lugar de firstOrNull. DiscoveryService registra el servicio mDNS con el nombre real del usuario. Se filtraron IPs Wi-Fi Direct en DhtWrapper/DhtService/ProximityEngine. Se forzó la solicitud de permisos BLE en Android 12+ desde MainActivity. Se desactivó Wi-Fi Direct tras 3 fallos consecutivos.
+¿ERA UN FIX DE ERROR?: ERROR: los dispositivos no se localizaban ni comunicaban; el envío BLE usaba el primer dispositivo detectado sin filtrar por contacto; el nombre mDNS era aleatorio. SOLUCIÓN APLICADA: incluir userId en advertising/parser y usarlo para mapear dispositivo BLE ↔ contactId; corregir serviceName mDNS con nombre real; filtrar IPs propias Wi-Fi Direct. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre Xiaomi y Cubot.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising, mDNS, Wi-Fi Direct, permisos runtime.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): botón copiar código de invitación; fragmentación de imágenes; mapear BLE→contacto automáticamente al detectar nodo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional BLE sin internet; fragmentación; warnings KSP/deprecación.
+──────────────────────────────

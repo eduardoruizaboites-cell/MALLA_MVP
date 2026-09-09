@@ -290,7 +290,7 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
             onDismissRequest = { showEditNameDialog = false },
             title = { Text("Editar nombre") },
             text = { OutlinedTextField(value = editedName, onValueChange = { editedName = it }, label = { Text("Nombre o apodo") }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = { TextButton(onClick = { if (editedName.isNotBlank()) { userName = editedName; IdentityManager.setUserName(context, editedName); IdentityManager.setUserName(context, editedName) }; showEditNameDialog = false }) { Text("Guardar") } },
+            confirmButton = { TextButton(onClick = { if (editedName.isNotBlank()) { userName = editedName; IdentityManager.setUserName(context, editedName) }; showEditNameDialog = false }) { Text("Guardar") } },
             dismissButton = { TextButton(onClick = { showEditNameDialog = false }) { Text("Cancelar") } }
         )
     }

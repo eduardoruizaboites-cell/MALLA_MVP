@@ -170,33 +170,26 @@ class MainActivity : FragmentActivity() {
             } catch (_: Exception) {}
         }
 
-        // Solicitar todos los permisos necesarios para el funcionamiento completo
-        val requiredPermissions = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.READ_CONTACTS
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requiredPermissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-            requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
-        // Permisos se solicitarán después de la explicación
         // Iniciar servicio foreground para mantener la comunicación viva
         val serviceIntent = Intent(this, MeshChatService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
         } else {
             startService(serviceIntent)
+        }
+
+        // Forzar solicitud de permisos BLE si faltan en Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val blePerms = listOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            )
+            if (blePerms.any { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }) {
+                // Evitar mostrar pantalla de explicación al mismo tiempo
+                showPermissionExplanationState.value = false
+                requestPermissions()
+            }
         }
 
         val appThemeState = AppThemeState.create(this)
