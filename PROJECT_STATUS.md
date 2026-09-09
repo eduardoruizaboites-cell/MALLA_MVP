@@ -1457,3 +1457,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, corrutinas, notificaciones.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código de invitación; limpiar warnings; mapear BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de mensajería bidireccional sin internet.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 01:39 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazaron las comprobaciones directas de BLUETOOTH_CONNECT por helper hasBlePermissions en BleTransport y BleManager. Esto permite que en Android 11 (API 30) no se bloquee la conexión GATT por permisos inexistentes.
+¿ERA UN FIX DE ERROR?: ERROR: Xiaomi no recibía mensajes BLE; la conexión GATT fallaba por pedir BLUETOOTH_CONNECT en API 30 donde no existe. SOLUCIÓN APLICADA: hasBlePermissions para API <31. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por inspección de permisos.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, API 30/31+.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código 24h; limpiar warnings; mapear BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de comunicación bidireccional sin internet.
+──────────────────────────────
