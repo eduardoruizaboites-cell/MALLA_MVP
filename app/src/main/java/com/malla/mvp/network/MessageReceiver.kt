@@ -46,7 +46,7 @@ object MessageReceiver {
         scope.launch {
             BleTransport.messages.collect { bytes ->
                 val raw = String(bytes, Charsets.UTF_8)
-                DiagnosticsLogger.log(TAG, "BLE recibido: $raw")
+                DiagnosticsLogger.log(TAG, "BLE recibido: ${raw.take(120)}")
                 var meshMsg: MeshMessage? = null
                 try {
                     val json = org.json.JSONObject(raw)

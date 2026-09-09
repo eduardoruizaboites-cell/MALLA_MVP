@@ -51,19 +51,22 @@ object TransportManager {
                 put("timestamp", message.timestamp)
             }.toString().toByteArray(Charsets.UTF_8)
             DiagnosticsLogger.log(TAG, "Intentando enviar por BLE: ${message.content.take(30)}")
-            var sentBle = BleTransport.broadcast(payload)
-            DiagnosticsLogger.log(TAG, "BLE broadcast resultado=$sentBle")
+            var sentBle = false
+            val device = BleManager.foundBluetoothDevices.value.firstOrNull()
+            if (device != null) {
+                // Método directo más confiable: conectar y escribir característica
+                DiagnosticsLogger.log(TAG, "Intentando connectAndWriteData a ${device.address}")
+                sentBle = BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                DiagnosticsLogger.log(TAG, "BLE connectAndWriteData resultado=$sentBle")
+            }
             if (!sentBle) {
-                val device = BleManager.foundBluetoothDevices.value.firstOrNull()
-                if (device != null) {
-                    DiagnosticsLogger.log(TAG, "Reintentando BLE a ${device.address}")
+                DiagnosticsLogger.log(TAG, "Fallback a broadcast/sendWithRetry")
+                sentBle = BleTransport.broadcast(payload)
+                DiagnosticsLogger.log(TAG, "BLE broadcast resultado=$sentBle")
+                if (!sentBle && device != null) {
+                    DiagnosticsLogger.log(TAG, "Reintentando sendWithRetry a ${device.address}")
                     sentBle = BleTransport.sendWithRetry(device, payload)
                     DiagnosticsLogger.log(TAG, "BLE sendWithRetry resultado=$sentBle")
-                    if (!sentBle) {
-                        DiagnosticsLogger.log(TAG, "Intentando connectAndWriteData a ${device.address}")
-                        sentBle = BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
-                        DiagnosticsLogger.log(TAG, "BLE connectAndWriteData resultado=$sentBle")
-                    }
                 }
             }
             if (sentBle) {

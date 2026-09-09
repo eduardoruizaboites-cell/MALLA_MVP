@@ -386,6 +386,7 @@ object BleManager {
 
     suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =
         suspendCancellableCoroutine { continuation ->
+            DiagnosticsLogger.log("BleManager", "connectAndWriteData iniciado a ${device.address}")
             val context = appContext ?: run { continuation.resume(false); return@suspendCancellableCoroutine }
             var gatt: BluetoothGatt? = null
             val callback = object : BluetoothGattCallback() {
@@ -409,6 +410,7 @@ object BleManager {
                     } else { gatt?.disconnect() }
                 }
                 override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
+                    DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status=$status")
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         LogBuffer.add("BLE", "Datos escritos en característica de invitación")
                         continuation.resume(true)

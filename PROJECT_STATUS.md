@@ -1468,3 +1468,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, API 30/31+.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código 24h; limpiar warnings; mapear BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de comunicación bidireccional sin internet.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 02:09 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reordenó TransportManager para intentar connectAndWriteData primero, con fallback a broadcast/sendWithRetry. Se añadieron logs en BleManager.connectAndWriteData y se corrigió log en MessageReceiver.
+¿ERA UN FIX DE ERROR?: ERROR: el envío BLE desde Xiaomi fallaba con broadcast; connectAndWriteData sí funcionaba. SOLUCIÓN APLICADA: priorizar connectAndWriteData. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por logs.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE GATT, corrutinas.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): copiar código de invitación; limpiar warnings; mapear BLE→contacto.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final de mensajería bidireccional sin internet.
+──────────────────────────────
