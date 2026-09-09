@@ -1,4 +1,5 @@
 package com.malla.mvp.ui.screen
+import android.graphics.BitmapFactory
 
 import android.content.Context
 import android.net.Uri
@@ -14,6 +15,7 @@ import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -76,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.draw.alpha
 import com.malla.mvp.ui.settings.ChatSettings
@@ -1430,7 +1433,7 @@ fun MessageBubbleV2(
     val textColor = (if (isOwn) ownTextColor else otherTextColor) ?: contrastingTextColor(baseColor)
     val bubbleOpacity = bubbleOpacityParam ?: ChatSettings.bubbleOpacity.collectAsState().value
     val fontSize = fontSizeParam ?: ChatSettings.fontSize.collectAsState().value
-    val onlyEmojis = msg.mediaUri == null && msg.content.isOnlyEmojis() && msg.content.codePointCount(0, msg.content.length) <= 4
+    val onlyEmojis = msg.mediaUri == null && msg.content.length <= 4 && msg.content.isOnlyEmojis()
 
 
     val scale = remember { Animatable(1f) }
@@ -1525,6 +1528,14 @@ private fun BubbleContent(
     fontSize: Float,
     onImageClick: (Uri) -> Unit
 ) {
+    val base64Bitmap = remember(msg.content) {
+        if (msg.mediaUri == null && msg.content.length > 100) {
+            try {
+                val bytes = android.util.Base64.decode(msg.content, android.util.Base64.NO_WRAP)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (_: Exception) { null }
+        } else null
+    }
     Column(horizontalAlignment = if (msg.isOwn) Alignment.End else Alignment.Start) {
         if (!msg.quotedMessageContent.isNullOrBlank()) {
             Surface(
@@ -1583,6 +1594,17 @@ private fun BubbleContent(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
+        } else if (base64Bitmap != null) {
+            Image(
+                bitmap = base64Bitmap.asImageBitmap(),
+                contentDescription = "Imagen recibida",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(4.dp))
         }
         if (msg.isDeleted) {
             Text(

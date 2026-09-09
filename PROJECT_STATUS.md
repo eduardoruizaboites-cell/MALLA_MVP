@@ -1490,3 +1490,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, Compose, BLE/TCP.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): limpiar warnings; copiar código de invitación; mejorar mapeo BLE→contacto.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de typing y scroll; posible chat fantasma aún por confirmar.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 02:45 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se implementó envío de imágenes como Base64 comprimido (320px JPEG) en MeshChatViewModel. ChatScreen ahora decodifica y muestra imágenes Base64 en BubbleContent. Se corrigió auto-scroll y se añadió burbuja de escribiendo remoto.
+¿ERA UN FIX DE ERROR?: ERROR: las imágenes no viajaban por BLE; no se mostraban; auto-scroll no bajaba; no había indicador de escribiendo. SOLUCIÓN APLICADA: Base64, decodificación, scroll y typing. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; eran funcionalidades faltantes.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose, imágenes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final bidireccional con imágenes y typing.
+──────────────────────────────

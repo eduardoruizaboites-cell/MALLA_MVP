@@ -1,6 +1,11 @@
 package com.malla.mvp.viewmodel
 
 import android.app.Application
+import java.io.ByteArrayOutputStream
+import android.net.Uri
+import android.util.Base64
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -218,13 +223,33 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             } else {
                 text.ifBlank { "📷 Imagen" }
             }
+            // Si hay imagen, comprimir y codificar en Base64 para que viaje en content
+            var base64Image: String? = null
+            if (mediaUri != null) {
+                try {
+                    val resolver = getApplication<Application>().contentResolver
+                    val inputStream = resolver.openInputStream(Uri.parse(mediaUri)) ?: return@launch
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    inputStream.close()
+                    if (bitmap != null) {
+                        val scaled = Bitmap.createScaledBitmap(bitmap, 320, 320, false)
+                        val baos = java.io.ByteArrayOutputStream()
+                        scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                        base64Image = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                    }
+                } catch (e: Exception) {
+                    Log.e("MeshChatVM", "Error convirtiendo imagen a Base64", e)
+                }
+            }
+            val contentToSend = base64Image ?: finalContent
+
             val msg = MessageEntity(
                 id = UUID.randomUUID().toString(),
                 conversationId = convId,
-                content = finalContent,
+                content = contentToSend,
                 isOwn = true,
                 expireAt = expireAt,
-                mediaUri = mediaUri,
+                mediaUri = if (base64Image != null) null else mediaUri,
                 viewOnce = viewOnce,
                 quotedMessageId = quotedMessageId,
                 quotedMessageContent = quotedMessageContent,
@@ -235,7 +260,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 // Enviar dirigido al contactId correcto (convId)
                 try {
                     val meshMsg = MeshMessage(
-                        content = finalContent,
+                        content = contentToSend,
                         senderId = IdentityManager.getIdentityId(),
                         timestamp = System.currentTimeMillis(),
                         type = "chat",
