@@ -1566,3 +1566,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, notificaciones, BiometricPrompt
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR; mapear BLE→contacto al detectar nodo.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional; fragmentación; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 18:10 (fix payload BLE excedido) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se redujo el payload BLE de advertising en startAdvertisingWithUserData: se eliminaron guiones del userId y se truncó el nombre a 5 caracteres. El payload total es de 27 bytes, dentro del límite de 31 bytes de Android BLE. Antes excedía y fallaba con "Datos demasiado grandes" en Xiaomi.
+¿ERA UN FIX DE ERROR?: ERROR: Xiaomi no podía anunciarse por BLE; advertising fallaba por exceder 31 bytes. SOLUCIÓN APLICADA: acortar userId y nombre. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causa confirmada por log de error.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional; fragmentación; warnings KSP/deprecación.
+──────────────────────────────
