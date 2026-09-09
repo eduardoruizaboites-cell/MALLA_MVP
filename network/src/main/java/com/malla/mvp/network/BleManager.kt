@@ -137,11 +137,10 @@ object BleManager {
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                 .setConnectable(true)
                 .build()
-            val shortToken = token.take(8)
             val shortUserId = userId.replace("-", "").take(12)
             val shortName = displayName.take(5)
             val data = AdvertiseData.Builder()
-                .addServiceData(ParcelUuid(serviceUuid), "$shortToken|$shortUserId|$shortName".toByteArray(Charsets.UTF_8))
+                .addManufacturerData(0xABCD, "$shortUserId|$shortName".toByteArray(Charsets.UTF_8))
                 .build()
             advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
             isProximityAdvertising = true
@@ -260,18 +259,18 @@ object BleManager {
     private val proximityScanCallbackWrapper = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val record = result.scanRecord ?: return
-            val serviceData = record.serviceData?.get(ParcelUuid(serviceUuid)) ?: return
+            val manufacturerData = record.getManufacturerSpecificData(0xABCD) ?: return
             DiagnosticsLogger.log("BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
             if (!_foundBluetoothDevices.value.contains(result.device)) {
                 _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
                 DiagnosticsLogger.log("BleManager", "Dispositivo BLE añadido: ${result.device.address}, total=${_foundBluetoothDevices.value.size}")
             }
-            val payload = String(serviceData, Charsets.UTF_8)
+            val payload = String(manufacturerData, Charsets.UTF_8)
             val parts = payload.split("|")
-            val token = parts[0]
-            val userIdFromAd = if (parts.size >= 3 && parts[1].isNotBlank()) parts[1] else null
-            val seed = if (parts.size >= 4) parts[3].toIntOrNull() ?: 0 else 0
-            val deviceName = if (parts.size >= 4) parts[2] else if (parts.size == 3) parts[1] else (result.device.name ?: "MALLA_$token")
+            val userIdFromAd = parts.getOrNull(0)?.takeIf { it.isNotBlank() }
+            val deviceName = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: (result.device.name ?: "MALLA_${userIdFromAd ?: "unknown"}")
+            val token = userIdFromAd?.hashCode()?.toUInt()?.toString(16)?.take(8) ?: "00000000"
+            val seed = 0
             Log.i(TAG, "Datos BLE parseados: token=$token, name=$deviceName")
             val strength = result.rssi?.let { rssi ->
                 when {

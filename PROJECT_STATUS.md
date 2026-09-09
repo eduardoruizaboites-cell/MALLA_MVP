@@ -1577,3 +1577,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional; fragmentación; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 18:25 (advertising BLE con manufacturerData) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reemplazó el uso de serviceData por manufacturerData en BleManager.startAdvertisingWithUserData. El parser de escaneo ahora lee getManufacturerSpecificData(0xABCD). El payload publicitario pasó de ~40 bytes (con UUID de servicio) a ~19 bytes, dentro del límite BLE de 31 bytes. Se eliminó el token del payload, derivándolo desde userId.
+¿ERA UN FIX DE ERROR?: ERROR: advertising BLE fallaba en Xiaomi y Cubot con "Datos demasiado grandes" porque serviceData añadía 16 bytes de UUID. SOLUCIÓN APLICADA: usar manufacturerData con ID de 16 bits, mucho más compacto. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre dispositivos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el problema fuera el permiso o el hardware; era el tamaño del payload.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising, manufacturerData.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; permisos BLE en Cubot; comunicación bidireccional; fragmentación; warnings.
+──────────────────────────────
