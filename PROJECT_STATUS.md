@@ -1501,3 +1501,13 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 8+, BLE, Compose, imágenes.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes grandes; copiar código 24h; limpiar warnings.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación final bidireccional con imágenes y typing.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 02:57 ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió typingReceived a MallaEventBus, envío de typing con debounce y burbuja de escribiendo remoto. También imágenes Base64.
+¿ERA UN FIX DE ERROR?: no; fue implementación de features.
+VERIFICADO EN: compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 8+.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes, copiar código 24h, limpiar warnings.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación real de typing e imágenes.
+──────────────────────────────
