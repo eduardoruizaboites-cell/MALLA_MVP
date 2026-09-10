@@ -1632,3 +1632,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Paylo
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): POST_NOTIFICATIONS (Iteración 4); QR sin IP pública (Iteración 5); fragmentación de imágenes.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos viejos huérfanos; notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 01:24 (Iteración 4: verificación defensiva de notificaciones + limpieza) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadieron verificaciones defensivas en util/NotificationHelper antes de notify(): areNotificationsEnabled() y channelBlocked() (canal con IMPORTANCE_NONE). Se añadió log de estado del canal en createChannel. Se eliminó el NotificationHelper duplicado de notification/ (dead code confirmado por grep — nadie lo importaba). NO se modificó el pedido de permisos: POST_NOTIFICATIONS ya estaba declarado en el manifest y ya se solicitaba en runtime.
+¿ERA UN FIX DE ERROR?: ERROR: notificaciones no visibles en Cubot Android 16 aunque el log dice "Notificación de mensaje mostrada". HIPÓTESIS: POST_NOTIFICATIONS denegado silenciosamente o canal malla_messages bloqueado por instalación previa. SOLUCIÓN APLICADA: log defensivo que permite diagnosticar la causa exacta en el próximo run; eliminación de dead code. ¿FUNCIONÓ?: pendiente prueba en dispositivo real. Los nuevos logs en malla_diagnostics.txt dirán si areNotificationsEnabled=false o channelBlocked=true.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que faltara declarar POST_NOTIFICATIONS en manifest o solicitarlo en runtime — ambos ya existían correctamente.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Verificación de canal solo activa en API 26+.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir botón "Reabrir ajustes de notificaciones" en pantalla de settings para guiar al usuario si denegó el permiso.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos viejos huérfanos; QR con IP pública (Iteración 5); fragmentación de imágenes; confirmar en dispositivo el estado real del permiso/canal.
+──────────────────────────────
