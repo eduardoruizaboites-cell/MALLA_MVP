@@ -87,11 +87,17 @@ object BleTransport {
                 override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         connectedGatts[device.address] = gatt
+                        gatt.requestMtu(517)
                         LogBuffer.add("BleTransport", "GATT conectado a ${device.address}")
                         DiagnosticsLogger.log("BleTransport", "GATT conectado a ${device.address}")
                     } else {
                         gatt.disconnect()
                     }
+                }
+                override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+                    val effective = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
+                    LogBuffer.add("BleTransport", "MTU con ${device.address}: $effective")
+                    DiagnosticsLogger.log("BleTransport", "MTU con ${device.address}: $effective")
                 }
             })
             // Mantener referencia para evitar GC
@@ -114,7 +120,7 @@ object BleTransport {
             )
             val inviteChar = BluetoothGattCharacteristic(
                 INVITE_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
             )
             service.addCharacteristic(char)
@@ -171,11 +177,17 @@ object BleTransport {
                 override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         connectedGatts[device.address] = gatt
+                        gatt.requestMtu(517)
                         if (!continuation.isCompleted) continuation.resume(gatt)
                     } else {
                         gatt.disconnect()
                         if (!continuation.isCompleted) continuation.resume(null)
                     }
+                }
+                override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+                    val effective = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
+                    LogBuffer.add("BleTransport", "MTU con ${device.address}: $effective")
+                    DiagnosticsLogger.log("BleTransport", "MTU con ${device.address}: $effective")
                 }
             })
         }

@@ -24,6 +24,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 object BleManager {
     private const val TAG = "BleManager"
@@ -39,6 +43,9 @@ object BleManager {
     private var isScanningActive = false
     private var appContext: Context? = null
     private var gattServer: BluetoothGattServer? = null
+    private val gattCache = java.util.concurrent.ConcurrentHashMap<String, BluetoothGatt>()
+    private val mtuCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val writeMutexes = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
 
     private val _foundDevices = MutableStateFlow<List<String>>(emptyList())
     val foundDevices: StateFlow<List<String>> = _foundDevices
@@ -212,6 +219,10 @@ object BleManager {
         isScanningActive = false
         stopProximityAdvertising()
         stopProximityScanning()
+        gattCache.values.forEach { try { it.disconnect() } catch (_: Exception) {} }
+        gattCache.values.forEach { try { it.close() } catch (_: Exception) {} }
+        gattCache.clear()
+        mtuCache.clear()
     }
 
     // ---------- Nuevo: escaneo con callback ----------
@@ -428,56 +439,78 @@ object BleManager {
 
 
 
-    suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean =
-        suspendCancellableCoroutine { continuation ->
-            DiagnosticsLogger.log("BleManager", "connectAndWriteData iniciado a ${device.address}")
-            val context = appContext ?: run { continuation.resume(false); return@suspendCancellableCoroutine }
-            var gatt: BluetoothGatt? = null
-            val callback = object : BluetoothGattCallback() {
-                override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-                    if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        gatt?.discoverServices()
-                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                        if (!continuation.isCompleted) continuation.resume(false)
-                        gatt?.close()
-                    }
-                }
-                override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        val service = gatt?.getService(serviceUuid)
-                        val characteristic = service?.getCharacteristic(characteristicUuid)
-                        if (characteristic != null) {
-                            characteristic.value = data
-                            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                            val success = gatt?.writeCharacteristic(characteristic) ?: false
-                            DiagnosticsLogger.log("BleManager", "writeCharacteristic (sin respuesta) iniciado, success=$success")
-                            if (success) {
-                                if (!continuation.isCompleted) continuation.resume(true)
-                                // Desconectar tras 300 ms para permitir que el paquete salga
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    gatt?.disconnect()
-                                }, 300)
-                            } else {
-                                if (!continuation.isCompleted) continuation.resume(false)
-                                gatt?.disconnect()
-                            }
-                        } else {
-                            if (!continuation.isCompleted) continuation.resume(false)
-                            gatt?.disconnect()
-                        }
-                    } else {
-                        if (!continuation.isCompleted) continuation.resume(false)
-                        gatt?.disconnect()
-                    }
-                }
-                override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
-                    // No se espera para WRITE_TYPE_NO_RESPONSE, se deja vacío
-                }
-            }
+    suspend fun connectAndWriteData(device: BluetoothDevice, characteristicUuid: UUID, data: ByteArray): Boolean {
+        val mutex = writeMutexes.getOrPut(device.address) { Mutex() }
+        return mutex.withLock {
+            DiagnosticsLogger.log("BleManager", "connectAndWriteData a ${device.address} (${data.size} bytes)")
+            val context = appContext ?: return@withLock false
+            if (!hasBlePermissions(context)) return@withLock false
             try {
-                gatt = device.connectGatt(context, false, callback)
-            } catch (e: SecurityException) {
-                continuation.resume(false)
+                val gatt = gattCache[device.address] ?: establishGatt(device) ?: return@withLock false
+                val mtu = mtuCache[device.address] ?: 23
+                val maxChunk = (mtu - 3).coerceAtLeast(20)
+                if (data.size > maxChunk) {
+                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B excede MTU $mtu (chunk $maxChunk); se rechaza")
+                    return@withLock false
+                }
+                val service = gatt.getService(serviceUuid) ?: return@withLock false
+                val characteristic = service.getCharacteristic(characteristicUuid) ?: return@withLock false
+                characteristic.value = data
+                characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                val ok = gatt.writeCharacteristic(characteristic)
+                DiagnosticsLogger.log("BleManager", "writeCharacteristic success=$ok (mtu=$mtu)")
+                ok
+            } catch (e: Exception) {
+                DiagnosticsLogger.log("BleManager", "Error connectAndWriteData: ${e.message}")
+                try { gattCache.remove(device.address)?.close() } catch (_: Exception) {}
+                false
             }
         }
+    }
+
+    private suspend fun establishGatt(device: BluetoothDevice): BluetoothGatt? {
+        val context = appContext ?: return null
+        val mtuDeferred = CompletableDeferred<Int>()
+        val callback = object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    gatt?.discoverServices()
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    gattCache.remove(device.address)
+                    mtuCache.remove(device.address)
+                    if (!mtuDeferred.isCompleted) mtuDeferred.complete(-1)
+                    try { gatt?.close() } catch (_: Exception) {}
+                }
+            }
+            override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS && gatt != null) {
+                    if (!gatt.requestMtu(517)) {
+                        if (!mtuDeferred.isCompleted) mtuDeferred.complete(23)
+                    }
+                } else {
+                    if (!mtuDeferred.isCompleted) mtuDeferred.complete(-1)
+                    try { gatt?.disconnect() } catch (_: Exception) {}
+                }
+            }
+            override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
+                val effective = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
+                if (!mtuDeferred.isCompleted) mtuDeferred.complete(effective)
+            }
+        }
+        val gatt = try {
+            device.connectGatt(context, false, callback)
+        } catch (e: SecurityException) {
+            return null
+        } ?: return null
+
+        val mtu = withTimeoutOrNull(1500L) { mtuDeferred.await() } ?: 23
+        if (mtu <= 0) {
+            try { gatt.disconnect(); gatt.close() } catch (_: Exception) {}
+            return null
+        }
+        mtuCache[device.address] = mtu
+        gattCache[device.address] = gatt
+        DiagnosticsLogger.log("BleManager", "MTU con ${device.address}: $mtu bytes")
+        return gatt
+    }
 }

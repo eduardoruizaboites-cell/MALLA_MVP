@@ -184,10 +184,17 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     }
 
 
+    private var typingJob: Job? = null
+
     fun sendTyping(isTyping: Boolean) {
         val convId = _conversationId.value ?: return
         if (convId == "self_chat") return
-        viewModelScope.launch {
+        typingJob?.cancel()
+        typingJob = viewModelScope.launch {
+            if (isTyping) {
+                // Debounce: solo enviar "escribiendo" si el usuario sigue tecleando tras 300ms
+                delay(300L)
+            }
             TransportManager.sendTyping(convId, isTyping)
         }
     }

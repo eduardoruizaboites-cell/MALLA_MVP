@@ -1599,3 +1599,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE GATT, permisos runtime.
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): consolidar arranque de ProximityEngine/WifiDirect/BleTransport/TransportManager en un único punto para evitar reinicios; añadir botón copiar código de invitación; fragmentación de imágenes.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional BLE sin internet; intercambio real de código 24h; warnings KSP/deprecación.
 ──────────────────────────────
+
+── ENTRADA — $(date '+%Y-%m-%d %H:%M') (Iteración 1: MTU negotiation + lock GATT + debounce typing) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió negociación de MTU (requestMtu 517 + onMtuChanged) en BleManager.connectAndWriteData y BleTransport.connectGatt/connectGattAndWait. Se implementó cache de GATT por dirección con Mutex por dispositivo para evitar conexiones concurrentes. Se rechazan payloads > MTU con log explícito. Se añadió debounce de 300ms en MeshChatViewModel.sendTyping. Se cambió INVITE_CHAR_UUID a PROPERTY_WRITE_NO_RESPONSE para alinear cliente/servidor.
+¿ERA UN FIX DE ERROR?: ERROR: JSON truncado a ~20 bytes al enviar Cubot→Xiaomi por MTU por defecto (23). 6 conexiones GATT concurrentes por burst de typing. SOLUCIÓN APLICADA: requestMtu(517) tras onServicesDiscovered; cache+Mutex por dirección; debounce 300ms. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo real (Xiaomi+Cubot).
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó problema en el receptor (Xiaomi recibe de Cubot truncado, Cubot recibe de Xiaomi completo — confirma que el emisor es el problema).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot), BLE GATT, MTU variable por fabricante.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación con header para payloads > MTU (imágenes); migración de userId a UUID persistido; filtro typing en receptor; permiso POST_NOTIFICATIONS.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: userId colisionado (Iteración 2); typing sin filtro en receptor (Iteración 3); notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
+──────────────────────────────
