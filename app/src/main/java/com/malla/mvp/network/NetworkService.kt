@@ -179,6 +179,7 @@ object NetworkService {
             val handler = this  // Capturar instancia para usar dentro de la corrutina
             serverScope.launch {
                 try {
+                    DiagnosticsLogger.log(TAG, "[HS:1] Iniciando handshake con socket=${socket.remoteSocketAddress}")
                     input = DataInputStream(socket.getInputStream())
                     output = DataOutputStream(socket.getOutputStream())
 
@@ -186,32 +187,38 @@ object NetworkService {
                     val identityPayload = "$localPublicKeyBase64|$localUserId|$localDisplayName"
                     output?.writeUTF(identityPayload)
                     output?.flush()
+                    DiagnosticsLogger.log(TAG, "[HS:2] Enviado identity (${identityPayload.length} chars, userId=$localUserId)")
 
                     // 2. Recibir datos del peer
+                    DiagnosticsLogger.log(TAG, "[HS:3] Esperando readUTF del peer...")
                     val peerPayload = input?.readUTF() ?: throw Exception("No se recibió identidad")
+                    DiagnosticsLogger.log(TAG, "[HS:4] Recibido del peer: ${peerPayload.take(80)}...")
                     val parts = peerPayload.split("|")
                     if (parts.size < 3) throw Exception("Payload de identidad incompleto")
                     val peerPubKeyBase64 = parts[0]
                     val peerUserId = parts[1]
                     val peerDisplayName = parts[2]
+                    DiagnosticsLogger.log(TAG, "[HS:5] Peer identificado: userId=$peerUserId, displayName=$peerDisplayName")
 
                     // 3. Verificar clave pública si se esperaba una concreta
                     if (expectedPublicKeyBase64 != null && peerPubKeyBase64 != expectedPublicKeyBase64) {
-                        Log.e(TAG, "[NS:HS] Clave pública no coincide para $peerUserId. Desconectando.")
+                        DiagnosticsLogger.log(TAG, "[HS:FAIL] Clave pública no coincide para $peerUserId")
                         socket.close()
                         return@launch
                     }
 
                     // 4. Verificar contactId esperado (si se especificó)
                     if (expectedContactId != null && peerUserId != expectedContactId) {
-                        Log.e(TAG, "[NS:HS] UserId no coincide con el esperado ($peerUserId != $expectedContactId). Desconectando.")
+                        DiagnosticsLogger.log(TAG, "[HS:FAIL] UserId no coincide: esperado=$expectedContactId, recibido=$peerUserId")
                         socket.close()
                         return@launch
                     }
 
                     // 5. Derivar secreto compartido
+                    DiagnosticsLogger.log(TAG, "[HS:6] Derivando secreto compartido...")
                     val peerPublicKey = CryptoEngine.base64ToPublicKey(peerPubKeyBase64)
                     secretKey = CryptoEngine.deriveSharedSecret(localKeyPair.private, peerPublicKey)
+                    DiagnosticsLogger.log(TAG, "[HS:7] Secreto derivado correctamente")
 
                     // 6. Guardar datos del peer
                     handler.contactId = peerUserId
@@ -227,11 +234,13 @@ object NetworkService {
 
                     Log.d(TAG, "[NS:HS] Handshake completado con $peerUserId ($peerDisplayName)")
                     LogBuffer.add("NS", "Handshake ECDH OK: $peerUserId")
+                    DiagnosticsLogger.log(TAG, "[HS:OK] Handshake completo. clients.size=${clients.size}, keys=${clients.keys}")
 
                     // 8. Escuchar mensajes entrantes
                     listenForMessages()
                 } catch (e: Exception) {
                     Log.e(TAG, "[NS:ERR] Handshake fallido: ${e.message}", e)
+                    DiagnosticsLogger.log(TAG, "[HS:FAIL] Handshake falló: ${e.message} | ${e.javaClass.simpleName}")
                     disconnect()
                 }
             }

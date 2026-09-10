@@ -42,8 +42,22 @@ object TransportManager {
     }
 
     suspend fun send(contactId: String, message: MeshMessage) = withContext(Dispatchers.IO) {
-        DiagnosticsLogger.log(TAG, "Enviando mensaje a $contactId; TCP conectado=${NetworkService.isContactConnected(contactId)}")
-        // 1. Intentar BLE broadcast primero (más confiable en mesh sin infraestructura)
+        val tcpConnected = NetworkService.isContactConnected(contactId)
+        DiagnosticsLogger.log(TAG, "Enviando mensaje a $contactId; TCP conectado=$tcpConnected")
+
+        // 1. TCP primero si el peer está conectado por red (más rápido, sin límite de MTU)
+        if (tcpConnected) {
+            try {
+                DiagnosticsLogger.log(TAG, "Usando TCP (peer conectado por red)")
+                NetworkService.sendMessageToContact(contactId, message)
+                updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
+                return@withContext
+            } catch (e: Exception) {
+                DiagnosticsLogger.log(TAG, "TCP falló, cayendo a BLE: ${e.message}")
+            }
+        }
+
+        // 2. BLE broadcast como fallback (mesh sin infraestructura)
         try {
             val payload = org.json.JSONObject().apply {
                 put("senderId", message.senderId)
@@ -90,14 +104,6 @@ object TransportManager {
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
-        }
-
-        // 2. Intentar TCP/IP si hay handler conectado
-        if (NetworkService.isContactConnected(contactId)) {
-            DiagnosticsLogger.log(TAG, "Enviando por TCP a $contactId")
-            NetworkService.sendMessageToContact(contactId, message)
-            updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
-            return@withContext
         }
 
         // 3. Intentar Wi-Fi Direct broadcast

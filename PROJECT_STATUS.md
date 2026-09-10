@@ -1698,3 +1698,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Paylo
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fix de NetworkService.isContactConnected para reconocer peers TCP (bug bloqueante: TCP conectado=false aunque NetworkService reporta "Conectado a 10.86.46.5"); fragmentación BLE cuando MTU<200 (Cubot responde 23 al requestMtu(517)).
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: NetworkService no reconoce peers TCP → todos los mensajes van por BLE; MTU Cubot=23 rechaza payloads >20B; fragmentación BLE pendiente.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 04:06 (Iteración 9: diagnóstico de handshake TCP + reordenar cascada) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: (1) NetworkService.ClientHandler.start ahora emite DiagnosticsLogger.log en cada paso del handshake ([HS:1]...[HS:OK]/[HS:FAIL]) — permite identificar exactamente en qué punto se cuelga o falla. (2) TransportManager.send reordena la cascada: TCP primero si isContactConnected=true, luego BLE, luego Wi-Fi Direct. Antes era BLE → TCP → Wi-Fi Direct. Ahora refleja la prioridad correcta (internet/red antes que BLE).
+¿ERA UN FIX DE ERROR?: ERROR: Cubot reporta "TCP conectado=false" aunque NetworkService dice "Conectado a 10.86.46.5". La causa es que el handshake ECDH no completa (nunca se ejecuta clients[peerUserId] = handler). SOLUCIÓN APLICADA: logs de diagnóstico para identificar el paso exacto del fallo + reordenamiento para usar TCP cuando el handshake sí complete. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo con logs nuevos.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; el fallo del handshake no se puede diagnosticar sin logs detallados, de ahí el cambio.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). El handshake usa DataInputStream.readUTF, sensible a diferencias entre APIs.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): una vez identificado el paso del fallo, evaluar si readUTF debe reemplazarse por readInt+readFully con timeout; fragmentación BLE cuando MTU<200.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: handshake TCP sin completar; MTU Cubot=23 rechaza payloads >20B; fragmentación BLE pendiente; el test del handshake quedó pendiente de los logs.
+──────────────────────────────
