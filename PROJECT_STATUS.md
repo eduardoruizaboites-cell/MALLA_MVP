@@ -1643,3 +1643,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Verif
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): añadir botón "Reabrir ajustes de notificaciones" en pantalla de settings para guiar al usuario si denegó el permiso.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos viejos huérfanos; QR con IP pública (Iteración 5); fragmentación de imágenes; confirmar en dispositivo el estado real del permiso/canal.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 01:26 (Iteración 5: sanitización de IP en QR) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió helper isLocalIp() en IdentityQrPayload que acepta solo 10.x, 172.16-31.x, 192.168.x, 169.254.x. Se aplica en generate() (no incluir IPs no locales en el QR) y en parseAndVerify() (descartar IPs no locales aunque vengan). No se tocó MainActivity ni PerfilScreen: el código existente queda correcto una vez sanitizado el campo localIp.
+¿ERA UN FIX DE ERROR?: ERROR: el QR del Cubot contenía la IP pública 196.83.29.16, causando ENETUNREACH al escanear desde Xiaomi. HIPÓTESIS: DhtWrapper.getLocalAddress() devuelve la IP pública cuando no encuentra interfaz Wi-Fi válida (log: SSID=<unknown>, IP=0.0.0.0). SOLUCIÓN APLICADA: filtro de rango en IdentityQrPayload. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el problema estuviera en el parser (aunque añadimos filtro allí también por defensa en profundidad); la causa está en el generador del QR.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). QRs viejos con IP pública siguen siendo parseados (aceptan el contacto), solo se descarta la IP.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): investigar por qué DhtWrapper.getLocalAddress() devuelve IP pública y corregir en la raíz; mostrar la IP local real en PerfilScreen para diagnóstico; fragmentación de imágenes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos viejos huérfanos; DhtWrapper.getLocalAddress() devolviendo IP pública (causa raíz no corregida, solo mitigada en QR); fragmentación de imágenes; verificar en dispositivo real que el contacto se agrega sin intento TCP fallido.
+──────────────────────────────
