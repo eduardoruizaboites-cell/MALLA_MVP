@@ -1610,3 +1610,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot), BLE G
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación con header para payloads > MTU (imágenes); migración de userId a UUID persistido; filtro typing en receptor; permiso POST_NOTIFICATIONS.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: userId colisionado (Iteración 2); typing sin filtro en receptor (Iteración 3); notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 01:19 (Iteración 2: userId único vía SHA-256 del pubkey) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se reescribió IdentityManager.getIdentityId() para derivar el userId de SHA-256(pubKeyBase64) → 16 hex chars (antes: pubKeyBase64.take(12) con guiones, idéntico en todos los dispositivos por el header DER). getOrCreatePersistentId() ahora devuelve el mismo formato (UUID sin guiones, 16 chars) y regenera si detecta formato viejo. BleManager.startAdvertisingWithUserData usa el userId completo de 16 chars en el payload de manufacturerData.
+¿ERA UN FIX DE ERROR?: ERROR: Cubot y Xiaomi compartían el mismo userId "MFk-wEw-YHK-oZI" porque los primeros 12 chars del base64 de cualquier pubkey secp256r1 son idénticos (header DER). SOLUCIÓN APLICADA: hash SHA-256 sobre el base64 completo. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo real (Xiaomi+Cubot).
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que ambos dispositivos compartieran la misma clave EC — el Keystore genera keypair único por instalación; el problema era exclusivamente el slice.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Payload de advertising: 16+1+5 = 22 bytes, dentro del límite de manufacturerData.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): filtro typing en receptor (Iteración 3); senderName en payload; POST_NOTIFICATIONS (Iteración 4); QR sin IP pública (Iteración 5); fragmentación de imágenes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos existentes con formato viejo quedan huérfanos (aceptable en MVP); typing sin filtro en receptor (Iteración 3); notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
+──────────────────────────────

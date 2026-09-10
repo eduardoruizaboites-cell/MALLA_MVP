@@ -92,7 +92,7 @@ object IdentityManager {
         cachedIdentityId?.let { return it }
         val pubKey = getPublicKeyBase64()
         val id = if (pubKey != null) {
-            pubKey.take(12).chunked(3).joinToString("-")
+            deriveUserIdFromPubKey(pubKey)
         } else {
             getOrCreatePersistentId()
         }
@@ -100,15 +100,29 @@ object IdentityManager {
         return id
     }
 
+    /**
+     * Deriva un userId único de 16 caracteres hex a partir de SHA-256(pubKeyBase64).
+     * A diferencia del esquema anterior (primeros 12 chars del base64 DER, idénticos
+     * en todos los dispositivos por el header del DER), este hash incluye la parte
+     * única de la clave y por tanto es único por dispositivo.
+     */
+    private fun deriveUserIdFromPubKey(pubKeyBase64: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(pubKeyBase64.toByteArray(Charsets.UTF_8))
+        return digest.take(8).joinToString("") { "%02x".format(it) }
+    }
+
     private fun getOrCreatePersistentId(): String {
-        val context = appContext ?: return java.util.UUID.randomUUID().toString().take(8).chunked(3).joinToString("-")
+        val context = appContext
+            ?: return java.util.UUID.randomUUID().toString().replace("-", "").take(16)
         val prefs = context.getSharedPreferences(ID_PREFS, Context.MODE_PRIVATE)
         var id = prefs.getString(PERSISTENT_ID_KEY, null)
-        if (id == null) {
-            id = java.util.UUID.randomUUID().toString().take(8)
+        // Regenerar si no existe o si tiene el formato viejo (8 chars con guiones)
+        if (id == null || id.length != 16 || id.contains("-")) {
+            id = java.util.UUID.randomUUID().toString().replace("-", "").take(16)
             prefs.edit().putString(PERSISTENT_ID_KEY, id).apply()
         }
-        return id.chunked(3).joinToString("-")
+        return id
     }
 
     fun getPrivateKey(): PrivateKey {

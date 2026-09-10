@@ -144,7 +144,8 @@ object BleManager {
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                 .setConnectable(true)
                 .build()
-            val shortUserId = userId.replace("-", "").take(12)
+            // userId ahora son 16 chars hex sin guiones (SHA-256 truncado). Se envía completo.
+            val shortUserId = userId.take(16)
             val shortName = displayName.take(5)
             val data = AdvertiseData.Builder()
                 .addManufacturerData(0xABCD, "$shortUserId|$shortName".toByteArray(Charsets.UTF_8))
