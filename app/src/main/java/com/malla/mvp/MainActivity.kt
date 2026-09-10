@@ -93,6 +93,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import androidx.compose.runtime.mutableStateOf
+import com.malla.mvp.core.config.MeshFlags
 
 enum class AppState { Splash, Main }
 
@@ -138,7 +139,9 @@ class MainActivity : FragmentActivity() {
         DeviceStateMonitor.start(this)
         CacheCleanerWorker.schedule(this)
         NotificationHelper.createChannel(this)
-        DhtWrapper.init(this)
+        if (MeshFlags.enableDht) {
+            DhtWrapper.init(this)
+        }
         insertSampleStories()
 
         // Iniciar servidor TCP siempre (para comunicación directa)
@@ -319,10 +322,12 @@ class MainActivity : FragmentActivity() {
                         meshToastShown.value = true
                     }
                     LogBuffer.add("MAIN", "Sin internet – usando comunicaciones locales")
-                    // Publicar presencia en DHT
-                    val myUserId = IdentityManager.getIdentityId() ?: ""
-                    val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
-                    DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
+                    if (MeshFlags.enableDht) {
+                        // Publicar presencia en DHT
+                        val myUserId = IdentityManager.getIdentityId() ?: ""
+                        val myIp = DhtWrapper.getLocalAddress() ?: "127.0.0.1"
+                        DhtWrapper.publish(myUserId, myIp, NetworkService.DEFAULT_PORT)
+                    }
                 }
             }
 

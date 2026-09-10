@@ -24,6 +24,7 @@ import com.malla.mvp.network.SeedManager
 import com.malla.mvp.network.MessageReceiver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import com.malla.mvp.core.config.MeshFlags
 
 object Injector {
     lateinit var messageBridge: MessageBridge
@@ -79,9 +80,11 @@ object Injector {
         }
         this.networkService = networkService
 
-        // Iniciar transporte global (WebRTC DataChannel)
-        GlobalTransport.start()
-        this.networkService = GlobalTransport
+        // Iniciar transporte global (WebRTC DataChannel) solo si legacy está activo
+        if (MeshFlags.enableLegacyTransport) {
+            GlobalTransport.start()
+            this.networkService = GlobalTransport
+        }
 
         // Repositorio de mensajes (Room)
         val messageRepo = object : IMessageRepository {
@@ -166,14 +169,18 @@ object Injector {
         // Puente de mensajes
         messageBridge = MessageBridge(context, networkService, messageRepo, conversationRepo, logger, notificationHelper)
         messageBridge.onSendMessage = { contactId, text ->
-            CascadeRouter.sendMessage(contactId, text)
+            if (MeshFlags.enableLegacyTransport) {
+                CascadeRouter.sendMessage(contactId, text)
+            }
         }
         messageBridge.start()
         MessageReceiver.start(context)
 
         // Inicializar Premium y perfil del dispositivo
         PremiumManager.init()
-        DhtService.start()
+        if (MeshFlags.enableDht) {
+            DhtService.start()
+        }
         SeedManager.init(context)
         CoroutineScope(Dispatchers.IO).launch {
             DeviceProfile.initialize(context)

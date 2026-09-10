@@ -21,6 +21,7 @@ import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.malla.mvp.core.config.MeshFlags
 
 class MeshChatService : Service() {
     override fun onCreate() {
@@ -47,7 +48,9 @@ class MeshChatService : Service() {
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             TransportManager.start(this@MeshChatService)
             ProximityEngine.start(this@MeshChatService)
-            com.malla.mvp.network.MeshConnector.start()
+            if (MeshFlags.enableLegacyTransport) {
+                com.malla.mvp.network.MeshConnector.start()
+            }
             InvitationManager.start(this@MeshChatService)
         }
     }

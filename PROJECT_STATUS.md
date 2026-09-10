@@ -1665,3 +1665,25 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Fix d
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): desconectar MeshConnector/GlobalTransport (sistema viejo) para eliminar la coexistencia de dos transportes; borrar app/transport/ (dead code); borrar GattServerManager.kt (dead code); limpiar módulos fantasma en settings.gradle.kts; borrar archivos basura raíz (0, tatus, {, *.py, *.txt).
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: coexisten sistema de transporte viejo (MeshConnector/GlobalTransport/CascadeRouter/WebRtc) y nuevo (TransportManager/BleManager/BleTransport/ProximityEngine) sin desconectar; Dead code en app/transport y GattServerManager; Módulos fantasma en settings.gradle.kts; Archivos basura en raíz; PROJECT_STATUS.md sin congelar (1656 líneas); Confirmar con logs post-fix si MTU es simétrico entre ambos dispositivos y si el userId del advertising coincide con el del Room tras escanear QR.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 03:34 (Iteración 6: fixes puntuales post-auditoría) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: (1) sendInvitation en BleTransport ahora negocia MTU (requestMtu 517) antes de escribir, mismo patrón que Iteración 1 para mensajes. (2) sendZumbido en MeshChatViewModel usa IdentityManager.getIdentityId() en vez de senderId="self" literal. (3) Logs de diagnóstico en TransportManager.send que listan nearbyUsers completos y avisan cuando el contacto no está. (4) Log del userId propio en ProximityEngine.start.
+¿ERA UN FIX DE ERROR?: SÍ, dos: ERROR: invitación BLE llegaba truncada ("Unterminated string at character 20") porque sendInvitation no negociaba MTU → SOLUCIÓN: requestMtu antes de writeCharacteristic. ERROR: zumbidos creaban chat "peer self" en receptor → SOLUCIÓN: senderId real. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que Iteración 1 hubiera ido al archivo equivocado (los imports apuntan todos a network/BleTransport, no al stub de app/transport).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): Iteración 7 con feature flags para desconectar sistema viejo (MeshConnector/GlobalTransport/CascadeRouter) y WifiDirect/DHT bajo demanda.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: coexistencia de sistemas de transporte; Wi-Fi Direct arrancado permanente; DHT con bug de IP pública; fragmentación de imágenes.
+──────────────────────────────
+
+── ENTRADA — 2026-09-10 03:38 (Iteración 7: feature flags y apagado quirúrgico) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se creó core/config/MeshFlags.kt con 6 flags (enableBle=true, enableTcpLan=true, enableWebRtc=false, enableWifiDirect=false, enableDht=false, enableLegacyTransport=false). Se guardaron los arranques con flags en: MeshChatService (MeshConnector), Injector (GlobalTransport + CascadeRouter + DhtService), ProximityEngine (Wi-Fi Direct), MainActivity (DhtWrapper init + publish). Todo reversible cambiando un flag en MeshFlags.kt.
+¿ERA UN FIX DE ERROR?: ERROR estructural: 3 sistemas de transporte coexistiendo (nuevo TransportManager + viejo MeshConnector + GlobalTransport), Wi-Fi Direct arrancado permanentemente pese a no aportar, DHT con bug de IP pública. SOLUCIÓN APLICADA: apagado quirúrgico con flags sin borrar código. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo con logs limpios.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica (cambio arquitectónico planificado).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Sin cambios de compatibilidad.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mover MeshFlags a SharedPreferences para alternar canales desde Ajustes sin recompilar; store-and-forward con retry real; fragmentación de imágenes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: store-and-forward real; fragmentación de imágenes; WebRTC sin cablear a TransportManager; Wi-Fi Direct bajo demanda.
+──────────────────────────────

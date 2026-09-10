@@ -10,6 +10,7 @@ import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.core.wifi.WifiDirectPeer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import com.malla.mvp.core.config.MeshFlags
 
 object ProximityEngine {
     @Volatile private var started = false
@@ -51,8 +52,10 @@ object ProximityEngine {
             DiagnosticsLogger.log("PROX", "Advertising propio: userId=$myUserId, name=$myName, token=$token")
             BleManager.startAdvertisingWithUserData(myUserId, token, myName)
 
-            // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
-            if (!WifiDirectManager.wifiDirectUnsupported) {
+            // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado Y habilitado
+            if (!MeshFlags.enableWifiDirect) {
+                LogBuffer.add("PROX", "Wi-Fi Direct deshabilitado por MeshFlags (modo minimalista)")
+            } else if (!WifiDirectManager.wifiDirectUnsupported) {
                 val groupName = "MALLA_$myName"
                 WifiDirectManager.startWithGroupName(context, groupName)
             } else {
