@@ -448,18 +448,30 @@ object BleManager {
                         val characteristic = service?.getCharacteristic(characteristicUuid)
                         if (characteristic != null) {
                             characteristic.value = data
-                            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                            gatt?.writeCharacteristic(characteristic)
-                        } else { gatt?.disconnect() }
-                    } else { gatt?.disconnect() }
+                            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                            val success = gatt?.writeCharacteristic(characteristic) ?: false
+                            DiagnosticsLogger.log("BleManager", "writeCharacteristic (sin respuesta) iniciado, success=$success")
+                            if (success) {
+                                if (!continuation.isCompleted) continuation.resume(true)
+                                // Desconectar tras 300 ms para permitir que el paquete salga
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    gatt?.disconnect()
+                                }, 300)
+                            } else {
+                                if (!continuation.isCompleted) continuation.resume(false)
+                                gatt?.disconnect()
+                            }
+                        } else {
+                            if (!continuation.isCompleted) continuation.resume(false)
+                            gatt?.disconnect()
+                        }
+                    } else {
+                        if (!continuation.isCompleted) continuation.resume(false)
+                        gatt?.disconnect()
+                    }
                 }
                 override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
-                    DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status=$status")
-                    if (status == BluetoothGatt.GATT_SUCCESS) {
-                        LogBuffer.add("BLE", "Datos escritos en característica de invitación")
-                        continuation.resume(true)
-                    } else { continuation.resume(false) }
-                    gatt?.disconnect()
+                    // No se espera para WRITE_TYPE_NO_RESPONSE, se deja vacío
                 }
             }
             try {

@@ -109,7 +109,7 @@ object BleTransport {
             val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
             val char = BluetoothGattCharacteristic(
                 MESSAGE_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
             )
             val inviteChar = BluetoothGattCharacteristic(
@@ -148,7 +148,7 @@ object BleTransport {
         }
 
         repeat(maxRetries) { attempt ->
-            val result = writeCharacteristicWithConfirmation(gatt, data)
+            val result = writeCharacteristicWithoutConfirmation(gatt, data)
             if (result) return true
             delay(1000L * (attempt + 1))
         }
@@ -180,28 +180,17 @@ object BleTransport {
             })
         }
 
-    private suspend fun writeCharacteristicWithConfirmation(gatt: BluetoothGatt, data: ByteArray): Boolean =
-        suspendCancellableCoroutine { continuation ->
-            try {
-                val service = gatt.getService(SERVICE_UUID) ?: run {
-                    continuation.resume(false); return@suspendCancellableCoroutine
-                }
-                val char = service.getCharacteristic(MESSAGE_CHAR_UUID) ?: run {
-                    continuation.resume(false); return@suspendCancellableCoroutine
-                }
-                char.value = data
-                char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                val key = gatt.device.address
-                writeConfirmations[key] = continuation
-                val success = gatt.writeCharacteristic(char)
-                if (!success) {
-                    writeConfirmations.remove(key)
-                    continuation.resume(false)
-                }
-            } catch (e: Exception) {
-                continuation.resume(false)
-            }
+    private suspend fun writeCharacteristicWithoutConfirmation(gatt: BluetoothGatt, data: ByteArray): Boolean {
+        return try {
+            val service = gatt.getService(SERVICE_UUID) ?: return false
+            val char = service.getCharacteristic(MESSAGE_CHAR_UUID) ?: return false
+            char.value = data
+            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            gatt.writeCharacteristic(char)
+        } catch (e: Exception) {
+            false
         }
+    }
 
     private fun handleWriteConfirmation(address: String, success: Boolean) {
         writeConfirmations.remove(address)?.let { cont ->
@@ -263,7 +252,7 @@ object BleTransport {
             return
         }
         char.value = data
-        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         val success = gatt.writeCharacteristic(char)
         Log.i("BleTransport", "Escritura de invitación iniciada: $success")
         DiagnosticsLogger.log("BleTransport", "Escritura de invitación iniciada: $success")
@@ -301,7 +290,7 @@ object BleTransport {
         val service = gatt.getService(SERVICE_UUID) ?: return
         val char = service.getCharacteristic(MESSAGE_CHAR_UUID) ?: return
         char.value = data
-        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         gatt.writeCharacteristic(char)
     }
 

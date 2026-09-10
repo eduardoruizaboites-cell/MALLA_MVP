@@ -1588,3 +1588,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE advertising, manufacturerDa
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentación de imágenes; botón copiar código; envío de invitación al agregar por QR.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; permisos BLE en Cubot; comunicación bidireccional; fragmentación; warnings.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-09 19:00 (fix BLE GATT write con WRITE_TYPE_NO_RESPONSE) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se cambió en BleManager.connectAndWriteData y BleTransport (servidor GATT) el tipo de escritura de WRITE_TYPE_DEFAULT a WRITE_TYPE_NO_RESPONSE; se ajustaron las propiedades de las características a PROPERTY_WRITE_NO_RESPONSE y se simplificó la confirmación de escritura para evitar cuelgues.
+¿ERA UN FIX DE ERROR?: ERROR: La escritura BLE desde Cubot (cliente) hacia Xiaomi (servidor) fallaba con status 133 (GATT_ERROR) al usar WRITE_TYPE_DEFAULT, pues el servidor no respondía a la escritura con responseNeeded. SOLUCIÓN APLICADA: migrar a escritura sin respuesta (WRITE_TYPE_NO_RESPONSE) en cliente y servidor; en cliente se considera éxito inmediato si writeCharacteristic retorna true y se desconecta tras 300 ms. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba real entre Xiaomi y Cubot.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se consideró que el servidor no exponía la característica o que el UUID era incorrecto; se confirmó por inspección que el error era de tipo de escritura/permisos GATT.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11/16, BLE GATT, permisos runtime.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): consolidar arranque de ProximityEngine/WifiDirect/BleTransport/TransportManager en un único punto para evitar reinicios; añadir botón copiar código de invitación; fragmentación de imágenes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: validación inter-dispositivo; comunicación bidireccional BLE sin internet; intercambio real de código 24h; warnings KSP/deprecación.
+──────────────────────────────
