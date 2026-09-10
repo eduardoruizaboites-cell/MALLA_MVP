@@ -55,6 +55,17 @@ object TransportManager {
             DiagnosticsLogger.log(TAG, "Intentando enviar por BLE: ${message.content.take(30)}")
             var sentBle = false
             val nearby = ProximityEngine.nearbyUsers.value.firstOrNull { it.userId == contactId }
+            val allNearby = ProximityEngine.nearbyUsers.value
+            DiagnosticsLogger.log(
+                TAG,
+                "Contacto=$contactId | nearbyUsers=${allNearby.map { "${it.userId}:${it.displayName}:${it.bluetoothDevice?.address}" }}"
+            )
+            if (nearby == null) {
+                DiagnosticsLogger.log(
+                    TAG,
+                    "AVISO: contacto $contactId NO está en nearbyUsers. Fallback a firstOrNull (posible envío a device incorrecto)."
+                )
+            }
             val device = nearby?.bluetoothDevice ?: BleManager.foundBluetoothDevices.value.firstOrNull()
             DiagnosticsLogger.log(TAG, "Dispositivo BLE seleccionado: ${device?.address ?: "null"} para contacto $contactId")
             if (device != null) {

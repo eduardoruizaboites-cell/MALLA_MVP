@@ -201,12 +201,13 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
 
     fun sendZumbido() {
         val convId = _conversationId.value ?: return
+        val myUserId = IdentityManager.getIdentityId()
         viewModelScope.launch {
             MallaEventBus.zumbidoReceived.tryEmit(
-                MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido")
+                MeshMessage(content = "📳 Zumbido", senderId = myUserId, type = "zumbido")
             )
             if (convId != "self_chat") {
-                TransportManager.send(convId, MeshMessage(content = "📳 Zumbido", senderId = "self", type = "zumbido"))
+                TransportManager.send(convId, MeshMessage(content = "📳 Zumbido", senderId = myUserId, type = "zumbido"))
             }
         }
     }

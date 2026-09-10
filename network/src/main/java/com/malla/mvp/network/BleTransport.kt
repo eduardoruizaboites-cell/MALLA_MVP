@@ -229,27 +229,39 @@ object BleTransport {
     fun sendInvitation(device: BluetoothDevice, payload: ByteArray) {
         val context = appContext ?: return
         if (!hasBlePermissions(context)) return
-        var gatt = connectedGatts[device.address]
-        if (gatt != null) {
-            writeInvitationCharacteristic(gatt, payload)
+        val existing = connectedGatts[device.address]
+        if (existing != null) {
+            writeInvitationCharacteristic(existing, payload)
             return
         }
-        gatt = device.connectGatt(context, true, object : BluetoothGattCallback() {
+        val gattRef = device.connectGatt(context, true, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     gatt.discoverServices()
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     connectedGatts.remove(device.address)
-                    gatt.close()
+                    try { gatt.close() } catch (_: Exception) {}
                 }
             }
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     connectedGatts[device.address] = gatt
-                    writeInvitationCharacteristic(gatt, payload)
+                    // Negociar MTU antes de escribir la invitación (mismo fix que en Iteración 1
+                    // para mensajes; este camino se quedó sin él).
+                    val ok = gatt.requestMtu(517)
+                    if (!ok) {
+                        // Si requestMtu no está soportado, escribir igual con MTU por defecto.
+                        writeInvitationCharacteristic(gatt, payload)
+                    }
                 } else {
                     gatt.disconnect()
                 }
+            }
+            override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+                val effective = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
+                LogBuffer.add("BleTransport", "MTU invite con ${device.address}: $effective")
+                DiagnosticsLogger.log("BleTransport", "MTU invite con ${device.address}: $effective")
+                writeInvitationCharacteristic(gatt, payload)
             }
         })
     }

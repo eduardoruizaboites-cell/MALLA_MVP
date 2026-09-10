@@ -48,6 +48,7 @@ object ProximityEngine {
             val myName = IdentityManager.getUserName(context)
             val myAvatarSeed = myUserId.hashCode()
             val token = generateToken(myUserId)
+            DiagnosticsLogger.log("PROX", "Advertising propio: userId=$myUserId, name=$myName, token=$token")
             BleManager.startAdvertisingWithUserData(myUserId, token, myName)
 
             // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado
