@@ -1687,3 +1687,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Sin c
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): mover MeshFlags a SharedPreferences para alternar canales desde Ajustes sin recompilar; store-and-forward con retry real; fragmentación de imágenes.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: store-and-forward real; fragmentación de imágenes; WebRTC sin cablear a TransportManager; Wi-Fi Direct bajo demanda.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 04:03 (Iteración 8: 4 fixes post-logs + auto-conexión self) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: (1) NearbySection.kt: eliminado DisposableEffect con ProximityEngine.start/stop — el motor es dueño MeshChatService y ya no se apaga al cambiar de pantalla. (2) BleTransport.start: filtro para no auto-conectar al propio device (evita el eco "peer self" observado en logs de Cubot). (3) BleManager.startAdvertisingWithUserData: nombre truncado a 6 chars de la primera palabra + payload condicional. Evita "Datos demasiado grandes" cuando el nombre es el default "Usuario Malla". (4) InvitationManager: filtro isLocalIp sobre senderLocalIp — no incluir IPs públicas (bug ya visto en el log: 196.83.29.16).
+¿ERA UN FIX DE ERROR?: SÍ, cuatro bugs confirmados en logs: ProximityEngine se reiniciaba cada ~30s; Cubot recibía eco de sus propios mensajes; advertising fallaba en Xiaomi; invitación filtraba IP pública.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica; causas confirmadas por lectura directa del código.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Payload advertising reducido a 23 bytes.
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fix de NetworkService.isContactConnected para reconocer peers TCP (bug bloqueante: TCP conectado=false aunque NetworkService reporta "Conectado a 10.86.46.5"); fragmentación BLE cuando MTU<200 (Cubot responde 23 al requestMtu(517)).
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: NetworkService no reconoce peers TCP → todos los mensajes van por BLE; MTU Cubot=23 rechaza payloads >20B; fragmentación BLE pendiente.
+──────────────────────────────

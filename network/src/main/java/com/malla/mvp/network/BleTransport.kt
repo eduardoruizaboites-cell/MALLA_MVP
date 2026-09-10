@@ -58,7 +58,15 @@ object BleTransport {
         // Observar dispositivos BLE detectados para conectar GATT automáticamente
         discoveryJob = scope.launch {
             BleManager.foundBluetoothDevices.collect { devices ->
+                val myAddress = try {
+                    BleManager.getAdapter()?.address
+                } catch (_: SecurityException) { null }
                 devices.forEach { device ->
+                    // NO conectar al propio dispositivo (evita el "eco" / peer self)
+                    if (myAddress != null && device.address == myAddress) {
+                        DiagnosticsLogger.log(TAG, "Ignorando auto-conexión al propio device: ${device.address}")
+                        return@forEach
+                    }
                     if (!connectedGatts.containsKey(device.address)) {
                         connectGatt(device)
                     }

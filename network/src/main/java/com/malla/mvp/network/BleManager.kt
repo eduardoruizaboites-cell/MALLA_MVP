@@ -144,12 +144,15 @@ object BleManager {
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                 .setConnectable(true)
                 .build()
-            // Payload: userId(16) + "|"(1) + nombre(10) = 27 bytes, dentro del límite BLE
-            // (manufacturerData: 2 bytes de cabecera + hasta 27 bytes de payload).
+            // Payload: userId(16) + "|"(1) + nombre(6) = 23 bytes.
+            // Con 6 chars cabemos siempre en el advertising de 31 bytes, incluso con
+            // AdvertiseData flags y el header de manufacturerData. Con 10 chars fallaba
+            // en Xiaomi cuando el nombre era el default "Usuario Malla".
             val shortUserId = userId.take(16)
-            val shortName = displayName.take(10)
+            val shortName = displayName.split(" ").firstOrNull()?.take(6).orEmpty()
+            val payload = if (shortName.isBlank()) shortUserId else "$shortUserId|$shortName"
             val data = AdvertiseData.Builder()
-                .addManufacturerData(0xABCD, "$shortUserId|$shortName".toByteArray(Charsets.UTF_8))
+                .addManufacturerData(0xABCD, payload.toByteArray(Charsets.UTF_8))
                 .build()
             advertiser?.startAdvertising(settings, data, proximityAdvertiseCallback)
             isProximityAdvertising = true

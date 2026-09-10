@@ -34,13 +34,11 @@ import com.malla.mvp.network.ProximityEngine
 
 @Composable
 fun NearbySection(onConnectClick: (NearbyUser) -> Unit) {
-    val context = LocalContext.current
     val nearbyUsers by ProximityEngine.nearbyUsers.collectAsState()
 
-    DisposableEffect(Unit) {
-        ProximityEngine.start(context)
-        onDispose { ProximityEngine.stop() }
-    }
+    // NOTA: ProximityEngine se arranca una sola vez desde MeshChatService.onCreate.
+    // NO detenerlo aquí en onDispose: el servicio es el dueño del ciclo de vida.
+    // Detenerlo aquí limpiaba nearbyUsers cada vez que este componente se desmontaba.
 
     AnimatedVisibility(
         visible = nearbyUsers.isNotEmpty(),
