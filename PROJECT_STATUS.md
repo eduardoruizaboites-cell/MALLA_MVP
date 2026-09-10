@@ -1621,3 +1621,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Paylo
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): filtro typing en receptor (Iteración 3); senderName en payload; POST_NOTIFICATIONS (Iteración 4); QR sin IP pública (Iteración 5); fragmentación de imágenes.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos existentes con formato viejo quedan huérfanos (aceptable en MVP); typing sin filtro en receptor (Iteración 3); notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-10 01:22 (Iteración 3: filtro typing + senderName en payload) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se añadió filtro type=="typing" en MessageReceiver antes del bloque de persistencia; emite MallaEventBus.typingReceived y no guarda el mensaje. Se añadieron campos senderName y senderAvatarSeed a MeshMessage. TransportManager.send y sendTyping incluyen senderName en el JSON cuando hay appContext (guardado en start()). MessageReceiver usa senderName del payload como primera opción para el título de conversación (fallback a connectedPeers, luego ProximityEngine, luego Peer <id>). BleManager.startAdvertisingWithUserData amplió el nombre a 10 chars.
+¿ERA UN FIX DE ERROR?: ERROR: 1) cada typing (1/0) se guardaba como mensaje real. 2) El título del chat entrante era "Peer <id>" porque connectedPeers solo se llena por TCP. SOLUCIÓN APLICADA: filtro typing con early return + senderName en el contrato del payload. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo real.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el problema del chat "Peer" fuera por BLE — era por ausencia de displayName en el payload JSON. Se descartó que TransportManager tuviera acceso al contexto global vía App.instance (no existe esa clase); se guardó el contexto en start().
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Payload BLE reducido a 27 bytes (límite 31).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): POST_NOTIFICATIONS (Iteración 4); QR sin IP pública (Iteración 5); fragmentación de imágenes.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: contactos viejos huérfanos; notificaciones Android 13+ (Iteración 4); QR con IP pública (Iteración 5); fragmentación de imágenes.
+──────────────────────────────

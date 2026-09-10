@@ -13,5 +13,7 @@ data class MeshMessage(
     val quotedMessageContent: String? = null,
     val expireAt: Long? = null,
     val viewOnce: Boolean = false,
-    val originalMessageId: String? = null
+    val originalMessageId: String? = null,
+    val senderName: String? = null,       // Display name real del emisor (para título del chat)
+    val senderAvatarSeed: Int = 0         // Seed para avatar determinista en receptor
 )

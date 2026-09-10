@@ -53,12 +53,16 @@ object MessageReceiver {
                 try {
                     val json = org.json.JSONObject(raw)
                     val extractedContent = json.optString("content", "")
+                    val senderNameFromJson = json.optString("senderName", "").takeIf { it.isNotBlank() }
+                    val seedFromJson = json.optInt("senderAvatarSeed", 0)
                     meshMsg = MeshMessage(
                         content = if (extractedContent.isNotBlank()) extractedContent else raw,
                         senderId = json.optString("senderId", json.optString("senderld", "unknown")),
                         timestamp = json.optLong("timestamp", System.currentTimeMillis()),
                         type = json.optString("type", "chat"),
-                        messageId = json.optString("messageId", null)
+                        messageId = json.optString("messageId", null),
+                        senderName = senderNameFromJson,
+                        senderAvatarSeed = seedFromJson
                     )
                     DiagnosticsLogger.log(TAG, "BLE JSON recibido: senderId=${meshMsg.senderId}, content=${meshMsg.content.take(30)}")
                 } catch (_: Exception) {
@@ -115,6 +119,13 @@ object MessageReceiver {
                 return
             }
             bloomFilter.add(messageId)
+
+            if (meshMsg.type == "typing") {
+                val isTyping = meshMsg.content == "1"
+                MallaEventBus.typingReceived.emit(meshMsg.senderId to isTyping)
+                DiagnosticsLogger.log(TAG, "Typing de ${meshMsg.senderId}: $isTyping")
+                return
+            }
 
             if (meshMsg.type == "poll_create") {
                 try {
@@ -198,7 +209,10 @@ object MessageReceiver {
 
             var conv = conversationDao.getConversationById(conversationId)
             if (conv == null) {
-                val peerName = NetworkService.connectedPeers[conversationId] ?: "Peer ${conversationId.take(8)}"
+                val peerName = meshMsg.senderName
+                    ?: NetworkService.connectedPeers[conversationId]
+                    ?: ProximityEngine.nearbyUsers.value.firstOrNull { it.userId == conversationId }?.displayName
+                    ?: "Peer ${conversationId.take(8)}"
                 conv = ConversationEntity(
                     id = conversationId,
                     title = peerName,
