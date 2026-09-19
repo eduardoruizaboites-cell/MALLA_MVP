@@ -89,6 +89,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         refreshMessages(convId)
         loadPolls(convId)
         initEncryption(convId)
+        // Notificar al peer que abrimos la conversación → enviará ACK=2 (read)
+        MallaEventBus.conversationOpened.tryEmit(convId)
     }
 
     private fun initEncryption(convId: String) {

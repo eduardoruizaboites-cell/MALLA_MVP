@@ -41,4 +41,6 @@ object MallaEventBus {
     val typingReceived = MutableSharedFlow<Pair<String, Boolean>>(extraBufferCapacity = 5)
     /** Zumbido recibido */
     val zumbidoReceived = MutableSharedFlow<MeshMessage>(extraBufferCapacity = 10)
+    /** El usuario abrió una conversación (peerId) → MessageReceiver enviará ACK=2 (read) al peer */
+    val conversationOpened = MutableSharedFlow<String>(extraBufferCapacity = 5)
 }

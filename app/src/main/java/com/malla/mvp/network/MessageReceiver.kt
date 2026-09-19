@@ -96,6 +96,24 @@ object MessageReceiver {
                 process(context, meshMsg)
             }
         }
+
+        // Cuando el usuario abre una conversación, avisar al peer con read_all (ACK=2)
+        scope.launch {
+            MallaEventBus.conversationOpened.collect { peerId ->
+                if (peerId.isBlank() || peerId == "self_chat") return@collect
+                try {
+                    TransportManager.send(peerId, MeshMessage(
+                        content = "read_all",
+                        senderId = IdentityManager.getIdentityId(),
+                        type = "read_all",
+                        timestamp = System.currentTimeMillis()
+                    ))
+                    DiagnosticsLogger.log(TAG, "read_all enviado a $peerId")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error enviando read_all: ${e.message}")
+                }
+            }
+        }
     }
 
     // Método público para que MessageBridge delegue
@@ -124,6 +142,18 @@ object MessageReceiver {
                 val isTyping = meshMsg.content == "1"
                 MallaEventBus.typingReceived.emit(meshMsg.senderId to isTyping)
                 DiagnosticsLogger.log(TAG, "Typing de ${meshMsg.senderId}: $isTyping")
+                return
+            }
+
+            if (meshMsg.type == "read_all") {
+                val peerId = meshMsg.senderId
+                try {
+                    db.messageDao().updateStatusForConversationAndOwn(peerId, isOwn = true, newStatus = 2)
+                    MallaEventBus.messageReceived.emit(meshMsg)
+                    DiagnosticsLogger.log(TAG, "read_all procesado de $peerId")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error procesando read_all: ${e.message}")
+                }
                 return
             }
 
@@ -250,14 +280,15 @@ object MessageReceiver {
                 DiagnosticsLogger.log(TAG, "Notificación de mensaje mostrada para $conversationId")
             }
 
-            // Enviar ack real al emisor si el mensaje trae messageId
+            // Enviar ACK=1 (delivered) al emisor si el mensaje trae messageId.
+            // ACK=2 (read) se envía cuando el receptor abre la conversación (type="read_all").
             if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
                 // Por TCP
                 try {
                     NetworkService.sendMessageToContact(
                         meshMsg.senderId,
                         MeshMessage(
-                            content = "2",
+                            content = "1",
                             senderId = IdentityManager.getIdentityId(),
                             type = "ack",
                             messageId = meshMsg.messageId
@@ -270,7 +301,7 @@ object MessageReceiver {
                 try {
                     val ackJson = org.json.JSONObject().apply {
                         put("senderId", IdentityManager.getIdentityId())
-                        put("content", "2")
+                        put("content", "1")
                         put("messageId", meshMsg.messageId)
                         put("type", "ack")
                         put("timestamp", System.currentTimeMillis())
@@ -281,12 +312,8 @@ object MessageReceiver {
                 }
             }
 
-            // Marcar como leídos los mensajes propios de esta conversación (palomita leída)
-            try {
-                messageDao.updateStatusForConversationAndOwn(conversationId, isOwn = true, newStatus = 2)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error marcando leídos: ${e.message}")
-            }
+            // NOTA: la marca de "leído" (status=2) para mensajes propios NO ocurre aquí.
+            // Se hace vía type="read_all" cuando el peer abre la conversación.
 
             MallaEventBus.messageReceived.emit(meshMsg)
             if (meshMsg.type == "zumbido") {
