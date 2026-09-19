@@ -33,6 +33,8 @@ private data class BleFragmentBuffer(
 
 object BleTransport {
     private const val TAG = "BleTransport"
+    /** Cap de fragmentos aceptados. 4095 × 508B (MTU 517) ≈ 2 MB; 4095 × 16B (MTU 23) ≈ 64 KB. */
+    private const val MAX_TOTAL_FRAGS = 4095
     val SERVICE_UUID = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
     val MESSAGE_CHAR_UUID = UUID.fromString("0000abcd-0003-1000-8000-00805f9b34fb")
     val INVITE_CHAR_UUID = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
@@ -61,6 +63,11 @@ object BleTransport {
         val payload = value.copyOfRange(4, value.size)
 
         if (totalFrags <= 1) return payload
+
+        if (totalFrags > MAX_TOTAL_FRAGS) {
+            DiagnosticsLogger.log(TAG, "Rechazado de ${device.address}: totalFrags=$totalFrags (>$MAX_TOTAL_FRAGS)")
+            return null
+        }
 
         val key = device.address
         return synchronized(fragmentBuffers) {

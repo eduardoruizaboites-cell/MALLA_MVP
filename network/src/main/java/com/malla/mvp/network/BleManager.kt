@@ -32,6 +32,8 @@ import kotlinx.coroutines.sync.withLock
 
 object BleManager {
     private const val TAG = "BleManager"
+    /** Cap de fragmentos aceptados. 4095 × 508B (MTU 517) ≈ 2 MB; 4095 × 16B (MTU 23) ≈ 64 KB. */
+    private const val MAX_TOTAL_FRAGS = 4095
     private val serviceUuid = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
     val MESSAGE_CHAR_UUID = UUID.fromString("0000abcd-0003-1000-8000-00805f9b34fb")
     private val ipCharacteristicUuid = UUID.fromString("0000abcd-0001-1000-8000-00805f9b34fb")
@@ -460,7 +462,8 @@ object BleManager {
                 // (observado en Iter 13 con imagen de 29 KB).
                 val maxChunk = (mtu - 3).coerceIn(20, 512)
                 // Formato fragmentado: [idxHi:1][idxLo:1][totalHi:1][totalLo:1][payload...]
-                // Header de 4 bytes permite hasta 65535 fragmentos (~1 MB con MTU=23).
+                // Header de 4 bytes permite hasta 65535 en el wire, pero el cap operativo
+                // es MAX_TOTAL_FRAGS=4095 (~2 MB con MTU=517, ~64 KB con MTU=23).
                 val payloadPerFrag = maxChunk - 4  // 4 bytes de header
                 val service = gatt.getService(serviceUuid) ?: return@withLock false
                 val characteristic = service.getCharacteristic(characteristicUuid) ?: return@withLock false
@@ -478,8 +481,8 @@ object BleManager {
                 }
 
                 val totalFrags = (data.size + payloadPerFrag - 1) / payloadPerFrag
-                if (totalFrags > 65535) {
-                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B requiere $totalFrags fragmentos (>65535); se rechaza")
+                if (totalFrags > MAX_TOTAL_FRAGS) {
+                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B requiere $totalFrags fragmentos (>$MAX_TOTAL_FRAGS); se rechaza")
                     return@withLock false
                 }
                 DiagnosticsLogger.log("BleManager", "Fragmentando ${data.size}B en $totalFrags trozos de $payloadPerFrag (mtu=$mtu)")
