@@ -279,7 +279,7 @@ object BleManager {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val record = result.scanRecord ?: return
             val manufacturerData = record.getManufacturerSpecificData(0xABCD) ?: return
-            DiagnosticsLogger.log("BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
+            DiagnosticsLogger.logThrottled("adv_${result.device.address}", "BLE", "Anuncio MALLA detectado: ${result.device.address} RSSI=${result.rssi}")
             if (!_foundBluetoothDevices.value.contains(result.device)) {
                 _foundBluetoothDevices.value = _foundBluetoothDevices.value + result.device
                 DiagnosticsLogger.log("BleManager", "Dispositivo BLE añadido: ${result.device.address}, total=${_foundBluetoothDevices.value.size}")

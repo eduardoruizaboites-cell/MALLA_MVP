@@ -37,7 +37,7 @@ object ProximityEngine {
             // BLE scanning
             BleManager.startScanningWithCallback { token, userId, name, seed, strength, device ->
                 val myId = IdentityManager.getIdentityId()
-                DiagnosticsLogger.log("PROX", "Callback BLE: token=$token, userId=$userId, name=$name, seed=$seed, device=${device.address}")
+                DiagnosticsLogger.logThrottled("prox_callback_${device.address}", "PROX", "Callback BLE: token=$token, userId=$userId, name=$name, seed=$seed, device=${device.address}")
                 if (token != generateToken(myId)) {
                     addOrUpdate(token, userId, name, seed, SignalType.BLE, strength, device)
                 } else {
@@ -164,7 +164,7 @@ object ProximityEngine {
             }
         }
         _nearbyUsers.value = current
-        DiagnosticsLogger.log("PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
+        DiagnosticsLogger.logThrottled("prox_nodes_updated", "PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
     }
 
     private fun addWifiDirectPeer(peer: WifiDirectPeer) {
@@ -183,7 +183,7 @@ object ProximityEngine {
         if (idx != -1) return // ya existe por otro transporte, no duplicar
         current.add(NearbyUser(token = token, userId = null, displayName = name, avatarSeed = 0, signalType = SignalType.WIFI_DIRECT, signalStrength = 0))
         _nearbyUsers.value = current
-        DiagnosticsLogger.log("PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
+        DiagnosticsLogger.logThrottled("prox_nodes_updated", "PROX", "Nodos actualizados: ${current.map { it.displayName + ":" + it.token }}")
     }
 
 

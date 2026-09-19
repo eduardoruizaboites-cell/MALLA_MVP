@@ -14,10 +14,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 object DiagnosticsLogger {
     private const val FILENAME = "malla_diagnostics.txt"
     private var logFile: File? = null
+    private val throttleMap = ConcurrentHashMap<String, Long>()
 
     fun init(context: Context) {
         if (logFile == null) {
@@ -59,6 +61,20 @@ object DiagnosticsLogger {
             Log.e("MallaDiagnostics", "No se pudo escribir log: ${e.message}")
         }
         Log.i("Malla", "[$tag] $message")
+    }
+
+    /**
+     * Igual que [log], pero silencia llamadas repetidas con la misma [key]
+     * dentro de [intervalMs]. Para eventos de alta frecuencia (advertising BLE,
+     * callbacks de proximidad) que de otro modo saturan el archivo.
+     */
+    fun logThrottled(key: String, tag: String, message: String, intervalMs: Long = 5000L) {
+        val now = System.currentTimeMillis()
+        val last = throttleMap[key]
+        if (last == null || now - last >= intervalMs) {
+            throttleMap[key] = now
+            log(tag, message)
+        }
     }
 
     fun getLogFilePath(): String? = logFile?.absolutePath
