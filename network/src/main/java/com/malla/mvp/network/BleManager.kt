@@ -455,25 +455,27 @@ object BleManager {
                 val gatt = gattCache[device.address] ?: establishGatt(device) ?: return@withLock false
                 val mtu = mtuCache[device.address] ?: 23
                 val maxChunk = (mtu - 3).coerceAtLeast(20)
-                // Formato fragmentado: [fragIdx:1][totalFrags:1][payload...]
-                // Si cabe en un solo paquete, totalFrags=1. Si no, se divide en trozos.
-                val payloadPerFrag = maxChunk - 2  // 2 bytes de header
+                // Formato fragmentado: [idxHi:1][idxLo:1][totalHi:1][totalLo:1][payload...]
+                // Header de 4 bytes permite hasta 65535 fragmentos (~1 MB con MTU=23).
+                val payloadPerFrag = maxChunk - 4  // 4 bytes de header
                 val service = gatt.getService(serviceUuid) ?: return@withLock false
                 val characteristic = service.getCharacteristic(characteristicUuid) ?: return@withLock false
 
                 if (data.size <= payloadPerFrag) {
-                    val framed = ByteArray(data.size + 2)
+                    val framed = ByteArray(data.size + 4)
                     framed[0] = 0
-                    framed[1] = 1
-                    System.arraycopy(data, 0, framed, 2, data.size)
+                    framed[1] = 0
+                    framed[2] = 0
+                    framed[3] = 1
+                    System.arraycopy(data, 0, framed, 4, data.size)
                     val ok = writeFramed(gatt, characteristic, framed)
                     DiagnosticsLogger.log("BleManager", "writeFramed single success=$ok (size=${framed.size}, mtu=$mtu)")
                     return@withLock ok
                 }
 
                 val totalFrags = (data.size + payloadPerFrag - 1) / payloadPerFrag
-                if (totalFrags > 255) {
-                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B requiere $totalFrags fragmentos (>255); se rechaza")
+                if (totalFrags > 65535) {
+                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B requiere $totalFrags fragmentos (>65535); se rechaza")
                     return@withLock false
                 }
                 DiagnosticsLogger.log("BleManager", "Fragmentando ${data.size}B en $totalFrags trozos de $payloadPerFrag (mtu=$mtu)")
@@ -481,15 +483,17 @@ object BleManager {
                     val start = i * payloadPerFrag
                     val end = minOf(start + payloadPerFrag, data.size)
                     val chunkSize = end - start
-                    val framed = ByteArray(chunkSize + 2)
-                    framed[0] = i.toByte()
-                    framed[1] = totalFrags.toByte()
-                    System.arraycopy(data, start, framed, 2, chunkSize)
+                    val framed = ByteArray(chunkSize + 4)
+                    framed[0] = ((i ushr 8) and 0xFF).toByte()
+                    framed[1] = (i and 0xFF).toByte()
+                    framed[2] = ((totalFrags ushr 8) and 0xFF).toByte()
+                    framed[3] = (totalFrags and 0xFF).toByte()
+                    System.arraycopy(data, start, framed, 4, chunkSize)
                     if (!writeFramed(gatt, characteristic, framed)) {
                         DiagnosticsLogger.log("BleManager", "Fallo fragmento ${i + 1}/$totalFrags")
                         return@withLock false
                     }
-                    if (i < totalFrags - 1) delay(30L)
+                    if (i < totalFrags - 1) delay(20L)
                 }
                 DiagnosticsLogger.log("BleManager", "Enviados $totalFrags fragmentos OK")
                 true

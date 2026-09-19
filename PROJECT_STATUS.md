@@ -1720,3 +1720,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Fragm
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentar también BleTransport.broadcast si connectAndWriteData no resuelve el problema; consolidar isLocalIp en :core para eliminar duplicación.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificar en dispositivo que los mensajes llegan bidireccionales y que el TCP se mantiene vivo >60s; si Cubot sigue rechazando MTU 247, la fragmentación ya lo cubre.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-19 14:38 (Iteración 11: fragmentación con header de 4 bytes) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se cambió el header de fragmentación BLE de 2 bytes ([idx:1][total:1]) a 4 bytes ([idxHi:1][idxLo:1][totalHi:1][totalLo:1]) en BleManager.connectAndWriteData y BleTransport.handleFragment. Se elevó el límite de 255 a 65535 fragmentos, permitiendo payloads de ~1 MB con MTU=23. El delay entre fragmentos bajó de 30 ms a 20 ms.
+¿ERA UN FIX DE ERROR?: SÍ: ERROR: imagen 12 KB rechazada por requerir 693 fragmentos (>255). SOLUCIÓN APLICADA: header de 4 bytes. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): no aplica.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): feedback al usuario cuando un payload excede el límite; investigar por qué la invitación no se envía.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: invitación no se envía (sin logs de intento); feedback de UI para fallos de envío; TCP sin probar.
+──────────────────────────────

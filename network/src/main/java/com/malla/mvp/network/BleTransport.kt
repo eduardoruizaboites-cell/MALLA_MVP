@@ -54,10 +54,11 @@ object BleTransport {
      * Si totalFrags <= 1, emite directo. Si no, acumula y emite al completar.
      */
     private fun handleFragment(device: BluetoothDevice, value: ByteArray) {
-        if (value.size < 2) return
-        val fragIdx = value[0].toInt() and 0xFF
-        val totalFrags = value[1].toInt() and 0xFF
-        val payload = value.copyOfRange(2, value.size)
+        if (value.size < 4) return
+        // Header de 4 bytes: [idxHi][idxLo][totalHi][totalLo]
+        val fragIdx = ((value[0].toInt() and 0xFF) shl 8) or (value[1].toInt() and 0xFF)
+        val totalFrags = ((value[2].toInt() and 0xFF) shl 8) or (value[3].toInt() and 0xFF)
+        val payload = value.copyOfRange(4, value.size)
 
         if (totalFrags <= 1) {
             incomingMessages.tryEmit(payload)
