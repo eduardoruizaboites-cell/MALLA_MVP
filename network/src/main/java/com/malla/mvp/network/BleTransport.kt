@@ -53,20 +53,17 @@ object BleTransport {
      * Formato del payload: fragIdx (1 byte) + totalFrags (1 byte) + chunk de datos.
      * Si totalFrags <= 1, emite directo. Si no, acumula y emite al completar.
      */
-    private fun handleFragment(device: BluetoothDevice, value: ByteArray) {
-        if (value.size < 4) return
+    private fun reassembleFragments(device: BluetoothDevice, value: ByteArray): ByteArray? {
+        if (value.size < 4) return null
         // Header de 4 bytes: [idxHi][idxLo][totalHi][totalLo]
         val fragIdx = ((value[0].toInt() and 0xFF) shl 8) or (value[1].toInt() and 0xFF)
         val totalFrags = ((value[2].toInt() and 0xFF) shl 8) or (value[3].toInt() and 0xFF)
         val payload = value.copyOfRange(4, value.size)
 
-        if (totalFrags <= 1) {
-            incomingMessages.tryEmit(payload)
-            return
-        }
+        if (totalFrags <= 1) return payload
 
         val key = device.address
-        val assembled: ByteArray? = synchronized(fragmentBuffers) {
+        return synchronized(fragmentBuffers) {
             val buffer = fragmentBuffers.getOrPut(key) {
                 BleFragmentBuffer(totalFrags, arrayOfNulls(totalFrags))
             }
@@ -91,11 +88,12 @@ object BleTransport {
                 null
             }
         }
+    }
 
-        if (assembled != null) {
-            DiagnosticsLogger.log(TAG, "Reensamblados $totalFrags fragmentos (${assembled.size}B) de ${device.address}")
-            incomingMessages.tryEmit(assembled)
-        }
+    private fun handleFragment(device: BluetoothDevice, value: ByteArray) {
+        val assembled = reassembleFragments(device, value) ?: return
+        DiagnosticsLogger.log(TAG, "Reensamblado ${assembled.size}B de ${device.address}")
+        incomingMessages.tryEmit(assembled)
     }
 
     private fun hasBlePermissions(context: Context): Boolean {
@@ -402,11 +400,15 @@ object BleTransport {
                     }
                 }
                 INVITE_CHAR_UUID -> {
-                    val payload = String(value, Charsets.UTF_8)
-                    LogBuffer.add(TAG, "Invitación BLE recibida: $payload")
-                    DiagnosticsLogger.log(TAG, "Invitación BLE recibida: $payload")
-                    // Emitir para que InvitationManager lo procese desde el módulo :app
-                    incomingInvitationPayloads.tryEmit(payload)
+                    val reassembled = reassembleFragments(device, value)
+                    if (reassembled != null) {
+                        val payload = String(reassembled, Charsets.UTF_8)
+                        LogBuffer.add(TAG, "Invitación BLE recibida: $payload")
+                        DiagnosticsLogger.log(TAG, "Invitación BLE recibida: $payload")
+                        incomingInvitationPayloads.tryEmit(payload)
+                    } else {
+                        DiagnosticsLogger.log(TAG, "Invitación fragmentada incompleta de ${device.address}")
+                    }
                     if (responseNeeded) {
                         gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
                     }

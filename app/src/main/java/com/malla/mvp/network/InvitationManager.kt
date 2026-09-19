@@ -117,7 +117,6 @@ object InvitationManager {
     }
 
     suspend fun sendInvitation(context: Context, user: NearbyUser) {
-        // Log al PRINCIPIO ABSOLUTO — si esto no aparece, la corrutina no llegó a ejecutarse
         DiagnosticsLogger.log("InvitationManager", "[sendInvitation] INICIO user=${user.displayName} userId=${user.userId} device=${user.bluetoothDevice?.address ?: "null"}")
         try {
             val myId = IdentityManager.getIdentityId()
@@ -125,8 +124,9 @@ object InvitationManager {
             val myName = IdentityManager.getUserName(context)
             val myPubKey = IdentityManager.getPublicKeyBase64() ?: ""
             DiagnosticsLogger.log("InvitationManager", "[sendInvitation] pubKey length=${myPubKey.length}")
-            val myIp = DhtService.getLocalAddress() ?: ""
-            DiagnosticsLogger.log("InvitationManager", "[sendInvitation] myIp=$myIp")
+            val rawIp = DhtService.getLocalAddress() ?: ""
+            val myIp = if (isLocalIp(rawIp)) rawIp else ""
+            DiagnosticsLogger.log("InvitationManager", "[sendInvitation] myIp=$myIp (raw=$rawIp)")
 
             val invitation = ContactInvitation(
                 senderUserId = myId,
@@ -135,7 +135,6 @@ object InvitationManager {
                 senderPublicKey = myPubKey,
                 preferredChannels = listOf("BLE", "mDNS", "DHT")
             )
-            DiagnosticsLogger.log("InvitationManager", "[sendInvitation] ContactInvitation creada")
 
             val json = JSONObject().apply {
                 put("senderUserId", invitation.senderUserId)
@@ -149,27 +148,25 @@ object InvitationManager {
             }.toString()
             DiagnosticsLogger.log("InvitationManager", "[sendInvitation] JSON preparado (${json.length} chars)")
 
-            DiagnosticsLogger.log("InvitationManager", "Enviando invitación a ${user.displayName} (userId=${user.userId}, device=${user.bluetoothDevice?.address ?: "sin BLE"})")
-
-            // Fallback: si no hay device BLE directo, intentar buscar en foundBluetoothDevices
             val targetDevice = user.bluetoothDevice
-                ?: BleManager.foundBluetoothDevices.value.firstOrNull { it.address == user.bluetoothDevice?.address }
+            if (targetDevice == null) {
+                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] SIN device BLE para ${user.displayName}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Sin canal BLE disponible para ${user.displayName}", Toast.LENGTH_LONG).show()
+                }
+                return
+            }
 
-            if (targetDevice != null) {
-                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] Enviando por BLE a ${targetDevice.address}")
-                BleTransport.sendInvitation(targetDevice, json.toByteArray(Charsets.UTF_8))
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] SIN device BLE — fallback broadcast")
-                // Fallback: escribir por cualquier GATT conectado
-                val sent = BleTransport.broadcast(json.toByteArray(Charsets.UTF_8))
-                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] broadcast=$sent")
-                withContext(Dispatchers.Main) {
-                    val msg = if (sent) "Solicitud difundida a ${user.displayName}" else "Sin canal BLE disponible para ${user.displayName}"
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                }
+            DiagnosticsLogger.log("InvitationManager", "[sendInvitation] Enviando por BLE a ${targetDevice.address}")
+            val sent = BleManager.connectAndWriteData(
+                targetDevice,
+                BleTransport.INVITE_CHAR_UUID,
+                json.toByteArray(Charsets.UTF_8)
+            )
+            DiagnosticsLogger.log("InvitationManager", "[sendInvitation] connectAndWriteData resultado=$sent")
+            withContext(Dispatchers.Main) {
+                val msg = if (sent) "Solicitud enviada a ${user.displayName}" else "No se pudo enviar a ${user.displayName}"
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
         } catch (e: Throwable) {
             val stack = e.stackTraceToString().take(600)
@@ -181,6 +178,17 @@ object InvitationManager {
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    private fun isLocalIp(ip: String): Boolean {
+        if (ip.isBlank()) return false
+        return ip.startsWith("10.") ||
+               ip.startsWith("192.168.") ||
+               ip.startsWith("169.254.") ||
+               (ip.startsWith("172.") && run {
+                   val second = ip.split(".").getOrNull(1)?.toIntOrNull() ?: return@run false
+                   second in 16..31
+               })
     }
 
     suspend fun sendAcceptance(context: Context, invitation: ContactInvitation) {
