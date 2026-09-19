@@ -214,10 +214,26 @@ object BleTransport {
     }
 
     fun broadcast(data: ByteArray): Boolean {
+        // Header de 4B requerido por reassembleFragments del receptor.
+        // Sin esto, el receptor lee los primeros 4B del payload como header
+        // y rechaza con totalFrags absurdo (bug confirmado 2026-09-19:
+        // "se perdió este mensaje" -> totalFrags=29541 = 0x7365 = "se").
+        if (data.size + 4 > 512) {
+            DiagnosticsLogger.log("BleTransport",
+                "broadcast rechaza payload ${data.size}B + 4B header > 512 (limite ATT)")
+            return false
+        }
+        val framed = ByteArray(data.size + 4)
+        framed[0] = 0
+        framed[1] = 0
+        framed[2] = 0
+        framed[3] = 1
+        System.arraycopy(data, 0, framed, 4, data.size)
+
         var sent = false
         connectedGatts.keys.forEach { address ->
             connectedGatts[address]?.let { gatt ->
-                writeCharacteristic(gatt, data)
+                writeCharacteristic(gatt, framed)
                 sent = true
             }
         }
