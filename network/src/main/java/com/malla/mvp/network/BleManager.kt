@@ -267,6 +267,18 @@ object BleManager {
         proximityScanCallback = null
     }
 
+    /**
+     * Re-registra el escaneo de proximidad con el callback almacenado.
+     * Android apaga el scan en background/doze sin avisar (a veces sin onScanFailed).
+     * Llamar periodicamente desde un watchdog garantiza continuidad del descubrimiento.
+     */
+    fun restartProximityScanning() {
+        val cb = proximityScanCallback ?: return
+        try { scanner?.stopScan(proximityScanCallbackWrapper) } catch (_: Exception) {}
+        isProximityScanning = false
+        startScanningWithCallback(cb)
+    }
+
     fun startScanning(context: Context, callback: (token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         appContext = context.applicationContext
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -309,7 +321,16 @@ object BleManager {
         }
 
         override fun onScanFailed(errorCode: Int) {
-            LogBuffer.add("BLE", "Escaneo de proximidad fallido: error $errorCode")
+            val readable = when (errorCode) {
+                ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "ALREADY_STARTED"
+                ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "APP_REGISTRATION_FAILED"
+                ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "INTERNAL_ERROR"
+                ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "FEATURE_UNSUPPORTED"
+                ScanCallback.SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES -> "OUT_OF_HARDWARE_RESOURCES"
+                else -> "UNKNOWN($errorCode)"
+            }
+            LogBuffer.add("BLE", "Escaneo de proximidad fallido: $readable")
+            DiagnosticsLogger.log("BLE", "onScanFailed: $readable")
         }
     }
 

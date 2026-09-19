@@ -86,6 +86,15 @@ object ProximityEngine {
                     }
                 }
             DiscoveryService.start(context)
+
+            // Watchdog: Android apaga el escaneo BLE en background/doze sin avisar
+            // (a veces sin disparar onScanFailed). Re-registrar cada 2 min garantiza
+            // continuidad del descubrimiento y evita que nearbyUsers quede vacio.
+            while (isActive) {
+                delay(2 * 60_000L)
+                DiagnosticsLogger.log("PROX", "Watchdog BLE: re-registrando escaneo de proximidad")
+                BleManager.restartProximityScanning()
+            }
         }
     }
 
