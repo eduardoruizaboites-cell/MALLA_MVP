@@ -1834,3 +1834,34 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi Redmi Note 9S) y Android 16
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): (1) registrar ProcessLifecycleOwner para que el watchdog pause el re-registro cuando la app entra en background y lo reanude en foreground — evita el 'reinicio inútil' de un scanner que el sistema va a apagar inmediatamente. (2) remover dead code confirmado: isScanningActive, scanCallback, y los dos stopScan(scanCallback) de líneas 226 y 347. (3) considerar migración de SCAN_MODE_LOW_LATENCY a SCAN_MODE_BALANCED si el watchdog no resuelve el apagado en producción.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificación en dispositivo de A y B; iteraciones 15, 16, 17, 18 pendientes de verificación; Fallo #2 (invitación, mismo patrón que B podría quedar mitigado); Falló técnico B (serialización GATT: writeCharacteristic false con MTU=517 — causa de la pérdida de imagen en Test 3, ~35% de pérdida observada en Xiaomi→Cubot); Falló técnico C (debounce typing no coalesce, confirmado en logs); Iter 18 (rate-limit) no surte efecto en logs reales; dead code: isScanningActive, scanCallback, BleTransport.sendInvitation, BleTransport.broadcast huérfano, app/transport/BleTransport.kt duplicado.
 ──────────────────────────────
+
+── AUDITORÍA ESTRUCTURAL — 2026-09-19 19:52 ──
+Protocolo R18 ejecutado. Solo lectura (find/grep/git log). Cero cambios en .kt.
+
+ESTADO DEL REPO: 321 commits totales, 200 en origin/main..HEAD, 0 sin pushear. 11 módulos declarados en settings.gradle.kts, 14 directorios de primer nivel, 3 sin archivos .kt (feature-childprotection/, tools/, transport/). 8 ramas locales sin upstream.
+
+DUPLICACIONES CONFIRMADAS:
+- BleTransport: network/.../BleTransport.kt (canónico, activo) + app/.../transport/BleTransport.kt (huérfano, no referenciado).
+- MeshMessage: core/.../core/data/MeshMessage.kt + data/.../data/entity/MeshMessage.kt + data/.../data/entity/MeshMessageEntity.kt (triplicado).
+
+FRAGMENTACIÓN DE CAPA DE RED: clases de transporte distribuidas en 4 ubicaciones dentro de :app — app/network/ (TransportManager, MessageReceiver, CascadeRouter), app/transport/ (BleTransport huérfano, WifiDirectTransport huérfano), app/ raíz (GattServerManager, GlobalTransport, FlashlightTransport, DhtHelper, DhtWrapper, IBleManager, IIdentityManager). El módulo :network solo contiene 11 archivos.
+
+SOLAPAMIENTO DE DOMINIO EN :core: contiene implementaciones concretas (SmsTransport, LightEncoder, DoubleRatchet, IdenticonGenerator, IdentityProofOfWork, KeystoreManager, InviteCodeGenerator, MeshSimulator) que según el prompt maestro deberían vivir en módulos de dominio. Solapa con :crypto (CryptoEngine, CryptoEngineAdapter, SessionCipher) y :identity (IdentityManager).
+
+MÓDULOS FANTASMA Y DRIFT DOCUMENTAL:
+- :transport declarado en settings.gradle.kts sin ningún archivo .kt.
+- feature-childprotection/ existe como directorio, sin .kt, sin include.
+- Bloque "Arquitectura objetivo" del prompt maestro v4 menciona :feature-sensors, :feature-transport, :feature-chat, :feature-settings — NINGUNO existe. Los módulos reales no mencionados en el prompt son :crypto, :identity, :events, :data, :media, :camera, :emoji.
+
+BASURA EN RAÍZ: 15 archivos .py y .txt sueltos (apply.py, apply_v2.py, integrate_voice_note.py, integrate_voice_note_v2.py, final_fix.py, content.txt, update_chat_preview.py, bottom_bar.txt, fix_mainapp_signatures.py, clean_splash.py, fix_chat_v2.py, insert_call_screen.py, fix_chat.py, connect_call_contact.py, full_logcat.txt).
+
+BUENAS NOTICIAS: cero violaciones de capa detectadas (:network no importa :app, :core no importa :network ni :app, :core no importa :crypto ni :identity pese al solapamiento de dominio). Working tree limpio. Rama sincronizada con origin.
+
+DISCREPANCIAS CLASIFICADAS:
+- BLOQUEANTES DE MANTENIBILIDAD: :transport vacío declarado; BleTransport duplicado; MeshMessage triplicado.
+- IMPORTANTES: capa de red fragmentada en :app; :core con implementaciones concretas + solapamiento con :crypto y :identity; prompt v4 desalineado al 100%.
+- MENORES: feature-childprotection/ huérfano; 15 archivos basura en raíz; 8 ramas locales sin upstream.
+
+NINGUNA DE ESTAS DISCREPANCIAS FUE CORREGIDA EN ESTA AUDITORÍA. R18 punto 5 prohíbe modificar el prompt maestro sin confirmación explícita del usuario. Los fixes estructurales quedan como deuda técnica documentada para priorizar en sesiones futuras.
+
+──────────────────────────────
