@@ -1731,3 +1731,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot).
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): feedback al usuario cuando un payload excede el límite; investigar por qué la invitación no se envía.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: invitación no se envía (sin logs de intento); feedback de UI para fallos de envío; TCP sin probar.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-19 14:44 (Iteración 12: diagnóstico invitación + fallback broadcast) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: Se blindó InvitationManager.sendInvitation con log de entrada absoluta, logs paso a paso (myId, pubKey length, myIp, JSON length) y try/catch con stacktrace completo. Se añadió fallback: si user.bluetoothDevice es null, intentar BleTransport.broadcast a cualquier GATT conectado y toast honesto. Se añadieron logs defensivos en ConversationsScreen.onSendRequest (LogBuffer + Logcat) para confirmar si la UI dispara el flujo. El propósito es diagnóstico: el log de hoy no muestra ni un solo [InvitationManager] Enviando invitación, así que necesitamos saber si la corrutina arranca o si falla antes del log original.
+¿ERA UN FIX DE ERROR?: ERROR: invitación no se envía desde la UI (sin logs). SOLUCIÓN APLICADA: logs defensivos + fallback. ¿FUNCIONÓ?: compilación exitosa; pendiente prueba en dispositivo.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el wiring de UI esté mal (NearbySection → onConnectClick → selectedNearbyUser → NearbyPanel → onSendRequest → InvitationManager.sendInvitation está cableado). Hipótesis actual: excepción no capturada en las 5 operaciones previas al log original (getIdentityId, getPublicKeyBase64, getLocalAddress, ContactInvitation, JSONObject).
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fix de sendAcceptance con manufacturerData (el serviceData actual excede 31 bytes).
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: sendAcceptance con serviceData excede límite de advertising; feedback UI en fallos.
+──────────────────────────────

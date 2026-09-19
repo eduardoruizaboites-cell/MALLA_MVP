@@ -407,8 +407,15 @@ fun ConversationsScreen(
             user = selectedNearbyUser!!,
             onDismiss = { selectedNearbyUser = null },
             onSendRequest = { user ->
+                LogBuffer.add("UI", "[onSendRequest] user=${user.displayName} device=${user.bluetoothDevice?.address ?: "null"}")
+                android.util.Log.d("MALLA_UI", "[onSendRequest] user=${user.displayName} device=${user.bluetoothDevice?.address ?: "null"}")
                 scope.launch {
-                    InvitationManager.sendInvitation(context, user)
+                    try {
+                        InvitationManager.sendInvitation(context, user)
+                    } catch (e: Throwable) {
+                        LogBuffer.add("UI", "[onSendRequest] excepción: ${e.message}")
+                        android.util.Log.e("MALLA_UI", "[onSendRequest] excepción", e)
+                    }
                 }
                 selectedNearbyUser = null
             },
