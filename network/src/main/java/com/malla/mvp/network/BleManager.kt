@@ -454,7 +454,11 @@ object BleManager {
             try {
                 val gatt = gattCache[device.address] ?: establishGatt(device) ?: return@withLock false
                 val mtu = mtuCache[device.address] ?: 23
-                val maxChunk = (mtu - 3).coerceAtLeast(20)
+                // Límite duro de ATT en Android: 512 bytes por operación writeCharacteristic
+                // (BluetoothGatt.GATT_MAX_ATTRIBUTE_LEN = 512). Con MTU=517, mtu-3=514 excede
+                // el límite y writeCharacteristic falla silenciosamente en el fragmento 1
+                // (observado en Iter 13 con imagen de 29 KB).
+                val maxChunk = (mtu - 3).coerceIn(20, 512)
                 // Formato fragmentado: [idxHi:1][idxLo:1][totalHi:1][totalLo:1][payload...]
                 // Header de 4 bytes permite hasta 65535 fragmentos (~1 MB con MTU=23).
                 val payloadPerFrag = maxChunk - 4  // 4 bytes de header
@@ -490,7 +494,7 @@ object BleManager {
                     framed[3] = (totalFrags and 0xFF).toByte()
                     System.arraycopy(data, start, framed, 4, chunkSize)
                     if (!writeFramed(gatt, characteristic, framed)) {
-                        DiagnosticsLogger.log("BleManager", "Fallo fragmento ${i + 1}/$totalFrags")
+                        DiagnosticsLogger.log("BleManager", "Fallo fragmento ${i + 1}/$totalFrags (framed=${framed.size}B, mtu=$mtu)")
                         return@withLock false
                     }
                     if (i < totalFrags - 1) delay(20L)
@@ -498,7 +502,9 @@ object BleManager {
                 DiagnosticsLogger.log("BleManager", "Enviados $totalFrags fragmentos OK")
                 true
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // Normal cuando otra corrutina toma el Mutex; no es un error real.
+                // La coroutine fue cancelada (scope cerrado o caller canceló).
+                // No confundir con contención de Mutex: withLock suspende, no cancela.
+                DiagnosticsLogger.log("BleManager", "connectAndWriteData cancelado para ${device.address}")
                 false
             } catch (e: Exception) {
                 DiagnosticsLogger.log("BleManager", "Error connectAndWriteData: ${e.message}")
@@ -510,10 +516,19 @@ object BleManager {
 
     private fun writeFramed(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, framed: ByteArray): Boolean {
         return try {
+            if (framed.size > 512) {
+                DiagnosticsLogger.log("BleManager", "writeFramed rechaza ${framed.size}B (>512 límite ATT)")
+                return false
+            }
             characteristic.value = framed
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            gatt.writeCharacteristic(characteristic)
+            val ok = gatt.writeCharacteristic(characteristic)
+            if (!ok) {
+                DiagnosticsLogger.log("BleManager", "writeCharacteristic devolvió false (framed=${framed.size}B)")
+            }
+            ok
         } catch (e: Exception) {
+            DiagnosticsLogger.log("BleManager", "writeFramed excepción: ${e.javaClass.simpleName}: ${e.message}")
             false
         }
     }

@@ -64,20 +64,33 @@ object BleTransport {
 
         val key = device.address
         return synchronized(fragmentBuffers) {
-            val buffer = fragmentBuffers.getOrPut(key) {
-                BleFragmentBuffer(totalFrags, arrayOfNulls(totalFrags))
+            var buffer = fragmentBuffers[key]
+            // Si el buffer contiene fragmentos huérfanos de un mensaje anterior
+            // (invitación previa incompleta, mensaje perdido), y llega un fragmento
+            // de un mensaje distinto, reseteamos para evitar corrupción cruzada.
+            // Evidencia: Iteración 13 mostró JSON de typing fusionado con timestamp
+            // corrupto por mezcla de fragmentos de dos payloads consecutivos.
+            if (buffer != null && buffer.totalFrags != totalFrags) {
+                DiagnosticsLogger.log(TAG, "Buffer reseteado para $key: totalFrags ${buffer.totalFrags}→$totalFrags (recibidos ${buffer.receivedCount}/${buffer.totalFrags})")
+                fragmentBuffers.remove(key)
+                buffer = null
             }
-            if (fragIdx < buffer.totalFrags && buffer.chunks[fragIdx] == null) {
-                buffer.chunks[fragIdx] = payload
-                buffer.receivedCount++
+            if (buffer == null) {
+                buffer = BleFragmentBuffer(totalFrags, arrayOfNulls(totalFrags))
+                fragmentBuffers[key] = buffer
             }
-            if (buffer.receivedCount == buffer.totalFrags) {
+            val b = buffer
+            if (fragIdx < b.totalFrags && b.chunks[fragIdx] == null) {
+                b.chunks[fragIdx] = payload
+                b.receivedCount++
+            }
+            if (b.receivedCount == b.totalFrags) {
                 fragmentBuffers.remove(key)
                 var totalSize = 0
-                for (c in buffer.chunks) totalSize += c?.size ?: 0
+                for (c in b.chunks) totalSize += c?.size ?: 0
                 val out = ByteArray(totalSize)
                 var offset = 0
-                for (c in buffer.chunks) {
+                for (c in b.chunks) {
                     if (c != null) {
                         System.arraycopy(c, 0, out, offset, c.size)
                         offset += c.size
