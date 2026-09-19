@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CompletableDeferred
@@ -454,22 +455,62 @@ object BleManager {
                 val gatt = gattCache[device.address] ?: establishGatt(device) ?: return@withLock false
                 val mtu = mtuCache[device.address] ?: 23
                 val maxChunk = (mtu - 3).coerceAtLeast(20)
-                if (data.size > maxChunk) {
-                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B excede MTU $mtu (chunk $maxChunk); se rechaza")
-                    return@withLock false
-                }
+                // Formato fragmentado: [fragIdx:1][totalFrags:1][payload...]
+                // Si cabe en un solo paquete, totalFrags=1. Si no, se divide en trozos.
+                val payloadPerFrag = maxChunk - 2  // 2 bytes de header
                 val service = gatt.getService(serviceUuid) ?: return@withLock false
                 val characteristic = service.getCharacteristic(characteristicUuid) ?: return@withLock false
-                characteristic.value = data
-                characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                val ok = gatt.writeCharacteristic(characteristic)
-                DiagnosticsLogger.log("BleManager", "writeCharacteristic success=$ok (mtu=$mtu)")
-                ok
+
+                if (data.size <= payloadPerFrag) {
+                    val framed = ByteArray(data.size + 2)
+                    framed[0] = 0
+                    framed[1] = 1
+                    System.arraycopy(data, 0, framed, 2, data.size)
+                    val ok = writeFramed(gatt, characteristic, framed)
+                    DiagnosticsLogger.log("BleManager", "writeFramed single success=$ok (size=${framed.size}, mtu=$mtu)")
+                    return@withLock ok
+                }
+
+                val totalFrags = (data.size + payloadPerFrag - 1) / payloadPerFrag
+                if (totalFrags > 255) {
+                    DiagnosticsLogger.log("BleManager", "Payload ${data.size}B requiere $totalFrags fragmentos (>255); se rechaza")
+                    return@withLock false
+                }
+                DiagnosticsLogger.log("BleManager", "Fragmentando ${data.size}B en $totalFrags trozos de $payloadPerFrag (mtu=$mtu)")
+                for (i in 0 until totalFrags) {
+                    val start = i * payloadPerFrag
+                    val end = minOf(start + payloadPerFrag, data.size)
+                    val chunkSize = end - start
+                    val framed = ByteArray(chunkSize + 2)
+                    framed[0] = i.toByte()
+                    framed[1] = totalFrags.toByte()
+                    System.arraycopy(data, start, framed, 2, chunkSize)
+                    if (!writeFramed(gatt, characteristic, framed)) {
+                        DiagnosticsLogger.log("BleManager", "Fallo fragmento ${i + 1}/$totalFrags")
+                        return@withLock false
+                    }
+                    if (i < totalFrags - 1) delay(30L)
+                }
+                DiagnosticsLogger.log("BleManager", "Enviados $totalFrags fragmentos OK")
+                true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Normal cuando otra corrutina toma el Mutex; no es un error real.
+                false
             } catch (e: Exception) {
                 DiagnosticsLogger.log("BleManager", "Error connectAndWriteData: ${e.message}")
                 try { gattCache.remove(device.address)?.close() } catch (_: Exception) {}
                 false
             }
+        }
+    }
+
+    private fun writeFramed(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, framed: ByteArray): Boolean {
+        return try {
+            characteristic.value = framed
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            gatt.writeCharacteristic(characteristic)
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -487,10 +528,16 @@ object BleManager {
                     try { gatt?.close() } catch (_: Exception) {}
                 }
             }
+            private var mtuAttempt: Int = 0  // 0 = intentó 517, 1 = intentó 247
             override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
                 if (status == BluetoothGatt.GATT_SUCCESS && gatt != null) {
-                    if (!gatt.requestMtu(517)) {
-                        if (!mtuDeferred.isCompleted) mtuDeferred.complete(23)
+                    val ok = gatt.requestMtu(517)
+                    if (!ok) {
+                        if (!gatt.requestMtu(247)) {
+                            if (!mtuDeferred.isCompleted) mtuDeferred.complete(23)
+                        } else {
+                            mtuAttempt = 1
+                        }
                     }
                 } else {
                     if (!mtuDeferred.isCompleted) mtuDeferred.complete(-1)
@@ -498,7 +545,15 @@ object BleManager {
                 }
             }
             override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
-                val effective = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
+                // Si con 517 el peer responde un MTU muy bajo, reintentar con 247
+                if (status != BluetoothGatt.GATT_SUCCESS || mtu < 100) {
+                    if (mtuAttempt == 0 && gatt != null) {
+                        DiagnosticsLogger.log("BleManager", "MTU inicial rechazado ($mtu); reintentando con 247")
+                        mtuAttempt = 1
+                        if (gatt.requestMtu(247)) return
+                    }
+                }
+                val effective = if (status == BluetoothGatt.GATT_SUCCESS && mtu >= 23) mtu else 23
                 if (!mtuDeferred.isCompleted) mtuDeferred.complete(effective)
             }
         }

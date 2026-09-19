@@ -1709,3 +1709,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). El ha
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): una vez identificado el paso del fallo, evaluar si readUTF debe reemplazarse por readInt+readFully con timeout; fragmentación BLE cuando MTU<200.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: handshake TCP sin completar; MTU Cubot=23 rechaza payloads >20B; fragmentación BLE pendiente; el test del handshake quedó pendiente de los logs.
 ──────────────────────────────
+
+── ENTRADA — 2026-09-19 13:55 (Iteración 10: fragmentación BLE + doble conexión TCP + MTU retry) ──
+Compilación: BUILD SUCCESSFUL
+QUÉ SE HIZO: (A) NetworkService: disconnect() solo elimina del mapa si el handler es el actualmente registrado; al registrar handler nuevo se cierra el previo ordenadamente; logs [HS:DISCONNECT] y [HS:EOF]. (B) BleManager.connectAndWriteData fragmenta payloads en formato fragIdx(1B)+totalFrags(1B)+chunk, 30ms entre fragmentos, hasta 255 fragmentos; helper writeFramed. (C) BleManager.establishGatt reintenta requestMtu(247) si 517 retorna MTU menor a 100. (D) BleTransport.onCharacteristicWriteRequest reensambla fragmentos con BleFragmentBuffer por device.address antes de emitir a incomingMessages. (E) CancellationException de connectAndWriteData silenciada. (F) import kotlinx.coroutines.delay añadido a BleManager. (G) KDoc de handleFragment reformulado sin corchetes (evita error de compilación de KDoc).
+¿ERA UN FIX DE ERROR?: SÍ, cuatro bugs confirmados en logs: (1) Cubot abre 2 conexiones TCP simultáneas y la segunda desconecta a la primera → clients vacío a los 40s; (2) Xiaomi MTU=23 rechaza todos los payloads >20B; (3) logs de StandaloneCoroutine was cancelled; (4) no había log de desconexión TCP.
+HIPÓTESIS DESCARTADAS (si fue debugging, ROL 2): se descartó que el handshake ECDH fallara — los logs [HS:OK] demuestran que sí completa correctamente.
+VERIFICADO EN: solo compilación.
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Fragmentación con MTU=23 soportada hasta 255 fragmentos (~4.5KB).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): fragmentar también BleTransport.broadcast si connectAndWriteData no resuelve el problema; consolidar isLocalIp en :core para eliminar duplicación.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificar en dispositivo que los mensajes llegan bidireccionales y que el TCP se mantiene vivo >60s; si Cubot sigue rechazando MTU 247, la fragmentación ya lo cubre.
+──────────────────────────────

@@ -25,6 +25,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+private data class BleFragmentBuffer(
+    val totalFrags: Int,
+    val chunks: Array<ByteArray?>,
+    var receivedCount: Int = 0
+)
+
 object BleTransport {
     private const val TAG = "BleTransport"
     val SERVICE_UUID = UUID.fromString("0000abcd-0000-1000-8000-00805f9b34fb")
@@ -39,6 +45,57 @@ object BleTransport {
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
     private val incomingInvitationPayloads = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val invitationPayloads: SharedFlow<String> = incomingInvitationPayloads.asSharedFlow()
+
+    private val fragmentBuffers = ConcurrentHashMap<String, BleFragmentBuffer>()
+
+    /**
+     * Reensambla fragmentos BLE.
+     * Formato del payload: fragIdx (1 byte) + totalFrags (1 byte) + chunk de datos.
+     * Si totalFrags <= 1, emite directo. Si no, acumula y emite al completar.
+     */
+    private fun handleFragment(device: BluetoothDevice, value: ByteArray) {
+        if (value.size < 2) return
+        val fragIdx = value[0].toInt() and 0xFF
+        val totalFrags = value[1].toInt() and 0xFF
+        val payload = value.copyOfRange(2, value.size)
+
+        if (totalFrags <= 1) {
+            incomingMessages.tryEmit(payload)
+            return
+        }
+
+        val key = device.address
+        val assembled: ByteArray? = synchronized(fragmentBuffers) {
+            val buffer = fragmentBuffers.getOrPut(key) {
+                BleFragmentBuffer(totalFrags, arrayOfNulls(totalFrags))
+            }
+            if (fragIdx < buffer.totalFrags && buffer.chunks[fragIdx] == null) {
+                buffer.chunks[fragIdx] = payload
+                buffer.receivedCount++
+            }
+            if (buffer.receivedCount == buffer.totalFrags) {
+                fragmentBuffers.remove(key)
+                var totalSize = 0
+                for (c in buffer.chunks) totalSize += c?.size ?: 0
+                val out = ByteArray(totalSize)
+                var offset = 0
+                for (c in buffer.chunks) {
+                    if (c != null) {
+                        System.arraycopy(c, 0, out, offset, c.size)
+                        offset += c.size
+                    }
+                }
+                out
+            } else {
+                null
+            }
+        }
+
+        if (assembled != null) {
+            DiagnosticsLogger.log(TAG, "Reensamblados $totalFrags fragmentos (${assembled.size}B) de ${device.address}")
+            incomingMessages.tryEmit(assembled)
+        }
+    }
 
     private fun hasBlePermissions(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
@@ -338,7 +395,7 @@ object BleTransport {
         ) {
             when (characteristic.uuid) {
                 MESSAGE_CHAR_UUID -> {
-                    incomingMessages.tryEmit(value)
+                    handleFragment(device, value)
                     if (responseNeeded) {
                         gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
                     }

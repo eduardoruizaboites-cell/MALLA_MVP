@@ -225,7 +225,15 @@ object NetworkService {
                     handler.displayName = peerDisplayName
                     handler.publicKeyBase64 = peerPubKeyBase64
 
-                    // 7. Registrar cliente en el mapa global
+                    // 7. Registrar cliente en el mapa global.
+                    // Si ya existe un handler para este peer (conexión duplicada),
+                    // cerrarlo ordenadamente ANTES de registrar el nuevo. Evita que el
+                    // disconnect() del viejo elimine al nuevo del mapa.
+                    val previous = clients[peerUserId]
+                    if (previous != null && previous !== handler) {
+                        DiagnosticsLogger.log(TAG, "[HS:DUP] Cerrando handler previo para $peerUserId")
+                        previous.disconnect()
+                    }
                     clients[peerUserId] = handler
                     connectedPeers[peerUserId] = peerDisplayName
                     clientsBySocket[socket] = handler
@@ -273,7 +281,10 @@ object NetworkService {
                     // También al flujo local para compatibilidad
                     _messages.emit(message)
                 }
+            } catch (e: java.io.EOFException) {
+                DiagnosticsLogger.log(TAG, "[HS:EOF] Peer $contactId cerró la conexión (EOF)")
             } catch (e: Exception) {
+                DiagnosticsLogger.log(TAG, "[HS:ERR] Error recibiendo mensaje de $contactId: ${e.message}")
                 Log.e(TAG, "[NS:ERR] Error recibiendo mensaje de $contactId: ${e.message}", e)
             } finally {
                 disconnect()
@@ -298,11 +309,18 @@ object NetworkService {
             try { socket.close() } catch (_: Exception) {}
             val id = contactId
             if (id != null) {
-                clients.remove(id)
+                // Solo eliminar del mapa si ESTE handler es el actualmente registrado.
+                // Evita que un handler previo (reemplazado por una segunda conexión
+                // del mismo peer) elimine al handler activo y deje clients vacío.
+                if (clients[id] === this) {
+                    clients.remove(id)
+                    connectedPeers.remove(id)
+                }
                 clientsBySocket.remove(socket)
             }
             _connectedClientsCount.value = clients.size
             Log.d(TAG, "[NS:TCP] Cliente desconectado: ${id ?: "desconocido"} (total: ${clients.size})")
+            DiagnosticsLogger.log(TAG, "[HS:DISCONNECT] Handler cerrado para ${id ?: "desconocido"}")
         }
     }
 }
