@@ -1601,11 +1601,16 @@ private fun BubbleContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        val dataUri = Uri.parse("data:image/jpeg;base64," + msg.content)
+                        onImageClick(dataUri)
+                    },
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.height(4.dp))
         }
+        val hasMedia = msg.mediaUri != null || base64Bitmap != null
         if (msg.isDeleted) {
             Text(
                 text = "Mensaje eliminado",
@@ -1613,7 +1618,7 @@ private fun BubbleContent(
                 fontSize = fontSize.sp,
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
             )
-        } else if (msg.content.isNotBlank() && msg.content != "Imagen") {
+        } else if (!hasMedia && msg.content.isNotBlank() && msg.content != "Imagen") {
             val uriHandler = LocalUriHandler.current
             val context = LocalContext.current
             val linkRegex = Regex("https?://[^\\s]+")
