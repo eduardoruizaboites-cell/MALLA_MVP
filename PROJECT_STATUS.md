@@ -1865,3 +1865,49 @@ DISCREPANCIAS CLASIFICADAS:
 NINGUNA DE ESTAS DISCREPANCIAS FUE CORREGIDA EN ESTA AUDITORÍA. R18 punto 5 prohíbe modificar el prompt maestro sin confirmación explícita del usuario. Los fixes estructurales quedan como deuda técnica documentada para priorizar en sesiones futuras.
 
 ──────────────────────────────
+
+── ENTRADA — 2026-09-19 19:54 (Iteración 22: documentación de los 4 tests en dispositivo + veredicto de iteraciones 15-18) ──
+Compilación: no aplica — entrada documental (no se modifica código).
+QUÉ SE HIZO: Se documentan formalmente los resultados del protocolo de 4 tests en dispositivo Xiaomi Redmi Note 9S (Android 11, API 30, userId=38a2a15730c9121a) ↔ Cubot KingKong ES 5 (Android 16, API 36, userId=83cf6fa3d0de9011), corridos el 2026-09-19. Los logs crudos analizados son malla_diagnostics.txt (Xiaomi) y malla_diagnostics1.txt (Cubot), cubriendo la franja 13:08-13:20. Los hallazgos de estos tests alimentaron las iteraciones 19 (fix broadcast) y 20 (watchdog BLE). Ninguna iteración previa (15-18) había sido verificada en dispositivo hasta esta sesión.
+
+TEST 1 — Chat de texto básico: PARCIAL.
+- Dirección Cubot→Xiaomi (MTU 517): 100% OK. Todos los mensajes llegaron con writeFramed single success=true.
+- Dirección Xiaomi→Cubot (MTU 23): ~65% OK. Tasa de pérdida medida ~35%. Fallos observados en fragmento 1/N y 27/N y 47/N de distintos payloads. Correlación mensajes marcados como fallidos por Eduardo vs recibidos por Cubot: "esesqq" no llegó, "ssq" no llegó, "fer" llegó (pero el write siguiente falló), "se perdió este mensaje" llegó, "y se perdió este mensaje" llegó, "no le llegaron al usuario" no llegó, "este tampoco le llegó" llegó. Fallos no deterministas por contenido: timing GATT.
+
+TEST 2 — Read receipts (Iter 16): PARCIAL.
+- Cubot→Xiaomi: OK siempre (MTU 517).
+- Xiaomi→Cubot: OK cuando el canal está vivo. Confirmado en log del Xiaomi a 13:10:05 "read_all enviado a 83cf6fa3d0de9011".
+- NUEVO HALLAZGO en log del Cubot a 13:15:41: TransportManager intentó enviar read_all con nearbyUsers=[] → Dispositivo BLE seleccionado: null → broadcast false → NONE (ERROR). Esto motivó la iteración 20 (watchdog BLE).
+
+TEST 3 — Imagen base64 + fullscreen (Iter 15): NO VERIFICABLE.
+- La imagen nunca llegó al receptor (Test 3 falló). No se pudo verificar el fix visual de Iter 15.
+- Log del Xiaomi: 2 intentos fallidos. Intentó 1: 19803 bytes → 1238 fragmentos → fallo en fragmento 27/1238. Intento 2: 20260 bytes → 1267 fragmentos → fallo en fragmento 47/1267.
+- Log del Cubot confirma: "Buffer reseteado para 2C:D0:66:52:38:15: totalFrags 1238→1267 (recibidos 26/1238)" y luego "1267→9 (recibidos 46/1267)". Iter 17 (cap 4095) funcionó correctamente en el receptor.
+- Causa raíz probable: saturación de cola GATT con MTU=23 + delay=20ms. ~50 writes/segundo excede la capacidad del stack BLE de Android. Sin retry por fragmento.
+
+TEST 4 — Imagen grande (Iter 14 + Iter 17): NO APLICABLE.
+- Sin imagen más grande que 20 KB en el log. El resultado de Test 3 es el baseline.
+
+VEREDICTO DE ITERACIONES 15-18:
+- Iter 15 (imagen base64 + fullscreen): NO VERIFICABLE — imagen no llegó.
+- Iter 16 (read receipts): PARCIALMENTE OK — flujo correcto, canal falla intermitentemente.
+- Iter 17 (cap MAX_TOTAL_FRAGS=4095): CONFIRMADO EN PRODUCCIÓN. Rechazó 4 payloads con totalFrags=29541 (= 0x7365 = ASCII "se") con log explícito. El cap protege al receptor correctamente.
+- Iter 18 (rate-limit logging): NO SURTE EFECTO EN LOGS REALES. Los logs del Cubot muestran ~5 Anuncio MALLA/segundo pese al logThrottled(key=adv_<address>, 5000ms). Hipótesis no verificada: fallo en ConcurrentHashMap de logThrottled o en la ventana temporal. Pendiente inspección de código en sesión futura.
+
+HALLAZGOS FORENSES NUEVOS (destapados por estos tests):
+1. totalFrags=29541 = 0x7365 = "se" — primeros 2 bytes del mensaje "se perdió este mensaje" enviado por BleTransport.broadcast. El receptor leía el payload crudo como header. Motivó iteración 19.
+2. El escáner BLE del Cubot dejó de emitir resultados a 13:13:39 (5 min 28 s tras el arranque). Silencio de ~3 min sin onScanFailed visible. Motivó iteración 20.
+3. onScanFailed escribía solo a LogBuffer in-app, no a DiagnosticsLogger. Corregido en iteración 20.
+4. Asimetría de MTU persistente: Xiaomi negocia MTU=23 (retry 517→247 no dispara), Cubot negocia MTU=517.
+5. Falló técnico C confirmado: 13 typing=1 en 30 segundos Cubot→Xiaomi. El debounce de 300ms de Iter 1 no coalesce efectivamente.
+
+DEUDA / PENDIENTE QUE SIGUE ABIERTA TRAS ESTA SESIÓN:
+- Verificación en dispositivo de iteraciones 19 (broadcast header) y 20 (watchdog BLE).
+- Fallo #2 (invitación no confirma): potencialmente mitigado por iteración 20 si el fallo era por nearbyUsers vacío. Requiere test en dispositivo.
+- Falló técnico B (serialización GATT): writeCharacteristic false con MTU=23 durante ráfagas de fragmentos. Causa raíz de Test 3. Sin fix. Requiere retry por fragmento o ajuste de delay.
+- Falló técnico C (debounce typing no coalesce): sin fix. Requiere inspección de MeshChatViewModel.sendTyping.
+- Iter 18 (rate-limit): sin efecto real. Requiere inspección de DiagnosticsLogger.logThrottled.
+- Dead code confirmado por auditoría R18: isScanningActive, scanCallback, los 2 stopScan(scanCallback), BleTransport.sendInvitation, BleTransport.broadcast huérfano, app/transport/BleTransport.kt duplicado, app/transport/WifiDirectTransport.kt huérfano, MeshMessage triplicado en 3 ubicaciones.
+- 8 ramas locales sin upstream (backups y features premium de sesiones anteriores).
+- Bloque "Arquitectura objetivo" del prompt maestro v4 desalineado 100% con el repo real.
+──────────────────────────────
