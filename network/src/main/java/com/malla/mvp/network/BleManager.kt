@@ -63,12 +63,23 @@ object BleManager {
     private var isProximityAdvertising = false
 
 
-    fun hasBlePermissions(context: Context): Boolean {
+    fun hasScanPermission(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
-        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
     }
+
+    fun hasConnectPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun hasAdvertisePermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun hasBlePermissions(context: Context): Boolean =
+        hasScanPermission(context) && hasConnectPermission(context) && hasAdvertisePermission(context)
 
     fun start(context: Context) {
         appContext = context.applicationContext
@@ -102,7 +113,7 @@ object BleManager {
             return
         }
         val context = appContext
-        if (context != null && !hasBlePermissions(context)) {
+        if (context != null && !hasAdvertisePermission(context)) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
@@ -137,7 +148,7 @@ object BleManager {
             return
         }
         val context = appContext
-        if (context != null && !hasBlePermissions(context)) {
+        if (context != null && !hasAdvertisePermission(context)) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
@@ -183,7 +194,7 @@ object BleManager {
         }
 
         val context = appContext
-        if (context != null && !hasBlePermissions(context)) {
+        if (context != null && !hasAdvertisePermission(context)) {
             LogBuffer.add("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             DiagnosticsLogger.log("BLE", "Permiso BLUETOOTH_ADVERTISE denegado")
             return
@@ -238,7 +249,7 @@ object BleManager {
     fun startScanningWithCallback(callback: (token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
         if (adapter == null || !adapter!!.isEnabled) return
         val ctx = appContext ?: return
-        if (!hasBlePermissions(ctx)) {
+        if (!hasScanPermission(ctx)) {
             LogBuffer.add("BLE", "Sin permisos BLUETOOTH_SCAN para iniciar escaneo")
             DiagnosticsLogger.log("BLE", "Sin permisos BLUETOOTH_SCAN para iniciar escaneo")
             return
@@ -477,7 +488,10 @@ object BleManager {
         return mutex.withLock {
             DiagnosticsLogger.log("BleManager", "connectAndWriteData a ${device.address} (${data.size} bytes)")
             val context = appContext ?: return@withLock false
-            if (!hasBlePermissions(context)) return@withLock false
+            if (!hasConnectPermission(context)) {
+                DiagnosticsLogger.log("BleManager", "connectAndWriteData: falta BLUETOOTH_CONNECT para ${device.address}")
+                return@withLock false
+            }
             try {
                 val gatt = gattCache[device.address] ?: establishGatt(device) ?: run {
                     DiagnosticsLogger.log("BleManager", "establishGatt falló para ${device.address}; sin conexión GATT")

@@ -176,15 +176,31 @@ class MainActivity : FragmentActivity() {
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { grants ->
-            val allGranted = grants.values.all { it }
-            if (allGranted) {
-                LogBuffer.add("MAIN", "Permisos concedidos, habilitando radio")
-                enableRadio()
+            // Evaluamos cada permiso individualmente. Antes el allGranted
+            // bloqueaba todo si faltaba uno (ej. Cubot sin SCAN): el advertising
+            // no se re-intentaba, el scan quedaba null, y los writes fallaban en 2ms
+            // por hasBlePermissions(). Ahora cada subsistema arranca si su permiso está.
+            val scanGranted = grants[Manifest.permission.BLUETOOTH_SCAN] == true ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                 checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED)
+            val advertiseGranted = grants[Manifest.permission.BLUETOOTH_ADVERTISE] == true ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                 checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED)
+            val connectGranted = grants[Manifest.permission.BLUETOOTH_CONNECT] == true ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                 checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+            LogBuffer.add("MAIN", "Permisos: scan=$scanGranted, advertise=$advertiseGranted, connect=$connectGranted")
+            enableRadio()
+            if (advertiseGranted) {
                 ProximityEngine.ensureAdvertising(this@MainActivity)
+            }
+            if (scanGranted) {
                 ProximityEngine.ensureScanning(this@MainActivity)
+            }
+            if (scanGranted && advertiseGranted && connectGranted) {
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Permisos parciales: scan=$scanGranted adv=$advertiseGranted conn=$connectGranted. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()
             }
             showPermissionExplanationState.value = false
             try {
