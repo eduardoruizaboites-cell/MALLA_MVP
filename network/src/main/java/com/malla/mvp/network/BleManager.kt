@@ -691,16 +691,22 @@ object BleManager {
                 }
             }
             override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
-                // Si el peer responde con MTU muy bajo (<100) en el primer intento,
-                // reintentar con 247 SIN completar el deferred — el segundo callback
-                // traerá el MTU real. Antes se completaba con 23 y el retry quedaba huérfano.
-                if (status == BluetoothGatt.GATT_SUCCESS && mtu < 100 && mtuAttempt == 0 && gatt != null) {
-                    DiagnosticsLogger.log("BleManager", "MTU inicial $mtu < 100; reintentando con 247")
-                    mtuAttempt = 1
-                    if (gatt.requestMtu(247)) return
-                }
                 val effective = if (status == BluetoothGatt.GATT_SUCCESS && mtu >= 23) mtu else 23
-                if (!mtuDeferred.isCompleted) mtuDeferred.complete(effective)
+                DiagnosticsLogger.log("BleManager", "onMtuChanged recibido: mtu=$effective status=$status para ${device.address}")
+                // SIEMPRE persistir en cache, aunque el deferred ya esté completado.
+                // Android 11 (Xiaomi) a veces dispara onMtuChanged DESPUÉS del timeout:
+                // el primer mensaje sale con MTU=23, los siguientes usan el MTU real.
+                mtuCache[device.address] = effective
+                if (!mtuDeferred.isCompleted) {
+                    // Si el primer intento devolvió un MTU muy bajo y aún no hemos reintentado,
+                    // probar 247 (algunos peers rechazan 517 pero aceptan 247).
+                    if (effective < 100 && mtuAttempt == 0 && gatt != null) {
+                        DiagnosticsLogger.log("BleManager", "MTU inicial $effective < 100; reintentando con 247")
+                        mtuAttempt = 1
+                        if (gatt.requestMtu(247)) return
+                    }
+                    mtuDeferred.complete(effective)
+                }
             }
             override fun onCharacteristicWrite(
                 gatt: BluetoothGatt?,
@@ -722,9 +728,24 @@ object BleManager {
             return null
         } ?: return null
 
-        val mtu = withTimeoutOrNull(3000L) { mtuDeferred.await() } ?: run {
-            DiagnosticsLogger.log("BleManager", "MTU timeout 3s para ${device.address}; asumiendo 23")
-            23
+        val mtu = withTimeoutOrNull(5000L) { mtuDeferred.await() } ?: run {
+            DiagnosticsLogger.log("BleManager", "MTU timeout 5s para ${device.address}; reintentando 247 desde el mismo gatt")
+            // Retry inline: pedimos 247 y esperamos otros 3s
+            val retryDeferred = CompletableDeferred<Int>()
+            val retryCallback = object : BluetoothGattCallback() {
+                override fun onMtuChanged(g: BluetoothGatt?, mtu2: Int, status: Int) {
+                    if (!retryDeferred.isCompleted) {
+                        val eff = if (status == BluetoothGatt.GATT_SUCCESS && mtu2 >= 23) mtu2 else 23
+                        retryDeferred.complete(eff)
+                    }
+                }
+            }
+            // Android no permite cambiar el callback de un gatt existente;
+            // usamos el mtuCache que el callback original ya actualiza si llega tarde.
+            try { gatt.requestMtu(247) } catch (_: Exception) {}
+            // Polling simple: esperar 3s más y leer del cache
+            kotlinx.coroutines.delay(3000L)
+            mtuCache[device.address] ?: 23
         }
         if (mtu <= 0) {
             DiagnosticsLogger.log("BleManager", "establishGatt ${device.address}: conexión rechazada o perdida (mtu=$mtu) — cerrando")
