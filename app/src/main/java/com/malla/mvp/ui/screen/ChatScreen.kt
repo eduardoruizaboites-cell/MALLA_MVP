@@ -189,6 +189,7 @@ fun ChatScreen(
     val colorScheme = LocalColorScheme.current
     val shakeOffset = remember { Animatable(0f) }
     var fullScreenImageUri by remember { mutableStateOf<Uri?>(null) }
+    var fullScreenBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var expiringViewOnceUri by remember { mutableStateOf<Uri?>(null) }
     var currentViewOnceMessageId by remember { mutableStateOf<String?>(null) }
     var showZumbidoOverlay by remember { mutableStateOf(false) }
@@ -573,6 +574,7 @@ fun ChatScreen(
                                     onReveal = {
                                         msg.mediaUri?.let { uriString ->
                                             fullScreenImageUri = Uri.parse(uriString)
+                                            fullScreenBitmap = null
                                             expiringViewOnceUri = Uri.parse(uriString)
                                             currentViewOnceMessageId = msg.id
                                         }
@@ -615,7 +617,10 @@ fun ChatScreen(
                                         selectedMessageIds = if (clicked.id in selectedMessageIds) selectedMessageIds - clicked.id else selectedMessageIds + clicked.id
                                     }
                                 },
-                                onImageClick = { uri -> fullScreenImageUri = uri },
+                                onImageClick = { uri, bmp ->
+                                    fullScreenImageUri = uri
+                                    fullScreenBitmap = bmp
+                                },
                                 onLongClick = { selected ->
                                     if (!multiSelectMode) {
                                         selectedMessage = selected
@@ -1189,7 +1194,7 @@ fun ChatScreen(
     // Diálogo de imagen a pantalla completa con zoom
 
 
-    if (fullScreenImageUri != null) {
+    if (fullScreenImageUri != null || fullScreenBitmap != null) {
         Dialog(
             onDismissRequest = {
                 if (fullScreenImageUri == expiringViewOnceUri) {
@@ -1198,6 +1203,7 @@ fun ChatScreen(
                     currentViewOnceMessageId = null
                 }
                 fullScreenImageUri = null
+                fullScreenBitmap = null
             },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
@@ -1216,6 +1222,7 @@ fun ChatScreen(
                             currentViewOnceMessageId = null
                         }
                         fullScreenImageUri = null
+                        fullScreenBitmap = null
                     }  // Cerrar al tocar fondo
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
@@ -1240,19 +1247,35 @@ fun ChatScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = fullScreenImageUri!!,
-                    contentDescription = "Imagen ampliada",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = scale.value
-                            scaleY = scale.value
-                            translationX = offset.x
-                            translationY = offset.y
-                        },
-                    contentScale = ContentScale.Fit
-                )
+                if (fullScreenBitmap != null) {
+                    Image(
+                        bitmap = fullScreenBitmap!!,
+                        contentDescription = "Imagen ampliada",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale.value
+                                scaleY = scale.value
+                                translationX = offset.x
+                                translationY = offset.y
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    AsyncImage(
+                        model = fullScreenImageUri!!,
+                        contentDescription = "Imagen ampliada",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale.value
+                                scaleY = scale.value
+                                translationX = offset.x
+                                translationY = offset.y
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+                }
 
                 if (fullScreenImageUri == expiringViewOnceUri) {
                     val progress = remember { Animatable(1f) }
@@ -1410,7 +1433,7 @@ fun ViewOnceMessageBubble(
 fun MessageBubbleV2(
     msg: MessageData,
     animate: Boolean = false,
-    onImageClick: (Uri) -> Unit = {},
+    onImageClick: (Uri?, androidx.compose.ui.graphics.ImageBitmap?) -> Unit = { _, _ -> },
     onLongClick: (MessageData) -> Unit = {},
     onClick: (MessageData) -> Unit = {},
     isSelected: Boolean = false,
@@ -1526,7 +1549,7 @@ private fun BubbleContent(
     msg: MessageData,
     textColor: Color,
     fontSize: Float,
-    onImageClick: (Uri) -> Unit
+    onImageClick: (Uri?, androidx.compose.ui.graphics.ImageBitmap?) -> Unit
 ) {
     val base64Bitmap = remember(msg.content) {
         if (msg.mediaUri == null && msg.content.length > 100) {
@@ -1583,7 +1606,7 @@ private fun BubbleContent(
                         .fillMaxWidth()
                         .heightIn(max = 220.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { onImageClick(uri) }
+                        .clickable { onImageClick(uri, null) }
                 ) {
                     AsyncImage(
                         model = uri,
@@ -1603,8 +1626,7 @@ private fun BubbleContent(
                     .heightIn(max = 220.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable {
-                        val dataUri = Uri.parse("data:image/jpeg;base64," + msg.content)
-                        onImageClick(dataUri)
+                        onImageClick(null, base64Bitmap.asImageBitmap())
                     },
                 contentScale = ContentScale.Crop
             )
