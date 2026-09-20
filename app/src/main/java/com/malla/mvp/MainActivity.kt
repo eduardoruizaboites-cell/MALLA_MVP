@@ -296,6 +296,12 @@ class MainActivity : FragmentActivity() {
                         com.malla.mvp.core.engine.DiagnosticsLogger.log(
                             "MAIN", "Invitación de ${inv.senderDisplayName} ignorada — ya es contacto"
                         )
+                        // Fix Bug E: feedback visual para que el receptor sepa por qué no apareció el diálogo
+                        Toast.makeText(
+                            context,
+                            "${inv.senderDisplayName} ya es tu contacto",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         InvitationManager.clearPendingInvitation(context)
                         InvitationManager.clearIncoming()
                     } else {

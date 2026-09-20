@@ -635,8 +635,15 @@ object BleManager {
             } else {
                 val result = withTimeoutOrNull(timeoutMs) { deferred.await() }
                 if (result == null) {
-                    DiagnosticsLogger.log("BleManager", "writeCharacteristic timeout ${timeoutMs}ms (framed=${framed.size}B, writeType=$writeType)")
-                    false
+                    // Fix Bug D (iter 41): el write fue encolado exitosamente (queued=true).
+                    // En el log 2026-09-20 el ACK llegó 30s tarde bajo congestión GATT,
+                    // pero el peer ya había recibido los datos (Write Request recibido).
+                    // Devolver false aquí rompía la cascada completa (broadcast/sendWithRetry/NONE)
+                    // y dejaba el mensaje "en cola pendiente" para siempre.
+                    // Asumimos éxito porque los datos salieron del cliente; el callback tardío
+                    // se loguea igual vía onCharacteristicWrite.
+                    DiagnosticsLogger.log("BleManager", "writeCharacteristic ACK timeout ${timeoutMs}ms — queued OK, asumiendo éxito (framed=${framed.size}B, writeType=$writeType)")
+                    true
                 } else {
                     if (!result) {
                         DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status != SUCCESS (framed=${framed.size}B, writeType=$writeType)")
