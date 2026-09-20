@@ -24,9 +24,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.biometric.BiometricPrompt
-import androidx.biometric.BiometricManager
-import androidx.core.content.ContextCompat
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +68,7 @@ import com.malla.mvp.network.DhtWrapper
 import com.malla.mvp.network.NetworkService
 import com.malla.mvp.network.TransportManager
 import com.malla.mvp.network.InvitationManager
+import com.malla.mvp.ui.components.IncomingRequestDialog
 import com.malla.mvp.ui.components.MainTopBar
 import com.malla.mvp.ui.components.StickerPickerDialog
 import com.malla.mvp.ui.components.StickerFullScreenDialog
@@ -309,90 +307,47 @@ class MainActivity : FragmentActivity() {
 
             if (showInvitationDialog && incomingInvitation != null) {
                 val invitation = incomingInvitation!!
-                AlertDialog(
-                    onDismissRequest = {
+                IncomingRequestDialog(
+                    invitation = invitation,
+                    onAccept = { inv ->
                         showInvitationDialog = false
                         incomingInvitation = null
                         InvitationManager.clearPendingInvitation(context)
                         InvitationManager.clearIncoming()
-                    },
-                    title = { Text("Solicitud de contacto") },
-                    text = { Text("${invitation.senderDisplayName} (${invitation.senderUserId}) quiere agregarte a sus contactos.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showInvitationDialog = false
-                            incomingInvitation = null
-                            InvitationManager.clearPendingInvitation(context)
-                            InvitationManager.clearIncoming()
-                            val acceptAction: suspend () -> Unit = {
-                                try {
-                                    // 1) Guardar contacto en Room
-                                    val contact = com.malla.mvp.data.entity.ContactEntity(
-                                        contactUserId = invitation.senderUserId,
-                                        displayName = invitation.senderDisplayName,
-                                        avatarSeed = invitation.senderAvatarSeed,
-                                        publicKey = invitation.senderPublicKey,
-                                        addedAt = System.currentTimeMillis()
-                                    )
-                                    com.malla.mvp.data.AppDatabase.getInstance(context)?.contactDao()?.insert(contact)
-                                    // 2) Crear conversación
-                                    val conversation = com.malla.mvp.data.entity.ConversationEntity(
-                                        id = invitation.senderUserId,
-                                        title = invitation.senderDisplayName,
-                                        timestamp = System.currentTimeMillis()
-                                    )
-                                    com.malla.mvp.data.AppDatabase.getInstance(context)?.conversationDao()?.insertConversation(conversation)
-                                    com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Contacto ${invitation.senderDisplayName} guardado tras aceptar invitación")
-                                    // 3) Notificar al peer con ACCEPT (advertising 30s)
-                                    InvitationManager.sendAcceptance(context, invitation)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Solicitud de ${invitation.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
-                                    }
-                                } catch (e: Exception) {
-                                    com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Error aceptando invitación: ${e.message}")
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
-                                    }
+                        MainScope().launch(Dispatchers.IO) {
+                            try {
+                                val contact = com.malla.mvp.data.entity.ContactEntity(
+                                    contactUserId = inv.senderUserId,
+                                    displayName = inv.senderDisplayName,
+                                    avatarSeed = inv.senderAvatarSeed,
+                                    publicKey = inv.senderPublicKey,
+                                    addedAt = System.currentTimeMillis()
+                                )
+                                com.malla.mvp.data.AppDatabase.getInstance(context)?.contactDao()?.insert(contact)
+                                val conversation = com.malla.mvp.data.entity.ConversationEntity(
+                                    id = inv.senderUserId,
+                                    title = inv.senderDisplayName,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                                com.malla.mvp.data.AppDatabase.getInstance(context)?.conversationDao()?.insertConversation(conversation)
+                                com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Contacto ${inv.senderDisplayName} guardado tras aceptar invitaci\u00f3n")
+                                InvitationManager.sendAcceptance(context, inv)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Error aceptando invitaci\u00f3n: ${e.message}")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                            // Biometría antes de aceptar (si está disponible)
-                            val biometricManager = BiometricManager.from(context)
-                            if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS) {
-                                val executor = ContextCompat.getMainExecutor(context)
-                                val biometricPrompt = BiometricPrompt(
-                                    context as FragmentActivity,
-                                    executor,
-                                    object : BiometricPrompt.AuthenticationCallback() {
-                                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                            MainScope().launch(Dispatchers.IO) { acceptAction() }
-                                        }
-                                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                                            Toast.makeText(context, "Autenticación cancelada", Toast.LENGTH_SHORT).show()
-                                        }
-                                        override fun onAuthenticationFailed() {
-                                            Toast.makeText(context, "Autenticación fallida", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                )
-                                val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle("Verificación biométrica")
-                                    .setSubtitle("Confirma tu identidad para aceptar la solicitud")
-                                    .setNegativeButtonText("Cancelar")
-                                    .build()
-                                biometricPrompt.authenticate(promptInfo)
-                            } else {
-                                // Sin biometría: aceptar directo
-                                MainScope().launch(Dispatchers.IO) { acceptAction() }
-                            }
-                        }) { Text("Aceptar") }
+                        }
                     },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showInvitationDialog = false
-                            incomingInvitation = null
-                            InvitationManager.clearPendingInvitation(context)
-                            InvitationManager.clearIncoming()
-                        }) { Text("Rechazar") }
+                    onReject = { _ ->
+                        showInvitationDialog = false
+                        incomingInvitation = null
+                        InvitationManager.clearPendingInvitation(context)
+                        InvitationManager.clearIncoming()
                     }
                 )
             }

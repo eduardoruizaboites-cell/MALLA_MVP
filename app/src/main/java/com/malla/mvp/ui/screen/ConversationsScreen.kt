@@ -41,7 +41,6 @@ import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.core.model.ContactInvitation
 import com.malla.mvp.ui.components.NearbyPanel
-import com.malla.mvp.ui.components.IncomingRequestDialog
 import com.malla.mvp.data.entity.ContactEntity
 import com.malla.mvp.util.BiometricAuthHelper
 import com.malla.mvp.network.ProximityEngine
