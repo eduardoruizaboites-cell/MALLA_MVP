@@ -266,6 +266,9 @@ class MainActivity : FragmentActivity() {
 
             LaunchedEffect(Unit) {
                 InvitationManager.incomingInvitation.collect { invitation ->
+                    com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                        "MAIN", "InvitationManager.collect recibió: ${invitation.senderDisplayName}"
+                    )
                     incomingInvitation = invitation
                     showInvitationDialog = true
                 }
@@ -279,7 +282,40 @@ class MainActivity : FragmentActivity() {
                     text = { Text("${invitation.senderDisplayName} (${invitation.senderUserId}) quiere agregarte a sus contactos.") },
                     confirmButton = {
                         TextButton(onClick = {
-                            // Autenticación biométrica antes de aceptar
+                            showInvitationDialog = false
+                            incomingInvitation = null
+                            val acceptAction: suspend () -> Unit = {
+                                try {
+                                    // 1) Guardar contacto en Room
+                                    val contact = com.malla.mvp.data.entity.ContactEntity(
+                                        contactUserId = invitation.senderUserId,
+                                        displayName = invitation.senderDisplayName,
+                                        avatarSeed = invitation.senderAvatarSeed,
+                                        publicKey = invitation.senderPublicKey,
+                                        addedAt = System.currentTimeMillis()
+                                    )
+                                    com.malla.mvp.data.AppDatabase.getInstance(context)?.contactDao()?.insert(contact)
+                                    // 2) Crear conversación
+                                    val conversation = com.malla.mvp.data.entity.ConversationEntity(
+                                        id = invitation.senderUserId,
+                                        title = invitation.senderDisplayName,
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                    com.malla.mvp.data.AppDatabase.getInstance(context)?.conversationDao()?.insertConversation(conversation)
+                                    com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Contacto ${invitation.senderDisplayName} guardado tras aceptar invitación")
+                                    // 3) Notificar al peer con ACCEPT (advertising 30s)
+                                    InvitationManager.sendAcceptance(context, invitation)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Solicitud de ${invitation.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Error aceptando invitación: ${e.message}")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            // Biometría antes de aceptar (si está disponible)
                             val biometricManager = BiometricManager.from(context)
                             if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS) {
                                 val executor = ContextCompat.getMainExecutor(context)
@@ -288,12 +324,7 @@ class MainActivity : FragmentActivity() {
                                     executor,
                                     object : BiometricPrompt.AuthenticationCallback() {
                                         override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                            MainScope().launch(Dispatchers.IO) {
-                                                InvitationManager.sendAcceptance(context, invitation)
-                                                withContext(Dispatchers.Main) {
-                                                    Toast.makeText(context, "Solicitud aceptada", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
+                                            MainScope().launch(Dispatchers.IO) { acceptAction() }
                                         }
                                         override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                                             Toast.makeText(context, "Autenticación cancelada", Toast.LENGTH_SHORT).show()
@@ -310,12 +341,9 @@ class MainActivity : FragmentActivity() {
                                     .build()
                                 biometricPrompt.authenticate(promptInfo)
                             } else {
-                                MainScope().launch(Dispatchers.IO) {
-                                    InvitationManager.sendAcceptance(context, invitation)
-                                }
+                                // Sin biometría: aceptar directo
+                                MainScope().launch(Dispatchers.IO) { acceptAction() }
                             }
-                            showInvitationDialog = false
-                            incomingInvitation = null
                         }) { Text("Aceptar") }
                     },
                     dismissButton = {

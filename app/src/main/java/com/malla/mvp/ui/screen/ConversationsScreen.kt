@@ -73,13 +73,8 @@ fun ConversationsScreen(
     var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
     var showContacts by remember { mutableStateOf(false) }
     var acceptanceMessage by remember { mutableStateOf<String?>(null) }
-    var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        InvitationManager.incomingInvitation.collect { inv ->
-            incomingInvitation = inv
-        }
-    }
+    // El listener de incomingInvitation se removió: MainActivity lo maneja globalmente.
     LaunchedEffect(Unit) {
         InvitationManager.acceptanceReceived.collect { (name, seed) ->
             acceptanceMessage = "${name} aceptó tu solicitud"
@@ -444,49 +439,8 @@ fun ConversationsScreen(
         )
     }
 
-    if (incomingInvitation != null) {
-        IncomingRequestDialog(
-            invitation = incomingInvitation!!,
-            onAccept = { inv ->
-                scope.launch {
-                        BiometricAuthHelper.authenticate(context,
-                            onSuccess = {
-                                scope.launch {
-                                    try {
-                                        // Guardar contacto en Room
-                                        val contact = ContactEntity(
-                                            contactUserId = inv.senderUserId,
-                                            displayName = inv.senderDisplayName,
-                                            avatarSeed = inv.senderAvatarSeed,
-                                            publicKey = inv.senderPublicKey,
-                                            addedAt = System.currentTimeMillis()
-                                        )
-                                        val db = AppDatabase.getInstance(context)
-                                        db?.contactDao()?.insert(contact)
-                                        val conversation = ConversationEntity(
-                                            id = inv.senderUserId,
-                                            title = inv.senderDisplayName,
-                                            timestamp = System.currentTimeMillis()
-                                        )
-                                        db?.conversationDao()?.insertConversation(conversation)
-                                        Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
-                                        // TODO: Enviar notificación de aceptación al emisor
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
-                                    }
-                                    incomingInvitation = null
-                                }
-                            },
-                            onError = { error ->
-                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                                incomingInvitation = null
-                            }
-                        )
-                    }
-            },
-            onReject = { inv ->
-                incomingInvitation = null
-            }
-        )
-    }
+    // NOTA: El diálogo de aceptación de invitaciones se movió a MainActivity para
+    // evitar duplicación (dos diálogos se abrían a la vez) y garantizar que siempre
+    // se guarden contacto Y se envíe ACCEPT. ConversationsScreen solo muestra el
+    // toast de confirmación cuando alguien acepta nuestra invitación (acceptanceReceived).
 }
