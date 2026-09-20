@@ -50,6 +50,7 @@ object BleManager {
     private val mtuCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val writeMutexes = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
     private val writeAckDeferreds = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Boolean>>()
+    private val writeError133Count = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     private val _foundDevices = MutableStateFlow<List<String>>(emptyList())
     val foundDevices: StateFlow<List<String>> = _foundDevices
@@ -589,7 +590,9 @@ object BleManager {
                 false
             } catch (e: Exception) {
                 DiagnosticsLogger.log("BleManager", "Error connectAndWriteData: ${e.message}")
-                try { gattCache.remove(device.address)?.close() } catch (_: Exception) {}
+                // NO cerramos el GATT aquí: la conexión sigue viva aunque un fragmento haya
+                // fallado. Solo lo cerramos si el error fue de conexión (IOException/status 133
+                // reiterado), lo cual se maneja en onCharacteristicWrite.
                 false
             }
         }
@@ -655,17 +658,9 @@ object BleManager {
         val callback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    // Android cachea definiciones de servicios por device. Si el server
-                    // cambió (agregamos PROPERTY_WRITE en Commit 4), el cliente sigue
-                    // usando la caché vieja y rechaza Write Requests. refresh() limpia
-                    // la caché (hidden API — falla silencioso si no disponible).
-                    try {
-                        val m = gatt?.javaClass?.getMethod("refresh")
-                        m?.invoke(gatt)
-                        DiagnosticsLogger.log("BleManager", "gatt.refresh() invocado para ${device.address}")
-                    } catch (e: Exception) {
-                        DiagnosticsLogger.log("BleManager", "gatt.refresh() no disponible: ${e.javaClass.simpleName}")
-                    }
+                    // NO refrescamos aquí: gatt.refresh() deja gatt.services=[] durante
+                    // 1-4s y rompe writes inmediatos (status=133). El refresh se hace
+                    // solo como fallback cuando writeFramedWithAck detecta 133 dos veces.
                     gatt?.discoverServices()
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     gattCache.remove(device.address)
@@ -716,6 +711,19 @@ object BleManager {
                 val address = gatt?.device?.address ?: return
                 val ok = status == BluetoothGatt.GATT_SUCCESS
                 DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status=$status (success=$ok) para ${device.address}")
+                // Si el GATT devuelve 133 (GATT_ERROR) repetidamente, la caché de servicios
+                // está corrupta. Marcamos para que la próxima conexión haga refresh.
+                if (status == 133) {
+                    val count = writeError133Count.merge(address, 1, Int::plus) ?: 1
+                    if (count >= 2) {
+                        DiagnosticsLogger.log("BleManager", "Detectados $count status=133 en $address; invalidando caché de servicios")
+                        gattCache.remove(address)
+                        try { gatt?.close() } catch (_: Exception) {}
+                        writeError133Count.remove(address)
+                    }
+                } else if (ok) {
+                    writeError133Count.remove(address)
+                }
                 val deferred = writeAckDeferreds.remove(address) ?: return
                 if (!deferred.isCompleted) {
                     deferred.complete(ok)
