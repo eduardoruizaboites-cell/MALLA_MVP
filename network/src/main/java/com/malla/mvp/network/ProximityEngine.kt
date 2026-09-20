@@ -154,6 +154,23 @@ object ProximityEngine {
         advertising = false
     }
 
+    /**
+     * Bug H (iter 45): el advertising inicial arranca en MainActivity.onCreate antes de
+     * que el usuario complete el registro. Cuando setUserName se llama despues, el advertising
+     * sigue anunciando el nombre viejo ("Usuario Malla") porque startAdvertising() retorna
+     * temprano si advertising==true.
+     *
+     * Este helper detiene el advertising actual y lo vuelve a arrancar con el nombre
+     * recien persistido. Se debe llamar desde RegistrationScreen (post-registro),
+     * PerfilScreen (edicion de nombre) y EditProfileScreen (guardar cambios).
+     */
+    fun refreshAdvertising(context: android.content.Context) {
+        val name = IdentityManager.getUserName(context)
+        stopAdvertising()
+        startAdvertising(name, 0)
+        DiagnosticsLogger.log("PROX", "Advertising refrescado con nombre=$name")
+    }
+
     fun hideUser(token: String) {
         _nearbyUsers.value = _nearbyUsers.value.filter { it.token != token }
     }

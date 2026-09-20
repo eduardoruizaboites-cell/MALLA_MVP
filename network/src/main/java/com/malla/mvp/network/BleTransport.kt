@@ -125,6 +125,7 @@ object BleTransport {
 
     private var started = false
     private var serverStarted = false
+    private var startingServer = false
     private var discoveryJob: Job? = null
 
     fun start(context: Context) {
@@ -209,9 +210,7 @@ object BleTransport {
     }
 
     private fun startServer(context: Context) {
-        // Bug F (iter 43): el GATT server solo necesita BLUETOOTH_CONNECT.
-        // hasBlePermissions exige los 3 permisos (SCAN + CONNECT + ADVERTISE) y bloqueaba
-        // la apertura silenciosamente si el usuario aún no había concedido todos.
+        if (serverStarted || startingServer) return
         if (!BleManager.hasConnectPermission(context)) {
             LogBuffer.add("BleTransport", "GATT server NO iniciado: falta BLUETOOTH_CONNECT")
             DiagnosticsLogger.log("BleTransport", "GATT server NO iniciado: falta BLUETOOTH_CONNECT")
@@ -219,30 +218,60 @@ object BleTransport {
         }
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = btManager.adapter ?: return
-        gattServer = btManager.openGattServer(context, gattServerCallback).apply {
-            val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-            val char = BluetoothGattCharacteristic(
-                MESSAGE_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ or
+        startingServer = true
+        // Bug F capa 2 (iter 44): en Android 14+ (y confirmado en Cubot API 36), llamar
+        // addService() inmediatamente despues de openGattServer() devuelve false porque
+        // el server interno aun no esta listo. Resultado: server "abierto" pero sin servicios
+        // registrados; los clientes solo ven los genericos del sistema (GAP + GATT).
+        // Fix: delay de 500ms entre openGattServer y addService, verificar el retorno,
+        // retry unico si falla, y logs honestos.
+        scope.launch {
+            try {
+                val server = btManager.openGattServer(context, gattServerCallback)
+                if (server == null) {
+                    DiagnosticsLogger.log("BleTransport", "openGattServer devolvio null")
+                    return@launch
+                }
+                gattServer = server
+                delay(500L)
+                val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+                val char = BluetoothGattCharacteristic(
+                    MESSAGE_CHAR_UUID,
+                    BluetoothGattCharacteristic.PROPERTY_READ or
+                        BluetoothGattCharacteristic.PROPERTY_WRITE or
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                    BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+                )
+                val inviteChar = BluetoothGattCharacteristic(
+                    INVITE_CHAR_UUID,
                     BluetoothGattCharacteristic.PROPERTY_WRITE or
-                    BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or
-                    BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
-            )
-            val inviteChar = BluetoothGattCharacteristic(
-                INVITE_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_WRITE or
-                    BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or
-                    BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
-            )
-            service.addCharacteristic(char)
-            service.addCharacteristic(inviteChar)
-            addService(service)
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or
+                        BluetoothGattCharacteristic.PROPERTY_READ,
+                    BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+                )
+                service.addCharacteristic(char)
+                service.addCharacteristic(inviteChar)
+                val ok = server.addService(service)
+                DiagnosticsLogger.log("BleTransport", "addService(service) retorno=$ok")
+                if (!ok) {
+                    delay(500L)
+                    val ok2 = server.addService(service)
+                    DiagnosticsLogger.log("BleTransport", "addService(service) retry retorno=$ok2")
+                    if (!ok2) {
+                        DiagnosticsLogger.log("BleTransport", "FALLO CRITICO: MALLA service no registrado tras 2 intentos")
+                        return@launch
+                    }
+                }
+                serverStarted = true
+                LogBuffer.add("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID (addService OK)")
+                DiagnosticsLogger.log("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID (addService OK)")
+            } catch (e: Exception) {
+                DiagnosticsLogger.log("BleTransport", "startServer excepcion: ${e.javaClass.simpleName}: ${e.message}")
+            } finally {
+                startingServer = false
+            }
         }
-        serverStarted = true
-        LogBuffer.add("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID")
-        DiagnosticsLogger.log("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID")
     }
 
     fun broadcast(data: ByteArray): Boolean {

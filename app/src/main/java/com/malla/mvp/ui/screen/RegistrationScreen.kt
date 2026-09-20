@@ -70,6 +70,8 @@ fun RegistrationScreen(onComplete: () -> Unit) {
                 onContinue = { name ->
                     username = name
                     IdentityManager.setUserName(context, name)
+                    // Bug H (iter 45): re-disparar advertising con el nombre recien guardado
+                    com.malla.mvp.network.ProximityEngine.refreshAdvertising(context)
                     currentStep = RegStep.CONFIRMACION
                 }
             )

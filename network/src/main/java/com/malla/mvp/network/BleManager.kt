@@ -508,11 +508,28 @@ object BleManager {
                 // Header de 4 bytes permite hasta 65535 en el wire, pero el cap operativo
                 // es MAX_TOTAL_FRAGS=4095 (~2 MB con MTU=517, ~64 KB con MTU=23).
                 val payloadPerFrag = maxChunk - 4  // 4 bytes de header
-                val service = gatt.getService(serviceUuid) ?: run {
+                var service = gatt.getService(serviceUuid)
+                if (service == null) {
+                    // Bug F capa 2 (iter 44): el peer pudo haber abierto su GATT server
+                    // DESPUES de nuestra primera conexion. Forzamos un discovery extra y
+                    // esperamos 1500ms. Si sigue sin aparecer, invalidamos la cache para
+                    // forzar reconexion limpia en el proximo intento.
+                    DiagnosticsLogger.log("BleManager", "Service $serviceUuid no encontrado; forzando discovery extra")
+                    try {
+                        gatt.discoverServices()
+                        delay(1500L)
+                        service = gatt.getService(serviceUuid)
+                    } catch (e: Exception) {
+                        DiagnosticsLogger.log("BleManager", "Discovery retry fallo: ${e.message}")
+                    }
+                }
+                val resolvedService = service
+                if (resolvedService == null) {
                     DiagnosticsLogger.log("BleManager", "Service no encontrado en gatt de ${device.address} (servicios=${gatt.services.map { it.uuid }})")
+                    gattCache.remove(device.address)
                     return@withLock false
                 }
-                val characteristic = service.getCharacteristic(characteristicUuid) ?: run {
+                val characteristic = resolvedService.getCharacteristic(characteristicUuid) ?: run {
                     DiagnosticsLogger.log("BleManager", "Characteristic $characteristicUuid no encontrada en ${device.address}")
                     return@withLock false
                 }

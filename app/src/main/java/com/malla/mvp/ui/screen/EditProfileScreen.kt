@@ -61,6 +61,8 @@ fun EditProfileScreen() {
                 onClick = {
                     IdentityManager.setUserName(context, name)
                     IdentityManager.setUserStatus(context, status)
+                    // Bug H (iter 45): re-disparar advertising con el nombre actualizado
+                    com.malla.mvp.network.ProximityEngine.refreshAdvertising(context)
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
