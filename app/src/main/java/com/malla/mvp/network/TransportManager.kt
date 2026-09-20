@@ -5,6 +5,7 @@ import com.malla.mvp.core.engine.DiagnosticsLogger
 import com.malla.mvp.identity.IdentityManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import com.malla.mvp.network.BleManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,7 @@ object TransportManager {
         DiagnosticsLogger.log(TAG, "Transporte activo: $transportName (${newStatus.name})")
     }
 
-    suspend fun send(contactId: String, message: MeshMessage) = withContext(Dispatchers.IO) {
+    suspend fun send(contactId: String, message: MeshMessage): Boolean = withContext(Dispatchers.IO) {
         val tcpConnected = NetworkService.isContactConnected(contactId)
         DiagnosticsLogger.log(TAG, "Enviando mensaje a $contactId; TCP conectado=$tcpConnected")
 
@@ -51,7 +52,7 @@ object TransportManager {
                 DiagnosticsLogger.log(TAG, "Usando TCP (peer conectado por red)")
                 NetworkService.sendMessageToContact(contactId, message)
                 updateStatus(TransportStatus.TCP_CONNECTED, "TCP")
-                return@withContext
+                return@withContext true
             } catch (e: Exception) {
                 DiagnosticsLogger.log(TAG, "TCP falló, cayendo a BLE: ${e.message}")
             }
@@ -85,7 +86,9 @@ object TransportManager {
             if (device != null) {
                 // Método directo más confiable: conectar y escribir característica
                 DiagnosticsLogger.log(TAG, "Intentando connectAndWriteData a ${device.address}")
-                sentBle = BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                sentBle = withContext(NonCancellable) {
+                    BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                }
                 DiagnosticsLogger.log(TAG, "BLE connectAndWriteData resultado=$sentBle")
             }
             if (!sentBle) {
@@ -94,13 +97,15 @@ object TransportManager {
                 DiagnosticsLogger.log(TAG, "BLE broadcast resultado=$sentBle")
                 if (!sentBle && device != null) {
                     DiagnosticsLogger.log(TAG, "Reintentando sendWithRetry a ${device.address}")
-                    sentBle = BleTransport.sendWithRetry(device, payload)
+                    sentBle = withContext(NonCancellable) {
+                        BleTransport.sendWithRetry(device, payload)
+                    }
                     DiagnosticsLogger.log(TAG, "BLE sendWithRetry resultado=$sentBle")
                 }
             }
             if (sentBle) {
                 updateStatus(TransportStatus.BLE_CONNECTED, "BLE")
-                return@withContext
+                return@withContext true
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error BLE: ${e.message}")
@@ -118,21 +123,25 @@ object TransportManager {
             val sentWfd = WifiDirectManager.broadcast(wfdPayload)
             if (sentWfd) {
                 updateStatus(TransportStatus.WIFI_DIRECT_CONNECTED, "Wi-Fi Direct")
-                return@withContext
+                return@withContext true
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error Wi-Fi Direct: ${e.message}")
         }
 
-        // 4. Si no hay canal activo, encolar en NetworkService para entrega cuando TCP esté disponible
+        // 4. Sin canal activo en el momento: NetworkService lo deja en su cola
+        // pendingMessages (memoria) y lo reenviará cuando el peer abra TCP.
+        // Devolvemos false para que el caller NO marque el mensaje como entregado:
+        // queda en status=0 (SENT) hasta que el ACK del receptor llegue.
         try {
             NetworkService.sendMessageToContact(contactId, message)
             updateStatus(TransportStatus.ERROR, "NONE")
-            DiagnosticsLogger.log(TAG, "Sin canal activo: mensaje encolado en TCP")
+            DiagnosticsLogger.log(TAG, "Sin canal activo: mensaje en cola pendiente (no entregado)")
         } catch (e: Exception) {
             DiagnosticsLogger.log(TAG, "Error encolando mensaje: ${e.message}")
             updateStatus(TransportStatus.ERROR, "NONE")
         }
+        return@withContext false
     }
     suspend fun sendTyping(contactId: String, isTyping: Boolean) = withContext(Dispatchers.IO) {
         try {
@@ -146,7 +155,9 @@ object TransportManager {
             val device = nearby?.bluetoothDevice ?: BleManager.foundBluetoothDevices.value.firstOrNull()
             DiagnosticsLogger.log(TAG, "Dispositivo BLE seleccionado: ${device?.address ?: "null"} para contacto $contactId")
             if (device != null) {
-                BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                withContext(NonCancellable) {
+                    BleManager.connectAndWriteData(device, BleManager.MESSAGE_CHAR_UUID, payload)
+                }
             } else {
                 BleTransport.broadcast(payload)
             }

@@ -280,8 +280,12 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         expireAt = expireAt,
                         viewOnce = viewOnce
                     )
-                    TransportManager.send(convId, meshMsg)
-                    db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
+                    val delivered = TransportManager.send(convId, meshMsg)
+                    if (delivered) {
+                        db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
+                    }
+                    // Si no se entregó, queda en status=0 (SENT). El ACK del
+                    // receptor lo subirá a 1 cuando llegue por read receipt.
                 } catch (e: Exception) {
                     // fallback: queda como enviado (0)
                 }
