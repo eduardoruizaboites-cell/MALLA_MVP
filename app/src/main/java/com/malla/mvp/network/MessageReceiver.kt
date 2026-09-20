@@ -102,13 +102,17 @@ object MessageReceiver {
             MallaEventBus.conversationOpened.collect { peerId ->
                 if (peerId.isBlank() || peerId == "self_chat") return@collect
                 try {
-                    TransportManager.send(peerId, MeshMessage(
+                    val delivered = TransportManager.send(peerId, MeshMessage(
                         content = "read_all",
                         senderId = IdentityManager.getIdentityId(),
                         type = "read_all",
                         timestamp = System.currentTimeMillis()
                     ))
-                    DiagnosticsLogger.log(TAG, "read_all enviado a $peerId")
+                    if (delivered) {
+                        DiagnosticsLogger.log(TAG, "read_all enviado a $peerId")
+                    } else {
+                        DiagnosticsLogger.log(TAG, "read_all en cola pendiente a $peerId (no entregado)")
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error enviando read_all: ${e.message}")
                 }
