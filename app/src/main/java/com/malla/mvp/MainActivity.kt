@@ -181,6 +181,7 @@ class MainActivity : FragmentActivity() {
                 LogBuffer.add("MAIN", "Permisos concedidos, habilitando radio")
                 enableRadio()
                 ProximityEngine.ensureAdvertising(this@MainActivity)
+                ProximityEngine.ensureScanning(this@MainActivity)
                 Toast.makeText(this, "Comunicación mesh activa", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Algunos permisos fueron denegados. La app puede funcionar con limitaciones.", Toast.LENGTH_LONG).show()

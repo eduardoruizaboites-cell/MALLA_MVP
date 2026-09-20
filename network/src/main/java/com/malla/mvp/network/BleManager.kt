@@ -274,7 +274,10 @@ object BleManager {
      * Llamar periodicamente desde un watchdog garantiza continuidad del descubrimiento.
      */
     fun restartProximityScanning() {
-        val cb = proximityScanCallback ?: return
+        val cb = proximityScanCallback ?: run {
+            DiagnosticsLogger.log("BLE", "Watchdog: proximityScanCallback null (scan nunca iniciado con exito)")
+            return
+        }
         try { scanner?.stopScan(proximityScanCallbackWrapper) } catch (_: Exception) {}
         isProximityScanning = false
         startScanningWithCallback(cb)

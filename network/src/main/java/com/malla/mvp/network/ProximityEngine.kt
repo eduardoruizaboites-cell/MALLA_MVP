@@ -116,6 +116,31 @@ object ProximityEngine {
         }
     }
 
+    /**
+     * Reintenta iniciar el escaneo BLE si no está activo y hay permisos.
+     * Necesario porque MeshChatService arranca antes de que el usuario conceda
+     * permisos: ProximityEngine.start() intenta escanear, falla por permisos, y
+     * proximityScanCallback queda null. El watchdog de 2min entra a
+     * restartProximityScanning, ve null y sale silencioso. Sin este método,
+     * nearbyUsers queda vacío hasta el próximo reinicio de la app.
+     */
+    fun ensureScanning(context: Context) {
+        if (!BleManager.hasBlePermissions(context)) {
+            DiagnosticsLogger.log("PROX", "ensureScanning: sin permisos BLE, no se inicia scan")
+            return
+        }
+        // BleManager.startScanningWithCallback es idempotente: si ya está escaneando, no-op.
+        BleManager.startScanningWithCallback { token, userId, name, seed, strength, device ->
+            val myId = IdentityManager.getIdentityId()
+            DiagnosticsLogger.logThrottled("prox_callback_${device.address}", "PROX", "Callback BLE: token=$token, userId=$userId, name=$name, seed=$seed, device=${device.address}")
+            if (token != generateToken(myId)) {
+                addOrUpdate(token, userId, name, seed, SignalType.BLE, strength, device)
+            } else {
+                DiagnosticsLogger.log("PROX", "Ignorando anuncio propio: $token")
+            }
+        }
+    }
+
     fun startAdvertising(displayName: String, avatarSeed: Int) {
         if (advertising) return
         val userId = IdentityManager.getIdentityId()
