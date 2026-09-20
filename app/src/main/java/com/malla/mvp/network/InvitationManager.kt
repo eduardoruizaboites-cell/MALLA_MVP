@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import android.bluetooth.BluetoothAdapter
@@ -24,7 +25,7 @@ import java.util.Locale
 
 object InvitationManager {
     private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _incomingInvitation = MutableSharedFlow<ContactInvitation>(replay = 0)
     private val _acceptanceReceived = MutableSharedFlow<Pair<String,Int>>(replay = 0)
     val acceptanceReceived = _acceptanceReceived.asSharedFlow()
@@ -39,6 +40,13 @@ object InvitationManager {
      */
     fun start(context: Context) {
         appContext = context.applicationContext
+        // Recrear el scope si fue cancelado por un stop() previo. Android mata
+        // services agresivamente (sobre todo en API 30+); si el scope queda muerto,
+        // las invitaciones dejan de llegar hasta reinstalar la app.
+        if (!scope.isActive) {
+            DiagnosticsLogger.log("InvitationManager", "scope cancelado detectado; recreando")
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        }
         scope.launch {
             BleTransport.invitationPayloads.collect { payload ->
                 processIncomingInvitationPayload(payload)
@@ -48,6 +56,52 @@ object InvitationManager {
 
     fun stop() {
         scope.cancel()
+    }
+
+    /**
+     * Invitación pendiente de mostrar. Si la app se cerró antes de aceptarla,
+     * se persiste y se recupera al reabrir.
+     */
+    fun savePendingInvitation(context: Context, invitation: ContactInvitation) {
+        try {
+            val json = org.json.JSONObject().apply {
+                put("senderUserId", invitation.senderUserId)
+                put("senderDisplayName", invitation.senderDisplayName)
+                put("senderAvatarSeed", invitation.senderAvatarSeed)
+                put("senderPublicKey", invitation.senderPublicKey)
+                put("ts", System.currentTimeMillis())
+            }
+            context.getSharedPreferences("invitation_codes", Context.MODE_PRIVATE)
+                .edit().putString("pending_invitation", json.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    fun loadPendingInvitation(context: Context): ContactInvitation? {
+        return try {
+            val prefs = context.getSharedPreferences("invitation_codes", Context.MODE_PRIVATE)
+            val raw = prefs.getString("pending_invitation", null) ?: return null
+            val json = org.json.JSONObject(raw)
+            // Expira a las 24h
+            val ts = json.optLong("ts", 0L)
+            if (System.currentTimeMillis() - ts > 24 * 60 * 60 * 1000L) {
+                prefs.edit().remove("pending_invitation").apply()
+                return null
+            }
+            ContactInvitation(
+                senderUserId = json.optString("senderUserId", ""),
+                senderDisplayName = json.optString("senderDisplayName", "Usuario Malla"),
+                senderAvatarSeed = json.optInt("senderAvatarSeed", 0),
+                senderPublicKey = json.optString("senderPublicKey", ""),
+                preferredChannels = listOf("BLE")
+            )
+        } catch (_: Exception) { null }
+    }
+
+    fun clearPendingInvitation(context: Context) {
+        try {
+            context.getSharedPreferences("invitation_codes", Context.MODE_PRIVATE)
+                .edit().remove("pending_invitation").apply()
+        } catch (_: Exception) {}
     }
 
     private fun processIncomingInvitationPayload(payload: String) {
@@ -61,7 +115,10 @@ object InvitationManager {
                 preferredChannels = listOf("BLE")
             )
             _incomingInvitation.tryEmit(invitation)
-            DiagnosticsLogger.log("InvitationManager", "Invitación procesada de ${invitation.senderDisplayName}")
+            try {
+                appContext?.let { ctx -> savePendingInvitation(ctx, invitation) }
+            } catch (_: Exception) {}
+            DiagnosticsLogger.log("InvitationManager", "Invitación procesada de ${invitation.senderDisplayName} (persistida)")
         } catch (e: Exception) {
             DiagnosticsLogger.log("InvitationManager", "Error parseando invitación: ${e.message}")
         }

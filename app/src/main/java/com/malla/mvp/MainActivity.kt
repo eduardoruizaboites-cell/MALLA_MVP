@@ -265,6 +265,15 @@ class MainActivity : FragmentActivity() {
             var showInvitationDialog by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
+                // Al reabrir la app, recuperar invitación pendiente si la había
+                InvitationManager.loadPendingInvitation(context)?.let { pending ->
+                    com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                        "MAIN", "Invitación pendiente recuperada de prefs: ${pending.senderDisplayName}"
+                    )
+                    incomingInvitation = pending
+                    showInvitationDialog = true
+                }
+                // Y escuchar nuevas
                 InvitationManager.incomingInvitation.collect { invitation ->
                     com.malla.mvp.core.engine.DiagnosticsLogger.log(
                         "MAIN", "InvitationManager.collect recibió: ${invitation.senderDisplayName}"
@@ -277,13 +286,18 @@ class MainActivity : FragmentActivity() {
             if (showInvitationDialog && incomingInvitation != null) {
                 val invitation = incomingInvitation!!
                 AlertDialog(
-                    onDismissRequest = { showInvitationDialog = false; incomingInvitation = null },
+                    onDismissRequest = {
+                        showInvitationDialog = false
+                        incomingInvitation = null
+                        InvitationManager.clearPendingInvitation(context)
+                    },
                     title = { Text("Solicitud de contacto") },
                     text = { Text("${invitation.senderDisplayName} (${invitation.senderUserId}) quiere agregarte a sus contactos.") },
                     confirmButton = {
                         TextButton(onClick = {
                             showInvitationDialog = false
                             incomingInvitation = null
+                            InvitationManager.clearPendingInvitation(context)
                             val acceptAction: suspend () -> Unit = {
                                 try {
                                     // 1) Guardar contacto en Room
@@ -347,7 +361,11 @@ class MainActivity : FragmentActivity() {
                         }) { Text("Aceptar") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showInvitationDialog = false; incomingInvitation = null }) { Text("Rechazar") }
+                        TextButton(onClick = {
+                            showInvitationDialog = false
+                            incomingInvitation = null
+                            InvitationManager.clearPendingInvitation(context)
+                        }) { Text("Rechazar") }
                     }
                 )
             }
