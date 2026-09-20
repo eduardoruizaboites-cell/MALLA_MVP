@@ -26,10 +26,12 @@ import java.util.Locale
 object InvitationManager {
     private var appContext: Context? = null
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val _incomingInvitation = MutableSharedFlow<ContactInvitation>(replay = 0)
+    private val _incomingInvitation = kotlinx.coroutines.flow.MutableStateFlow<ContactInvitation?>(null)
     private val _acceptanceReceived = MutableSharedFlow<Pair<String,Int>>(replay = 0)
     val acceptanceReceived = _acceptanceReceived.asSharedFlow()
-    val incomingInvitation = _incomingInvitation.asSharedFlow()
+    val incomingInvitation: kotlinx.coroutines.flow.StateFlow<ContactInvitation?> = _incomingInvitation
+
+    fun clearIncoming() { _incomingInvitation.value = null }
     private val invitationCharUuid = UUID.fromString("0000abcd-0002-1000-8000-00805f9b34fb")
     private const val PREFS_NAME = "invitation_codes"
     private const val EXPIRATION_MS = 24 * 60 * 60 * 1000L
@@ -114,7 +116,7 @@ object InvitationManager {
                 senderPublicKey = json.optString("senderPublicKey", ""),
                 preferredChannels = listOf("BLE")
             )
-            _incomingInvitation.tryEmit(invitation)
+            _incomingInvitation.value = invitation
             try {
                 appContext?.let { ctx -> savePendingInvitation(ctx, invitation) }
             } catch (_: Exception) {}
@@ -259,6 +261,6 @@ object InvitationManager {
     }
 
     fun receiveInvitation(invitation: ContactInvitation) {
-        _incomingInvitation.tryEmit(invitation)
+        _incomingInvitation.value = invitation
     }
 }

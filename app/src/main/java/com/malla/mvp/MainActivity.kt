@@ -264,21 +264,25 @@ class MainActivity : FragmentActivity() {
             var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
             var showInvitationDialog by remember { mutableStateOf(false) }
 
+            // 1) Al arrancar, si había una invitación pendiente persistida, la cargamos
+            //    en el StateFlow (que sobrevive recomposiciones).
             LaunchedEffect(Unit) {
-                // Al reabrir la app, recuperar invitación pendiente si la había
                 InvitationManager.loadPendingInvitation(context)?.let { pending ->
                     com.malla.mvp.core.engine.DiagnosticsLogger.log(
                         "MAIN", "Invitación pendiente recuperada de prefs: ${pending.senderDisplayName}"
                     )
-                    incomingInvitation = pending
-                    showInvitationDialog = true
+                    InvitationManager.receiveInvitation(pending)
                 }
-                // Y escuchar nuevas
-                InvitationManager.incomingInvitation.collect { invitation ->
+            }
+            // 2) Observar el StateFlow. collectAsState() siempre está suscrito mientras la
+            //    composición esté viva — no depende de un LaunchedEffect que puede cancelarse.
+            val observedInvitation by InvitationManager.incomingInvitation.collectAsState()
+            LaunchedEffect(observedInvitation) {
+                if (observedInvitation != null) {
                     com.malla.mvp.core.engine.DiagnosticsLogger.log(
-                        "MAIN", "InvitationManager.collect recibió: ${invitation.senderDisplayName}"
+                        "MAIN", "invitación observada: ${observedInvitation!!.senderDisplayName}"
                     )
-                    incomingInvitation = invitation
+                    incomingInvitation = observedInvitation
                     showInvitationDialog = true
                 }
             }
@@ -290,6 +294,7 @@ class MainActivity : FragmentActivity() {
                         showInvitationDialog = false
                         incomingInvitation = null
                         InvitationManager.clearPendingInvitation(context)
+                        InvitationManager.clearIncoming()
                     },
                     title = { Text("Solicitud de contacto") },
                     text = { Text("${invitation.senderDisplayName} (${invitation.senderUserId}) quiere agregarte a sus contactos.") },
@@ -298,6 +303,7 @@ class MainActivity : FragmentActivity() {
                             showInvitationDialog = false
                             incomingInvitation = null
                             InvitationManager.clearPendingInvitation(context)
+                            InvitationManager.clearIncoming()
                             val acceptAction: suspend () -> Unit = {
                                 try {
                                     // 1) Guardar contacto en Room
@@ -365,6 +371,7 @@ class MainActivity : FragmentActivity() {
                             showInvitationDialog = false
                             incomingInvitation = null
                             InvitationManager.clearPendingInvitation(context)
+                            InvitationManager.clearIncoming()
                         }) { Text("Rechazar") }
                     }
                 )
