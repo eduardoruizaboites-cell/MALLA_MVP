@@ -11,6 +11,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -117,7 +119,10 @@ fun IncomingRequestDialog(
                             .background(Color(0xFF4CE6FF).copy(alpha = glowAlpha))
                     )
                     Surface(
-                        modifier = Modifier.size(72.dp).clip(CircleShape),
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, Color(0xFF4CE6FF).copy(alpha = 0.35f), CircleShape),
                         color = Color(android.graphics.Color.HSVToColor(
                             floatArrayOf(
                                 (invitation.senderAvatarSeed * 27) % 360f,
@@ -216,14 +221,17 @@ fun IncomingRequestDialog(
 
                 Spacer(Modifier.height(12.dp))
 
-                TextButton(
+                OutlinedButton(
                     onClick = { onReject(invitation) },
-                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF8B949E).copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE6EDF3))
                 ) {
                     Text(
                         text = "Rechazar",
-                        color = Color(0xFF8B949E),
-                        fontSize = 14.sp
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp
                     )
                 }
             }
