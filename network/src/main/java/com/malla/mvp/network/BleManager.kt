@@ -511,8 +511,14 @@ object BleManager {
                     System.arraycopy(data, 0, framed, 4, data.size)
                     var ok = false
                     var attempt = 0
+                    // Intento 1-2: WRITE_TYPE_DEFAULT (con ACK). Intento 3: NO_RESPONSE (fallback).
+                    val writeTypes = intArrayOf(
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                        BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                    )
                     while (attempt < 3 && !ok) {
-                        ok = writeFramedWithAck(gatt, characteristic, framed)
+                        ok = writeFramedWithAck(gatt, characteristic, framed, writeType = writeTypes[attempt])
                         if (!ok) {
                             attempt++
                             if (attempt < 3) delay(50L * attempt)
@@ -540,8 +546,13 @@ object BleManager {
                     System.arraycopy(data, start, framed, 4, chunkSize)
                     var ok = false
                     var attempt = 0
+                    val writeTypes = intArrayOf(
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                        BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                    )
                     while (attempt < 3 && !ok) {
-                        ok = writeFramedWithAck(gatt, characteristic, framed)
+                        ok = writeFramedWithAck(gatt, characteristic, framed, writeType = writeTypes[attempt])
                         if (!ok) {
                             attempt++
                             if (attempt < 3) {
@@ -574,26 +585,46 @@ object BleManager {
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic,
         framed: ByteArray,
-        timeoutMs: Long = 1500L
+        timeoutMs: Long = 1500L,
+        writeType: Int = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
     ): Boolean {
         if (framed.size > 512) {
             DiagnosticsLogger.log("BleManager", "writeFramed rechaza ${framed.size}B (>512 límite ATT)")
             return false
         }
         val address = gatt.device.address
+        // NO_RESPONSE no espera callback: solo encolar y devolver el resultado del queue.
+        if (writeType == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
+            return try {
+                characteristic.value = framed
+                characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                val queued = gatt.writeCharacteristic(characteristic)
+                DiagnosticsLogger.log("BleManager", "writeFramed NO_RESPONSE queued=$queued (framed=${framed.size}B)")
+                queued
+            } catch (e: Exception) {
+                DiagnosticsLogger.log("BleManager", "writeFramed NO_RESPONSE excepción: ${e.message}")
+                false
+            }
+        }
         val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
         writeAckDeferreds[address] = deferred
         return try {
             characteristic.value = framed
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            characteristic.writeType = writeType
             val queued = gatt.writeCharacteristic(characteristic)
             if (!queued) {
-                DiagnosticsLogger.log("BleManager", "writeCharacteristic devolvió false (queued, framed=${framed.size}B)")
+                DiagnosticsLogger.log("BleManager", "writeCharacteristic devolvió false (queued, framed=${framed.size}B, writeType=$writeType)")
                 false
             } else {
-                withTimeoutOrNull(timeoutMs) { deferred.await() } ?: run {
-                    DiagnosticsLogger.log("BleManager", "writeCharacteristic timeout ${timeoutMs}ms (framed=${framed.size}B)")
+                val result = withTimeoutOrNull(timeoutMs) { deferred.await() }
+                if (result == null) {
+                    DiagnosticsLogger.log("BleManager", "writeCharacteristic timeout ${timeoutMs}ms (framed=${framed.size}B, writeType=$writeType)")
                     false
+                } else {
+                    if (!result) {
+                        DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status != SUCCESS (framed=${framed.size}B, writeType=$writeType)")
+                    }
+                    result
                 }
             }
         } catch (e: Exception) {
@@ -610,6 +641,17 @@ object BleManager {
         val callback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    // Android cachea definiciones de servicios por device. Si el server
+                    // cambió (agregamos PROPERTY_WRITE en Commit 4), el cliente sigue
+                    // usando la caché vieja y rechaza Write Requests. refresh() limpia
+                    // la caché (hidden API — falla silencioso si no disponible).
+                    try {
+                        val m = gatt?.javaClass?.getMethod("refresh")
+                        m?.invoke(gatt)
+                        DiagnosticsLogger.log("BleManager", "gatt.refresh() invocado para ${device.address}")
+                    } catch (e: Exception) {
+                        DiagnosticsLogger.log("BleManager", "gatt.refresh() no disponible: ${e.javaClass.simpleName}")
+                    }
                     gatt?.discoverServices()
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     gattCache.remove(device.address)
@@ -652,9 +694,11 @@ object BleManager {
                 status: Int
             ) {
                 val address = gatt?.device?.address ?: return
+                val ok = status == BluetoothGatt.GATT_SUCCESS
+                DiagnosticsLogger.log("BleManager", "onCharacteristicWrite status=$status (success=$ok) para ${device.address}")
                 val deferred = writeAckDeferreds.remove(address) ?: return
                 if (!deferred.isCompleted) {
-                    deferred.complete(status == BluetoothGatt.GATT_SUCCESS)
+                    deferred.complete(ok)
                 }
             }
         }

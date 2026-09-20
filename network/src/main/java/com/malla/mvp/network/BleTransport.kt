@@ -445,6 +445,7 @@ object BleTransport {
             offset: Int,
             value: ByteArray
         ) {
+            DiagnosticsLogger.log(TAG, "Write Request recibido de ${device.address}: char=${characteristic.uuid}, responseNeeded=$responseNeeded, size=${value.size}")
             when (characteristic.uuid) {
                 MESSAGE_CHAR_UUID -> {
                     handleFragment(device, value)
