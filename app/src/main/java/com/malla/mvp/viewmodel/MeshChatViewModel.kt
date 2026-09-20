@@ -186,18 +186,51 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     }
 
 
-    private var typingJob: Job? = null
+    private var typingStartJob: Job? = null
+    private var typingStopJob: Job? = null
+    private var lastSentTyping: Boolean = false
 
     fun sendTyping(isTyping: Boolean) {
         val convId = _conversationId.value ?: return
         if (convId == "self_chat") return
-        typingJob?.cancel()
-        typingJob = viewModelScope.launch {
-            if (isTyping) {
-                // Debounce: solo enviar "escribiendo" si el usuario sigue tecleando tras 300ms
-                delay(300L)
+
+        if (isTyping) {
+            // Resetear auto-stop: usuario sigue activo
+            typingStopJob?.cancel()
+            // Si ya avisamos "escribiendo", no reenviar — solo reprogramar el stop
+            if (lastSentTyping) {
+                scheduleTypingStop(convId)
+                return
             }
-            TransportManager.sendTyping(convId, isTyping)
+            // Primer keystroke: debounce corto y avisar una sola vez
+            typingStartJob?.cancel()
+            typingStartJob = viewModelScope.launch {
+                delay(300L)
+                TransportManager.sendTyping(convId, true)
+                lastSentTyping = true
+                scheduleTypingStop(convId)
+            }
+        } else {
+            // "Dejó de escribir" explícito: enviar inmediato
+            typingStartJob?.cancel()
+            typingStopJob?.cancel()
+            if (lastSentTyping) {
+                viewModelScope.launch {
+                    TransportManager.sendTyping(convId, false)
+                    lastSentTyping = false
+                }
+            }
+        }
+    }
+
+    private fun scheduleTypingStop(convId: String) {
+        typingStopJob?.cancel()
+        typingStopJob = viewModelScope.launch {
+            delay(4000L)
+            if (lastSentTyping) {
+                TransportManager.sendTyping(convId, false)
+                lastSentTyping = false
+            }
         }
     }
 

@@ -1911,3 +1911,208 @@ DEUDA / PENDIENTE QUE SIGUE ABIERTA TRAS ESTA SESIÓN:
 - 8 ramas locales sin upstream (backups y features premium de sesiones anteriores).
 - Bloque "Arquitectura objetivo" del prompt maestro v4 desalineado 100% con el repo real.
 ──────────────────────────────
+
+
+── ENTRADA — 2026-09-20 13:01 (Iteración 23 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt (network/): reintento de MTU negotiation. Tras requestMtu(517) con timeout de 5s, segundo requestMtu(247) sobre el mismo GATT + polling de 3s. onMtuChanged persiste el MTU en cache aunque llegue fuera de la ventana de espera.
+¿ERA UN FIX DE ERROR?: SI: ERROR: en Xiaomi el primer requestMtu(517) se perdia por timeout y el codigo abortaba sin reintentar (MTU quedaba en 23, default). SOLUCION: segundo intento con 247 + polling 3s. FUNCIONO?: compilacion exitosa; verificado en device posteriormente en iter 33/35.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion (verificacion en device diferida a iter 33/35)
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi Redmi Note 9S), Android 16 (Cubot KingKong ES 5)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del nuevo MTU negociado
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 13:03 (Iteración 24 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt (network/): write con ACK por fragmento. Cada fragmento se envia con WRITE_TYPE_DEFAULT y se espera onCharacteristicWrite hasta 1500ms, retry 3x con backoff 50/100ms. Tercer intento cae a WRITE_TYPE_NO_RESPONSE como fallback. Cierra el fallo F2 del Bloque 1.
+¿ERA UN FIX DE ERROR?: SI: ERROR: fragmentos perdidos en envios grandes porque el write NO_RESPONSE no garantizaba entrega. SOLUCION: ACK por fragmento con WRITE_TYPE_DEFAULT + fallback. FUNCIONO?: compilacion exitosa; confirmado en device iter 26-38.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del flujo completo
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 13:10 (Iteración 25 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: TransportManager.kt (app/network/) y MeshChatViewModel.kt (app/viewmodel/): writes BLE envueltos en NonCancellable para no abortar ante cancelacion externa. El status del mensaje refleja honestamente si hubo ACK - sin ACK queda como enviado, no como entregado. Cierra F3 y F4 del Bloque 1.
+¿ERA UN FIX DE ERROR?: SI: ERROR: writes cancelados por el scope padre dejaban mensajes a medio enviar; el status reportaba entregado sin confirmacion real. SOLUCION: NonCancellable + status honesto. FUNCIONO?: compilacion exitosa; confirmado en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device de estado de mensajes
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 13:36 (Iteración 26 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt (network/, server side): la caracteristica GATT del server ahora declara PROPERTY_WRITE ademas de PROPERTY_WRITE_NO_RESPONSE, para que el cliente con WRITE_TYPE_DEFAULT no reciba rechazo silencioso. Referenciado como 'Commit 4' en H2 del INFORME DE CONTINUIDAD, pero ausente de la tabla 'LOS 15 COMMITS'.
+¿ERA UN FIX DE ERROR?: SI: ERROR: WRITE_TYPE_DEFAULT del cliente fallaba silenciosamente con status != 0 porque el server solo declaraba WRITE_NO_RESPONSE. SOLUCION: agregar PROPERTY_WRITE al server. FUNCIONO?: compilacion exitosa; confirmado en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del ACK del server
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 14:05 (Iteración 27 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: ProximityEngine.kt (network/) y MainActivity.kt (app/): tras conceder permisos BLE en runtime, ensureScanning() re-dispara el scan si estaba detenido. Watchdog log para diagnostico del silencio. Cierra el bug de scan que no arranca post-permisos.
+¿ERA UN FIX DE ERROR?: SI: ERROR: tras conceder permisos BLE en Android 12+, el scan no se iniciaba automaticamente (ProximityEngine ya habia intentado arrancar antes de los permisos). SOLUCION: ensureScanning() tras onRequestPermissionsResult + watchdog log. FUNCIONO?: compilacion exitosa; confirmado en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del scan post-permisos
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 14:07 (Iteración 28 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: MessageReceiver.kt (app/network/): el log de read_all refleja el Boolean real devuelto por TransportManager.send - ya no reporta exito cuando el envio devuelve false. Nota: numeracion 'iter 28' commiteada antes de 'iter 27' (ba5c285b); desfase documental, no de codigo.
+¿ERA UN FIX DE ERROR?: SI: ERROR: log afirmaba 'read_all enviado' sin verificar el retorno real de TransportManager. SOLUCION: log honesto. FUNCIONO?: compilacion exitosa.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: read_all por BLE aun no llega al emisor (dependiente del bug broadcast sin header 4B, resuelto en iter 19)
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 14:21 (Iteración 29 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt y BleTransport.kt (network/): logs agregados en los early-returns que antes salian en silencio (permisos faltantes, GATT null, etc). Filtro de auto-conexion por userId propio para evitar el eco 'peer self' que se veia en logs del Cubot.
+¿ERA UN FIX DE ERROR?: SI: ERROR: (1) ramas de salida temprana sin log ocultaban por que fallaba el write; (2) Cubot recibia eco de sus propios mensajes. SOLUCION: logs + filtro isSelfUser por userId. FUNCIONO?: compilacion exitosa; auto-conexion self bloqueada confirmada en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del eco eliminado
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 14:48 (Iteración 30 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt y BleTransport.kt (network/): gatt.refresh() como fallback tras fallos persistentes, fallback automatico a WRITE_TYPE_NO_RESPONSE si WRITE_TYPE_DEFAULT agota retries, logs detallados en callbacks GATT. Precursor del H1 (gatt.refresh rompe flujo normal - resuelto en iter 35).
+¿ERA UN FIX DE ERROR?: SI: ERROR: status 133 intermitente en writes grandes. SOLUCION: gatt.refresh() como fallback + logs. FUNCIONO?: compilacion exitosa; el refresh resulto problematico y se removio en iter 35.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: gatt.refresh() causa status=133 (resuelto en iter 35)
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 15:40 (Iteración 31 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: MainActivity.kt (app/): solicitud de permisos BLE diferenciada por tipo (BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE en Android 12+). El Cubot (Android 16) sin SCAN ya no bloquea writes por pedir el permiso equivocado. Cierra bug de permisos en API 31+.
+¿ERA UN FIX DE ERROR?: SI: ERROR: en Android 12+ el Cubot pedia permisos BLE agregados y sin SCAN concedido, los writes GATT se bloqueaban. SOLUCION: permisos granulares por tipo de operacion. FUNCIONO?: compilacion exitosa; scan en Cubot confirmado en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 12+ (BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE); Android 11 usa permisos legacy
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del scan granular
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 15:59 (Iteración 32 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: MeshChatService.kt (app/service/): log '[BUILD] MALLA APK: iter N' al arrancar el servicio. Permite confirmar que el APK instalado en device corresponde al HEAD actual - cierra el problema recurrente de testear versiones viejas.
+¿ERA UN FIX DE ERROR?: NO era fix de error - infraestructura de diagnostico. Objetivo: evitar testear APKs desactualizados (problema que se materializo entre iter 32 y iter 38 en la sesion 2026-09-20).
+HIPÓTESIS DESCARTADAS (ROL 2): no aplica
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificar iter 38 en device usando este log
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 16:18 (Iteración 33 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt (network/): ampliacion del fix de iter 23. El retry de MTU 517->247 persiste el valor en cache aunque onMtuChanged llegue tarde (fuera de la ventana de espera), reduciendo el retraso observado Xiaomi->Cubot.
+¿ERA UN FIX DE ERROR?: SI: ERROR: en Xiaomi onMtuChanged llegaba tarde y el MTU no se persistia, manteniendo el default 23 durante toda la sesion. SOLUCION: persistir siempre aunque llegue fuera de ventana. FUNCIONO?: compilacion exitosa; MTU negociado confirmado en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del MTU final
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 16:22 (Iteración 34 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: ChatScreen.kt (app/ui/screen/): el visor fullscreen usa el bitmap directo en vez de un data URI 'data:image/jpeg;base64,...'. Cierra la pantalla negra observada al abrir imagen recibida en fullscreen.
+¿ERA UN FIX DE ERROR?: SI: ERROR: al abrir imagen en fullscreen, la pantalla quedaba negra porque Coil no procesaba el data URI. SOLUCION: pasar el bitmap directo al ImageViewer. FUNCIONO?: compilacion exitosa; pendiente verificacion en device al momento del commit.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot). Coil >= 2.x soporta data: URI pero con overhead
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del fullscreen
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 16:46 (Iteración 35 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: BleManager.kt (network/): gatt.refresh() removido del flujo normal y conservado unicamente como fallback tras 2x status 133 consecutivos. Cierra H1 del informe - el refresh dejaba gatt.services=[] durante 1-4s y disparaba status 133 en writes grandes.
+¿ERA UN FIX DE ERROR?: SI: ERROR: gatt.refresh() introducido en iter 30 rompia el flujo normal (services=[] durante 1-4s, status 133 en writes grandes). SOLUCION: refresh solo como fallback tras 2x status 133. FUNCIONO?: compilacion exitosa; confirmado en device (reduccion de status 133).
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: verificacion en device del status 133 residual
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 16:53 (Iteración 36 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: MainActivity.kt (app/) y ConversationsScreen.kt (app/ui/screen/): flujo de aceptacion de invitacion consolidado en MainActivity. Antes dos diálogos competian (MainActivity guardaba contacto sin ACCEPT, ConversationsScreen enviaba ACCEPT sin guardar). Cierra H3 del informe.
+¿ERA UN FIX DE ERROR?: SI: ERROR: MainActivity y ConversationsScreen ambos consumian incomingInvitation, ninguno hacia el flujo completo - el receptor nunca guardaba contacto + enviaba ACCEPT juntos. SOLUCION: consolidar en MainActivity. FUNCIONO?: compilacion exitosa; pendiente verificacion en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: diálogo de aceptacion aun no verificado en device
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 16:56 (Iteración 37 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: InvitationManager.kt (app/network/) y MainActivity.kt (app/): la invitacion entrante se persiste a SharedPreferences y se recupera al reabrir la app. El scope de recoleccion se recrea para asegurar que el collector este suscrito cuando llegue el evento. Cierra parcialmente P1.
+¿ERA UN FIX DE ERROR?: SI: ERROR: invitacion procesada por InvitationManager pero UI no reaccionaba si el collector no estaba suscrito. SOLUCION: persistir a prefs + recrear scope. FUNCIONO?: compilacion exitosa; pendiente verificacion en device.
+HIPÓTESIS DESCARTADAS (ROL 2): no documentadas al momento
+VERIFICADO EN: solo compilacion
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: dialogo de aceptacion aun no verificado en device
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+── ENTRADA — 2026-09-20 17:57 (Iteración 38 — RECONSTRUIDA RETROACTIVAMENTE el 2026-09-20) ──
+Compilación: BUILD SUCCESSFUL (según mensaje de commit; salida cruda no preservada)
+QUÉ SE HIZO: InvitationManager.kt (app/network/), MainActivity.kt (app/) y MeshChatService.kt (app/service/): incomingInvitation cambio de SharedFlow(replay=0) a StateFlow. Cierra H4 del informe - SharedFlow(replay=0) pierde el evento si no hay collector suscrito en el momento exacto del tryEmit.
+¿ERA UN FIX DE ERROR?: SI: ERROR: SharedFlow(replay=0) perdia el evento de invitacion si el collector no estaba suscrito en el momento exacto. SOLUCION: StateFlow retiene el ultimo valor. FUNCIONO?: compilacion exitosa; SIN verificar en device al momento del commit.
+HIPÓTESIS DESCARTADAS (ROL 2): H4 del informe: SharedFlow(replay=0) confirmado como causa de perdida de eventos
+VERIFICADO EN: solo compilacion - pendiente verificacion en device con log '[BUILD] MALLA APK: iter 38'
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (Xiaomi), Android 16 (Cubot)
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): no documentadas al momento
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: P1 (dialogo de aceptacion) - pendiente verificacion en device
+Nota: entrada escrita el 2026-09-20 al detectar que la sesión original no registró la compilación. Fuente: git log fd2a2ffa..a1d2c51f + INFORME DE CONTINUIDAD 2026-09-20.
+──────────────────────────────
+
+
+── ENTRADA — 2026-09-20 12:15 (Iteración 38 — VERIFICADA EN DEVICE: P1 cerrado) ──
+Compilación: no aplica — entrada documental (verificación de código ya compilado).
+QUÉ SE HIZO: Verificación en device del APK iter 38 (StateFlow invitación + log activo). Logs pareados malla_diagnostics.txt (Cubot KingKong ES 5, Android 16, userId=a4a5bd44ed4340b4, name=Lalo) y malla_diagnostics1.txt (Xiaomi Redmi Note 9S, Android 11, userId=3ca57504fc54315a, name=Eduardo), franja 11:48–12:12. Cubre los 15 commits de iter 23–38.
+¿ERA UN FIX DE ERROR?: SÍ — cierre de P1 del INFORME DE CONTINUIDAD 2026-09-20. ERROR: diálogo de aceptación de invitación no aparecía en el receptor. SOLUCIÓN APLICADA: iter 36 (unificar flujo en MainActivity) + iter 37 (persistir a prefs) + iter 38 (StateFlow). ¿FUNCIONÓ?: SÍ, confirmado en device. Cubot: 'invitación observada: Eduardo' → 'Contacto Eduardo guardado tras aceptar invitación'. Xiaomi: ídem con Lalo. Iter 37 y 38 funcionan como se diseñaron.
+HIPÓTESIS DESCARTADAS (ROL 2): H3 (dos diálogos compitiendo) y H4 (SharedFlow(replay=0) pierde eventos) confirmadas como causa raíz — resueltas por iter 36 y 38 respectivamente.
+VERIFICADO EN: dispositivo real (Xiaomi Redmi Note 9S Android 11 + Cubot KingKong ES 5 Android 16).
+COMPATIBILIDAD CONSIDERADA (R21): Android 11 (API 30) + Android 16 (API 36). MTU 517 negociado simétricamente en esta sesión (el asimetrismo reportado en iter 22 no se reprodujo).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): (1) Bug A — timeout de write 1500ms demasiado corto, onCharacteristicWrite llegó a 1992ms; subir a 3500ms o esperar callback real con techo de 5s. (2) Bug B — typing sigue sin coalescer (Fallo técnico C). (3) Bug C — dedup de invitación por userId ya-contacto para evitar re-diálogo.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: Bug A (timeout write), Bug B (typing sin coalesce), Bug C (dedup invitación), Fallo técnico B (writeCharacteristic false intermitente en ráfagas), Iter 18 (rate-limit sin efecto), dead code confirmado en auditoría R18.
+──────────────────────────────

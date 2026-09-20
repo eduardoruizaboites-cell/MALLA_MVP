@@ -279,11 +279,31 @@ class MainActivity : FragmentActivity() {
             val observedInvitation by InvitationManager.incomingInvitation.collectAsState()
             LaunchedEffect(observedInvitation) {
                 if (observedInvitation != null) {
+                    val inv = observedInvitation!!
                     com.malla.mvp.core.engine.DiagnosticsLogger.log(
-                        "MAIN", "invitación observada: ${observedInvitation!!.senderDisplayName}"
+                        "MAIN", "invitación observada: ${inv.senderDisplayName}"
                     )
-                    incomingInvitation = observedInvitation
-                    showInvitationDialog = true
+                    // Fix Bug C (post-iter 38): si el sender ya es contacto, no re-mostrar diálogo.
+                    // Evita el doble "Contacto guardado" cuando el usuario reenvía la invitación.
+                    val existingContact = try {
+                        com.malla.mvp.data.AppDatabase.getInstance(context)
+                            ?.contactDao()?.getById(inv.senderUserId)
+                    } catch (e: Exception) {
+                        com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                            "MAIN", "Error consultando contacto existente: ${e.message}"
+                        )
+                        null
+                    }
+                    if (existingContact != null) {
+                        com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                            "MAIN", "Invitación de ${inv.senderDisplayName} ignorada — ya es contacto"
+                        )
+                        InvitationManager.clearPendingInvitation(context)
+                        InvitationManager.clearIncoming()
+                    } else {
+                        incomingInvitation = inv
+                        showInvitationDialog = true
+                    }
                 }
             }
 

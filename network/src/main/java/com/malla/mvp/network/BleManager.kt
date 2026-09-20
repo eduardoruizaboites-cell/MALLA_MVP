@@ -602,7 +602,7 @@ object BleManager {
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic,
         framed: ByteArray,
-        timeoutMs: Long = 1500L,
+        timeoutMs: Long = 3500L,
         writeType: Int = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
     ): Boolean {
         if (framed.size > 512) {
