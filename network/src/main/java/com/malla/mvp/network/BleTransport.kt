@@ -124,13 +124,18 @@ object BleTransport {
     }
 
     private var started = false
+    private var serverStarted = false
     private var discoveryJob: Job? = null
 
     fun start(context: Context) {
+        appContext = context.applicationContext
+        // Bug F (iter 43): el server debe poder re-intentarse si la primera llamada
+        // llegó antes de que los permisos BLE estén concedidos.
+        if (!serverStarted) {
+            startServer(context)
+        }
         if (started) return
         started = true
-        appContext = context.applicationContext
-        startServer(context)
         // Observar dispositivos BLE detectados para conectar GATT automáticamente
         discoveryJob = scope.launch {
             BleManager.foundBluetoothDevices.collect { devices ->
@@ -204,7 +209,14 @@ object BleTransport {
     }
 
     private fun startServer(context: Context) {
-        if (!hasBlePermissions(context)) return
+        // Bug F (iter 43): el GATT server solo necesita BLUETOOTH_CONNECT.
+        // hasBlePermissions exige los 3 permisos (SCAN + CONNECT + ADVERTISE) y bloqueaba
+        // la apertura silenciosamente si el usuario aún no había concedido todos.
+        if (!BleManager.hasConnectPermission(context)) {
+            LogBuffer.add("BleTransport", "GATT server NO iniciado: falta BLUETOOTH_CONNECT")
+            DiagnosticsLogger.log("BleTransport", "GATT server NO iniciado: falta BLUETOOTH_CONNECT")
+            return
+        }
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = btManager.adapter ?: return
         gattServer = btManager.openGattServer(context, gattServerCallback).apply {
@@ -228,6 +240,9 @@ object BleTransport {
             service.addCharacteristic(inviteChar)
             addService(service)
         }
+        serverStarted = true
+        LogBuffer.add("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID")
+        DiagnosticsLogger.log("BleTransport", "GATT server abierto con SERVICE_UUID=$SERVICE_UUID")
     }
 
     fun broadcast(data: ByteArray): Boolean {

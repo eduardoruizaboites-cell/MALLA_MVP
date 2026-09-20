@@ -189,6 +189,11 @@ class MainActivity : FragmentActivity() {
                  checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
             LogBuffer.add("MAIN", "Permisos: scan=$scanGranted, advertise=$advertiseGranted, connect=$connectGranted")
             enableRadio()
+            // Bug F (iter 43): si BleTransport.start() se llamó antes de tener permisos,
+            // el GATT server quedó cerrado. Re-intentamos ahora que CONNECT está concedido.
+            if (connectGranted) {
+                BleTransport.start(this@MainActivity)
+            }
             if (advertiseGranted) {
                 ProximityEngine.ensureAdvertising(this@MainActivity)
             }
