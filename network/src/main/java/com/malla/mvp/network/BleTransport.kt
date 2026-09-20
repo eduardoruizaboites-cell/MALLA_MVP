@@ -134,14 +134,26 @@ object BleTransport {
         // Observar dispositivos BLE detectados para conectar GATT automáticamente
         discoveryJob = scope.launch {
             BleManager.foundBluetoothDevices.collect { devices ->
-                val myAddress = try {
-                    BleManager.getAdapter()?.address
+                // En Android 11+ adapter.address devuelve 02:00:00:00:00:00 (placeholder).
+                // El filtro por MAC no sirve. Filtramos por el userId del advertising:
+                // si el device está en nearbyUsers con nuestro propio userId, es un eco.
+                val myId = try { com.malla.mvp.identity.IdentityManager.getIdentityId() } catch (_: Exception) { null }
+                val selfMac = try {
+                    val adapter = BleManager.getAdapter()
+                    adapter?.address?.takeIf { it != "02:00:00:00:00:00" }
                 } catch (_: SecurityException) { null }
                 devices.forEach { device ->
-                    // NO conectar al propio dispositivo (evita el "eco" / peer self)
-                    if (myAddress != null && device.address == myAddress) {
-                        DiagnosticsLogger.log(TAG, "Ignorando auto-conexión al propio device: ${device.address}")
+                    if (selfMac != null && device.address == selfMac) {
+                        DiagnosticsLogger.log(TAG, "Ignorando auto-conexión (MAC coincide): ${device.address}")
                         return@forEach
+                    }
+                    if (myId != null) {
+                        val nearby = com.malla.mvp.network.ProximityEngine.nearbyUsers.value
+                            .firstOrNull { it.bluetoothDevice?.address == device.address }
+                        if (nearby?.userId != null && nearby.userId == myId) {
+                            DiagnosticsLogger.log(TAG, "Ignorando auto-conexión (userId propio): ${device.address}")
+                            return@forEach
+                        }
                     }
                     if (!connectedGatts.containsKey(device.address)) {
                         connectGatt(device)

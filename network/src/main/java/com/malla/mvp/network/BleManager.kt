@@ -479,7 +479,10 @@ object BleManager {
             val context = appContext ?: return@withLock false
             if (!hasBlePermissions(context)) return@withLock false
             try {
-                val gatt = gattCache[device.address] ?: establishGatt(device) ?: return@withLock false
+                val gatt = gattCache[device.address] ?: establishGatt(device) ?: run {
+                    DiagnosticsLogger.log("BleManager", "establishGatt falló para ${device.address}; sin conexión GATT")
+                    return@withLock false
+                }
                 val mtu = mtuCache[device.address] ?: 23
                 // Límite duro de ATT en Android: 512 bytes por operación writeCharacteristic
                 // (BluetoothGatt.GATT_MAX_ATTRIBUTE_LEN = 512). Con MTU=517, mtu-3=514 excede
@@ -490,8 +493,14 @@ object BleManager {
                 // Header de 4 bytes permite hasta 65535 en el wire, pero el cap operativo
                 // es MAX_TOTAL_FRAGS=4095 (~2 MB con MTU=517, ~64 KB con MTU=23).
                 val payloadPerFrag = maxChunk - 4  // 4 bytes de header
-                val service = gatt.getService(serviceUuid) ?: return@withLock false
-                val characteristic = service.getCharacteristic(characteristicUuid) ?: return@withLock false
+                val service = gatt.getService(serviceUuid) ?: run {
+                    DiagnosticsLogger.log("BleManager", "Service no encontrado en gatt de ${device.address} (servicios=${gatt.services.map { it.uuid }})")
+                    return@withLock false
+                }
+                val characteristic = service.getCharacteristic(characteristicUuid) ?: run {
+                    DiagnosticsLogger.log("BleManager", "Characteristic $characteristicUuid no encontrada en ${device.address}")
+                    return@withLock false
+                }
 
                 if (data.size <= payloadPerFrag) {
                     val framed = ByteArray(data.size + 4)
@@ -660,6 +669,7 @@ object BleManager {
             23
         }
         if (mtu <= 0) {
+            DiagnosticsLogger.log("BleManager", "establishGatt ${device.address}: conexión rechazada o perdida (mtu=$mtu) — cerrando")
             try { gatt.disconnect(); gatt.close() } catch (_: Exception) {}
             return null
         }
