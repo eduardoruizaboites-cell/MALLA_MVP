@@ -26,6 +26,7 @@ import com.malla.mvp.core.config.MeshFlags
 class MeshChatService : Service() {
     override fun onCreate() {
         super.onCreate()
+        com.malla.mvp.core.engine.DiagnosticsLogger.log("BUILD", "MALLA APK: iter 32 (HEAD=9ed455c7) — si NO ves este log, APK viejo")
         createNotificationChannel()
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
