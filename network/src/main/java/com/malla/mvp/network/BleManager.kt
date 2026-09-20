@@ -49,6 +49,7 @@ object BleManager {
     private val gattCache = java.util.concurrent.ConcurrentHashMap<String, BluetoothGatt>()
     private val mtuCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val writeMutexes = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
+    private val writeAckDeferreds = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Boolean>>()
 
     private val _foundDevices = MutableStateFlow<List<String>>(emptyList())
     val foundDevices: StateFlow<List<String>> = _foundDevices
@@ -496,8 +497,16 @@ object BleManager {
                     framed[2] = 0
                     framed[3] = 1
                     System.arraycopy(data, 0, framed, 4, data.size)
-                    val ok = writeFramed(gatt, characteristic, framed)
-                    DiagnosticsLogger.log("BleManager", "writeFramed single success=$ok (size=${framed.size}, mtu=$mtu)")
+                    var ok = false
+                    var attempt = 0
+                    while (attempt < 3 && !ok) {
+                        ok = writeFramedWithAck(gatt, characteristic, framed)
+                        if (!ok) {
+                            attempt++
+                            if (attempt < 3) delay(50L * attempt)
+                        }
+                    }
+                    DiagnosticsLogger.log("BleManager", "writeFramed single success=$ok (size=${framed.size}, mtu=$mtu, intentos=$attempt)")
                     return@withLock ok
                 }
 
@@ -517,11 +526,22 @@ object BleManager {
                     framed[2] = ((totalFrags ushr 8) and 0xFF).toByte()
                     framed[3] = (totalFrags and 0xFF).toByte()
                     System.arraycopy(data, start, framed, 4, chunkSize)
-                    if (!writeFramed(gatt, characteristic, framed)) {
-                        DiagnosticsLogger.log("BleManager", "Fallo fragmento ${i + 1}/$totalFrags (framed=${framed.size}B, mtu=$mtu)")
+                    var ok = false
+                    var attempt = 0
+                    while (attempt < 3 && !ok) {
+                        ok = writeFramedWithAck(gatt, characteristic, framed)
+                        if (!ok) {
+                            attempt++
+                            if (attempt < 3) {
+                                DiagnosticsLogger.log("BleManager", "Retry fragmento ${i + 1}/$totalFrags (intento $attempt)")
+                                delay(50L * attempt)
+                            }
+                        }
+                    }
+                    if (!ok) {
+                        DiagnosticsLogger.log("BleManager", "Fallo definitivo fragmento ${i + 1}/$totalFrags")
                         return@withLock false
                     }
-                    if (i < totalFrags - 1) delay(20L)
                 }
                 DiagnosticsLogger.log("BleManager", "Enviados $totalFrags fragmentos OK")
                 true
@@ -538,22 +558,37 @@ object BleManager {
         }
     }
 
-    private fun writeFramed(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, framed: ByteArray): Boolean {
+    private suspend fun writeFramedWithAck(
+        gatt: BluetoothGatt,
+        characteristic: BluetoothGattCharacteristic,
+        framed: ByteArray,
+        timeoutMs: Long = 1500L
+    ): Boolean {
+        if (framed.size > 512) {
+            DiagnosticsLogger.log("BleManager", "writeFramed rechaza ${framed.size}B (>512 límite ATT)")
+            return false
+        }
+        val address = gatt.device.address
+        val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        writeAckDeferreds[address] = deferred
         return try {
-            if (framed.size > 512) {
-                DiagnosticsLogger.log("BleManager", "writeFramed rechaza ${framed.size}B (>512 límite ATT)")
-                return false
-            }
             characteristic.value = framed
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            val ok = gatt.writeCharacteristic(characteristic)
-            if (!ok) {
-                DiagnosticsLogger.log("BleManager", "writeCharacteristic devolvió false (framed=${framed.size}B)")
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            val queued = gatt.writeCharacteristic(characteristic)
+            if (!queued) {
+                DiagnosticsLogger.log("BleManager", "writeCharacteristic devolvió false (queued, framed=${framed.size}B)")
+                false
+            } else {
+                withTimeoutOrNull(timeoutMs) { deferred.await() } ?: run {
+                    DiagnosticsLogger.log("BleManager", "writeCharacteristic timeout ${timeoutMs}ms (framed=${framed.size}B)")
+                    false
+                }
             }
-            ok
         } catch (e: Exception) {
             DiagnosticsLogger.log("BleManager", "writeFramed excepción: ${e.javaClass.simpleName}: ${e.message}")
             false
+        } finally {
+            writeAckDeferreds.remove(address)
         }
     }
 
@@ -598,6 +633,17 @@ object BleManager {
                 }
                 val effective = if (status == BluetoothGatt.GATT_SUCCESS && mtu >= 23) mtu else 23
                 if (!mtuDeferred.isCompleted) mtuDeferred.complete(effective)
+            }
+            override fun onCharacteristicWrite(
+                gatt: BluetoothGatt?,
+                characteristic: BluetoothGattCharacteristic?,
+                status: Int
+            ) {
+                val address = gatt?.device?.address ?: return
+                val deferred = writeAckDeferreds.remove(address) ?: return
+                if (!deferred.isCompleted) {
+                    deferred.complete(status == BluetoothGatt.GATT_SUCCESS)
+                }
             }
         }
         val gatt = try {
