@@ -2,6 +2,7 @@ package com.malla.mvp.network
 
 import android.content.Context
 import android.provider.Settings
+import com.malla.mvp.events.MallaEventBus
 import com.malla.mvp.core.model.NearbyUser
 import com.malla.mvp.core.model.SignalType
 import com.malla.mvp.core.engine.LogBuffer
@@ -83,6 +84,8 @@ object ProximityEngine {
                         val token = "mdns_$remoteIp"
                         val displayName = serviceName.removePrefix("MALLA_")
                         addOrUpdate(token, null, displayName, 0, SignalType.MDNS, 3)
+                        // Iter 46: emitir evento al bus para que :app dispare NetworkService.connectToPeer
+                        MallaEventBus.peerMdnsResolved.tryEmit(remoteIp)
                     }
                 }
             DiscoveryService.start(context)

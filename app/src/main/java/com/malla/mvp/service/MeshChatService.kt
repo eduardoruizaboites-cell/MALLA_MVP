@@ -54,6 +54,23 @@ class MeshChatService : Service() {
             }
             InvitationManager.start(this@MeshChatService)
         }
+        // Iter 46: escuchar peers descubiertos por mDNS y disparar conexion TCP.
+        // ProximityEngine vive en :network y no puede importar NetworkService (:app),
+        // asi que se usa MallaEventBus (:events) como puente.
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val lastAttempt = mutableMapOf<String, Long>()
+            com.malla.mvp.events.MallaEventBus.peerMdnsResolved.collect { ip ->
+                val now = System.currentTimeMillis()
+                val last = lastAttempt[ip] ?: 0L
+                if (now - last > 30_000L) {
+                    lastAttempt[ip] = now
+                    com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                        "MeshChatService", "mDNS peer $ip - iniciando conexion TCP"
+                    )
+                    NetworkService.connectToPeer(ip)
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

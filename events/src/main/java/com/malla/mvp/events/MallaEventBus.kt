@@ -21,6 +21,8 @@ object MallaEventBus {
     val internetRestored = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     /** Lista de nodos cercanos detectados (direcciones/IPs) */
     val nearbyNodesUpdated = MutableSharedFlow<List<String>>(replay = 1)
+    /** IP de un peer descubierto por mDNS en la misma LAN (iter 46) */
+    val peerMdnsResolved = MutableSharedFlow<String>(extraBufferCapacity = 5)
 
     // ── Mensajería ────────────────────────────────────────────────
     /** Mensaje recibido desde la red mesh (ya validado y guardado) */
