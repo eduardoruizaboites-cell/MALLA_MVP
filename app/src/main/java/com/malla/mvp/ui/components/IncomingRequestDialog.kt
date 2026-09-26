@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.components
 
+import com.malla.mvp.util.ToastHelper
 import android.widget.Toast
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -200,7 +201,7 @@ fun IncomingRequestDialog(
                                 },
                                 onError = { err ->
                                     authenticating = false
-                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                                    ToastHelper.show(context, err, Toast.LENGTH_SHORT)
                                 }
                             )
                         }

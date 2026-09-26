@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -247,7 +248,7 @@ fun ConversationsScreen(
                             onClick = { onChatClicked(conversation.id, conversation.title) },
                             avatarBitmap = avatarBitmap,
                             onProfile = { onProfileClicked(conversation.title) },
-                            onStories = { Toast.makeText(context, "Historias de ${conversation.title}", Toast.LENGTH_SHORT).show() },
+                            onStories = { ToastHelper.show(context, "Historias de ${conversation.title}", Toast.LENGTH_SHORT) },
                             onHide = { scope.launch { conversationDao?.hideConversation(conversation.id) } },
                             onDelete = { scope.launch { conversationDao?.deleteConversation(conversation) } },
                             onArchive = { scope.launch { conversationDao?.hideConversation(conversation.id) } }
@@ -372,7 +373,7 @@ fun ConversationsScreen(
                                     db?.contactDao()?.insert(contact)
                                 } catch (_: Exception) {}
                                 onChatClicked(convId, "Invitación ${inviteCode.trim().take(12)}")
-                                Toast.makeText(context, "Código aceptado", Toast.LENGTH_SHORT).show()
+                                ToastHelper.show(context, "Código aceptado", Toast.LENGTH_SHORT)
                                 // Iniciar búsqueda automática del usuario validado
                                 scope.launch {
                                     ProximityEngine.nearbyUsers.collect { users ->
@@ -387,7 +388,7 @@ fun ConversationsScreen(
                                 }
                             }
                         } else {
-                            Toast.makeText(context, "Código inválido o expirado", Toast.LENGTH_SHORT).show()
+                            ToastHelper.show(context, "Código inválido o expirado", Toast.LENGTH_SHORT)
                         }
                     }) { Text("Aceptar") }
                 },

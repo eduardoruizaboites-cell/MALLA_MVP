@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -132,11 +133,11 @@ fun CodeInputScreen(
                         if (InviteCodeGenerator.isValid(inviteCode)) {
                             onCodeValidated(code)
                         } else {
-                            Toast.makeText(context, "Código inválido o expirado", Toast.LENGTH_SHORT).show()
+                            ToastHelper.show(context, "Código inválido o expirado", Toast.LENGTH_SHORT)
                         }
                         isProcessing = false
                     } else {
-                        Toast.makeText(context, "Formato de código incorrecto", Toast.LENGTH_SHORT).show()
+                        ToastHelper.show(context, "Formato de código incorrecto", Toast.LENGTH_SHORT)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),

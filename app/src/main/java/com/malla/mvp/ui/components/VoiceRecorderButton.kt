@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.components
 
+import com.malla.mvp.util.ToastHelper
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -74,10 +75,10 @@ fun VoiceRecorderButton(
                                         showPanel = true
                                         onRecordingStarted()
                                     } else {
-                                        Toast.makeText(context, "Error al iniciar grabación", Toast.LENGTH_SHORT).show()
+                                        ToastHelper.show(context, "Error al iniciar grabación", Toast.LENGTH_SHORT)
                                     }
                                 } else {
-                                    Toast.makeText(context, "Permiso de micrófono requerido", Toast.LENGTH_SHORT).show()
+                                    ToastHelper.show(context, "Permiso de micrófono requerido", Toast.LENGTH_SHORT)
                                 }
                             }
                         }

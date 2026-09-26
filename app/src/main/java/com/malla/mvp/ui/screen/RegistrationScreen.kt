@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -334,7 +335,7 @@ fun NameStep(username: String, myId: String, onContinue: (String) -> Unit) {
                 Button(
                     onClick = {
                         if (name.isBlank()) {
-                            Toast.makeText(context, "El nombre de usuario es obligatorio", Toast.LENGTH_SHORT).show()
+                            ToastHelper.show(context, "El nombre de usuario es obligatorio", Toast.LENGTH_SHORT)
                         } else {
                             onContinue(name.trim())
                         }

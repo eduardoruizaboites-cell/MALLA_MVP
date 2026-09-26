@@ -1,4 +1,5 @@
 package com.malla.mvp.network
+import com.malla.mvp.util.ToastHelper
 import com.malla.mvp.data.entity.MeshMessage
 
 import android.content.Context
@@ -17,7 +18,7 @@ object CascadeRouter {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e ->
         mainHandler.post {
-            Toast.makeText(App.context, "Error inesperado: ${e.message}", Toast.LENGTH_LONG).show()
+            ToastHelper.show(App.context, "Error inesperado: ${e.message}", Toast.LENGTH_LONG)
         }
     })
     private val phoneMap = mutableMapOf<String, String>()
@@ -94,7 +95,7 @@ object CascadeRouter {
                 LogBuffer.add(TAG, "Error en cascada: ${e.message}")
                 try {
                     mainHandler.post {
-                        Toast.makeText(App.context, "Error al enviar: ${e.message}", Toast.LENGTH_LONG).show()
+                        ToastHelper.show(App.context, "Error al enviar: ${e.message}", Toast.LENGTH_LONG)
                     }
                 } catch (_: Exception) {}
             }

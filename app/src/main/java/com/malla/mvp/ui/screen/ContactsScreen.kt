@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -123,7 +124,7 @@ fun ContactsScreen(onBack: () -> Unit, onChatClicked: (contactId: String, contac
                     scope.launch {
                         val db = AppDatabase.getInstance(context)
                         db?.contactDao()?.delete(contactToDelete!!)
-                        Toast.makeText(context, "Contacto eliminado", Toast.LENGTH_SHORT).show()
+                        ToastHelper.show(context, "Contacto eliminado", Toast.LENGTH_SHORT)
                     }
                     contactToDelete = null
                 }) { Text("Eliminar", color = Color(0xFFE74C3C)) }

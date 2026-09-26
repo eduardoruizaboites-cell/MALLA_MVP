@@ -126,6 +126,54 @@ object NotificationHelper {
         manager.cancelAll()
     }
 
+    fun showAcceptanceNotification(context: Context, acceptorUserId: String, acceptorName: String) {
+        if (!areNotificationsEnabled(context)) {
+            DiagnosticsLogger.log("NotifHelper", "OMITIDA acceptance: notificaciones deshabilitadas")
+            return
+        }
+        if (channelBlocked(context)) {
+            DiagnosticsLogger.log("NotifHelper", "OMITIDA acceptance: canal bloqueado")
+            return
+        }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            putExtra("conversation_id", acceptorUserId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, acceptorUserId.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+        val accentColor: Int = try {
+            val themeState = com.malla.mvp.viewmodel.AppThemeState.create(context)
+            val scheme = themeState.currentTheme.value
+            android.graphics.Color.argb(
+                255,
+                (scheme.primary.red * 255f).toInt().coerceIn(0, 255),
+                (scheme.primary.green * 255f).toInt().coerceIn(0, 255),
+                (scheme.primary.blue * 255f).toInt().coerceIn(0, 255)
+            )
+        } catch (e: Exception) {
+            android.graphics.Color.parseColor("#4CE6FF")
+        }
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(accentColor)
+            .setContentTitle("$acceptorName te agregó")
+            .setContentText("Presiona para abrir el chat")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$acceptorName aceptó tu solicitud. Presiona para abrir el chat."))
+            .setCategory(NotificationCompat.CATEGORY_SOCIAL)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(("accept_$acceptorUserId").hashCode(), builder.build())
+        DiagnosticsLogger.log("NotifHelper", "Notificacion acceptance mostrada para $acceptorName")
+    }
+
     fun showDiscoveryNotification(context: Context, peerName: String) {
         if (!areNotificationsEnabled(context)) return
         if (channelBlocked(context)) return

@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -50,7 +51,7 @@ fun FaroScreen() {
                 if (message.isBlank()) return@Button
                 isTransmitting = true
                 flashlight.startTransmitting(message)
-                Toast.makeText(context, "Transmitiendo...", Toast.LENGTH_SHORT).show()
+                ToastHelper.show(context, "Transmitiendo...", Toast.LENGTH_SHORT)
             },
             enabled = !isTransmitting && !isReceiving,
             modifier = Modifier.fillMaxWidth(),
@@ -72,7 +73,7 @@ fun FaroScreen() {
             onClick = {
                 isReceiving = true
                 flashlight.startReceiving()
-                Toast.makeText(context, "Escuchando...", Toast.LENGTH_SHORT).show()
+                ToastHelper.show(context, "Escuchando...", Toast.LENGTH_SHORT)
             },
             enabled = !isTransmitting && !isReceiving,
             modifier = Modifier.fillMaxWidth(),

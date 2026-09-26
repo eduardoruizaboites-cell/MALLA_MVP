@@ -1,5 +1,6 @@
 package com.malla.mvp.ui.screen
 
+import com.malla.mvp.util.ToastHelper
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -88,10 +89,10 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onSuccess() }
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        Toast.makeText(context, "Autenticación cancelada", Toast.LENGTH_SHORT).show()
+                        ToastHelper.show(context, "Autenticación cancelada", Toast.LENGTH_SHORT)
                     }
                     override fun onAuthenticationFailed() {
-                        Toast.makeText(context, "Autenticación fallida", Toast.LENGTH_SHORT).show()
+                        ToastHelper.show(context, "Autenticación fallida", Toast.LENGTH_SHORT)
                     }
                 }
             )
@@ -120,10 +121,10 @@ fun PerfilScreen(onVerifyClick: () -> Unit = {}) {
                     qrPayload = payload
                     qrExpired = false
                     DiagnosticsLogger.log("QR", "QR generado para $userName")
-                    Toast.makeText(context, "QR generado", Toast.LENGTH_SHORT).show()
+                    ToastHelper.show(context, "QR generado", Toast.LENGTH_SHORT)
                 } catch (e: Exception) {
                     DiagnosticsLogger.log("QR", "Error generando QR: ${e.message}")
-                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    ToastHelper.show(context, "Error: ${e.message}", Toast.LENGTH_SHORT)
                 }
             }
         }

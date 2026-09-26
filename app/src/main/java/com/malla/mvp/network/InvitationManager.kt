@@ -1,5 +1,6 @@
 package com.malla.mvp.network
 
+import com.malla.mvp.util.ToastHelper
 import android.content.Context
 import com.malla.mvp.core.engine.DiagnosticsLogger
 import android.widget.Toast
@@ -236,7 +237,7 @@ object InvitationManager {
             if (targetDevice == null) {
                 DiagnosticsLogger.log("InvitationManager", "[sendInvitation] SIN device BLE para ${user.displayName}")
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Sin canal BLE disponible para ${user.displayName}", Toast.LENGTH_LONG).show()
+                    ToastHelper.show(context, "Sin canal BLE disponible para ${user.displayName}", Toast.LENGTH_LONG)
                 }
                 return
             }
@@ -250,7 +251,7 @@ object InvitationManager {
             DiagnosticsLogger.log("InvitationManager", "[sendInvitation] connectAndWriteData resultado=$sent")
             withContext(Dispatchers.Main) {
                 val msg = if (sent) "Solicitud enviada a ${user.displayName}" else "No se pudo enviar a ${user.displayName}"
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                ToastHelper.show(context, msg, Toast.LENGTH_LONG)
             }
         } catch (e: Throwable) {
             val stack = e.stackTraceToString().take(600)
@@ -258,7 +259,7 @@ object InvitationManager {
             DiagnosticsLogger.log("InvitationManager", "[sendInvitation] STACK: $stack")
             try {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Error invitación: ${e.message}", Toast.LENGTH_LONG).show()
+                    ToastHelper.show(context, "Error invitación: ${e.message}", Toast.LENGTH_LONG)
                 }
             } catch (_: Exception) {}
         }

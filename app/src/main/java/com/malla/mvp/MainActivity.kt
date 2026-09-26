@@ -93,6 +93,20 @@ import java.util.UUID
 import androidx.compose.runtime.mutableStateOf
 import com.malla.mvp.core.config.MeshFlags
 
+/**
+ * Iter 49: Toast seguro desde cualquier thread. Postea al message queue del main
+ * looper, evitando el crash "Can't toast on a thread that has not called
+ * Looper.prepare()" cuando la coroutine que lo invoca fue cancelada antes de
+ * completar withContext(Dispatchers.Main).
+ */
+private fun toastSafe(context: android.content.Context, message: String, duration: Int = android.widget.Toast.LENGTH_SHORT) {
+    android.os.Handler(android.os.Looper.getMainLooper()).post {
+        try {
+            android.widget.Toast.makeText(context.applicationContext, message, duration).show()
+        } catch (_: Exception) {}
+    }
+}
+
 enum class AppState { Splash, Main }
 
 class MainActivity : FragmentActivity() {
@@ -130,6 +144,7 @@ class MainActivity : FragmentActivity() {
         // Inicializar identidad antes de cualquier operación criptográfica
         IdentityManager.init(this)
         DiagnosticsLogger.init(this)
+        com.malla.mvp.util.CrashCapture.install(this)
         DiagnosticsLogger.logDeviceInfo(this)
 
         // Iniciar componentes base
@@ -266,6 +281,8 @@ class MainActivity : FragmentActivity() {
             val flashlight = remember { FlashlightTransport(context) }
             var incomingInvitation by remember { mutableStateOf<ContactInvitation?>(null) }
             var showInvitationDialog by remember { mutableStateOf(false) }
+            // Iter 50: card flotante cuando alguien nos acepta la invitacion (foreground)
+            var showAcceptanceCard by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
 
             // 1) Al arrancar, si había una invitación pendiente persistida, la cargamos
             //    en el StateFlow (que sobrevive recomposiciones).
@@ -308,7 +325,15 @@ class MainActivity : FragmentActivity() {
                                     "MAIN", "Contacto $acceptorName guardado tras recibir ACCEPT"
                                 )
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "$acceptorName te agregó", Toast.LENGTH_SHORT).show()
+                                    if (com.malla.mvp.MainActivity.appForeground) {
+                                        // MALLA en foreground: mostrar card flotante premium
+                                        showAcceptanceCard = Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
+                                    } else {
+                                        // MALLA en background: notificacion del sistema
+                                        com.malla.mvp.util.NotificationHelper.showAcceptanceNotification(
+                                            context, acceptorUserId, acceptorName
+                                        )
+                                    }
                                 }
                             } else {
                                 com.malla.mvp.core.engine.DiagnosticsLogger.log(
@@ -389,14 +414,10 @@ class MainActivity : FragmentActivity() {
                                 com.malla.mvp.data.AppDatabase.getInstance(context)?.conversationDao()?.insertConversation(conversation)
                                 com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Contacto ${inv.senderDisplayName} guardado tras aceptar invitaci\u00f3n")
                                 InvitationManager.sendAcceptance(context, inv)
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Solicitud de ${inv.senderDisplayName} aceptada", Toast.LENGTH_SHORT).show()
-                                }
+                                toastSafe(context, "Solicitud de ${inv.senderDisplayName} aceptada")
                             } catch (e: Exception) {
                                 com.malla.mvp.core.engine.DiagnosticsLogger.log("MAIN", "Error aceptando invitaci\u00f3n: ${e.message}")
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Error al guardar contacto", Toast.LENGTH_SHORT).show()
-                                }
+                                toastSafe(context, "Error al guardar contacto")
                             }
                         }
                     },
@@ -406,6 +427,20 @@ class MainActivity : FragmentActivity() {
                         InvitationManager.clearPendingInvitation(context)
                         InvitationManager.clearIncoming()
                     }
+                )
+            }
+
+            // Iter 50: render del card flotante si hay una aceptacion reciente
+            showAcceptanceCard?.let { (acceptorId, acceptorName, seed) ->
+                com.malla.mvp.ui.components.AcceptanceReceivedCard(
+                    acceptorName = acceptorName,
+                    acceptorAvatarSeed = seed,
+                    onOpenChat = {
+                        showAcceptanceCard = null
+                        currentConversationId = acceptorId
+                        selectedContact = acceptorId
+                    },
+                    onDismiss = { showAcceptanceCard = null }
                 )
             }
 
