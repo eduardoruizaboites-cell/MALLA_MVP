@@ -277,6 +277,52 @@ class MainActivity : FragmentActivity() {
                     InvitationManager.receiveInvitation(pending)
                 }
             }
+
+            // Iter 47: observar aceptaciones entrantes y crear contacto + conversacion
+            // del lado del emisor original (que antes nunca se enteraba).
+            LaunchedEffect(Unit) {
+                com.malla.mvp.events.MallaEventBus.acceptanceReceived.collect { (acceptorUserId, acceptorName, acceptorAvatarSeed) ->
+                    com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                        "MAIN", "ACEPTACION recibida de $acceptorName ($acceptorUserId)"
+                    )
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val db = com.malla.mvp.data.AppDatabase.getInstance(context)
+                            val existing = db?.contactDao()?.getById(acceptorUserId)
+                            if (existing == null) {
+                                val contact = com.malla.mvp.data.entity.ContactEntity(
+                                    contactUserId = acceptorUserId,
+                                    displayName = acceptorName,
+                                    avatarSeed = acceptorAvatarSeed,
+                                    publicKey = "",
+                                    addedAt = System.currentTimeMillis()
+                                )
+                                db?.contactDao()?.insert(contact)
+                                val conversation = com.malla.mvp.data.entity.ConversationEntity(
+                                    id = acceptorUserId,
+                                    title = acceptorName,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                                db?.conversationDao()?.insertConversation(conversation)
+                                com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                                    "MAIN", "Contacto $acceptorName guardado tras recibir ACCEPT"
+                                )
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "$acceptorName te agregó", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                                    "MAIN", "ACCEPT de $acceptorName: ya era contacto, ignorado"
+                                )
+                            }
+                        } catch (e: Exception) {
+                            com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                                "MAIN", "Error procesando ACCEPT: ${e.message}"
+                            )
+                        }
+                    }
+                }
+            }
             // 2) Observar el StateFlow. collectAsState() siempre está suscrito mientras la
             //    composición esté viva — no depende de un LaunchedEffect que puede cancelarse.
             val observedInvitation by InvitationManager.incomingInvitation.collectAsState()

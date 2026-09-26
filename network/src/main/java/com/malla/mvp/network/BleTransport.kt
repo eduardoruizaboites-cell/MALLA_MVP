@@ -47,6 +47,8 @@ object BleTransport {
     val messages: SharedFlow<ByteArray> = incomingMessages.asSharedFlow()
     private val incomingInvitationPayloads = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val invitationPayloads: SharedFlow<String> = incomingInvitationPayloads.asSharedFlow()
+    private val incomingAcceptancePayloads = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val acceptancePayloads: SharedFlow<String> = incomingAcceptancePayloads.asSharedFlow()
 
     private val fragmentBuffers = ConcurrentHashMap<String, BleFragmentBuffer>()
 
@@ -501,11 +503,21 @@ object BleTransport {
                     val reassembled = reassembleFragments(device, value)
                     if (reassembled != null) {
                         val payload = String(reassembled, Charsets.UTF_8)
-                        LogBuffer.add(TAG, "Invitación BLE recibida: $payload")
-                        DiagnosticsLogger.log(TAG, "Invitación BLE recibida: $payload")
-                        incomingInvitationPayloads.tryEmit(payload)
+                        // Iter 47: diferenciar invitacion vs aceptacion por prefijo.
+                        // La aceptacion viaja por el mismo canal GATT que la invitacion
+                        // (antes usaba advertising serviceData y el scanner solo lee
+                        // manufacturerData — nunca llegaba).
+                        if (payload.startsWith("ACCEPT|")) {
+                            LogBuffer.add(TAG, "Aceptacion BLE recibida: $payload")
+                            DiagnosticsLogger.log(TAG, "Aceptacion BLE recibida: $payload")
+                            incomingAcceptancePayloads.tryEmit(payload)
+                        } else {
+                            LogBuffer.add(TAG, "Invitacion BLE recibida: $payload")
+                            DiagnosticsLogger.log(TAG, "Invitacion BLE recibida: $payload")
+                            incomingInvitationPayloads.tryEmit(payload)
+                        }
                     } else {
-                        DiagnosticsLogger.log(TAG, "Invitación fragmentada incompleta de ${device.address}")
+                        DiagnosticsLogger.log(TAG, "Invitacion fragmentada incompleta de ${device.address}")
                     }
                     if (responseNeeded) {
                         gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)

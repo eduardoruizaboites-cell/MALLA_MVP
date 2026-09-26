@@ -41,6 +41,31 @@ object InvitationManager {
      * Debe llamarse al arrancar la app.
      */
     fun start(context: Context) {
+        // Iter 47: escuchar aceptaciones entrantes y emitir al bus
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            BleTransport.acceptancePayloads.collect { payload ->
+                try {
+                    val parts = payload.split("|")
+                    if (parts.size >= 5 && parts[0] == "ACCEPT") {
+                        val targetUserId = parts[1]
+                        val acceptorUserId = parts[2]
+                        val acceptorName = parts[3]
+                        val acceptorAvatarSeed = parts[4].toIntOrNull() ?: 0
+                        val myUserId = IdentityManager.getIdentityId()
+                        if (targetUserId == myUserId) {
+                            DiagnosticsLogger.log("InvitationManager", "ACCEPT para mi de $acceptorName ($acceptorUserId)")
+                            com.malla.mvp.events.MallaEventBus.acceptanceReceived.tryEmit(
+                                Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
+                            )
+                        } else {
+                            DiagnosticsLogger.log("InvitationManager", "ACCEPT para $targetUserId (ignorado)")
+                        }
+                    }
+                } catch (e: Exception) {
+                    DiagnosticsLogger.log("InvitationManager", "Error parseando ACCEPT: ${e.message}")
+                }
+            }
+        }
         appContext = context.applicationContext
         // Recrear el scope si fue cancelado por un stop() previo. Android mata
         // services agresivamente (sobre todo en API 30+); si el scope queda muerto,
@@ -251,13 +276,27 @@ object InvitationManager {
     }
 
     suspend fun sendAcceptance(context: Context, invitation: ContactInvitation) {
+        val myUserId = IdentityManager.getIdentityId()
         val myName = IdentityManager.getUserName(context)
         val myAvatarSeed = 0
-        val myIp = DhtService.getLocalAddress() ?: ""
-        val payload = "ACCEPT|${invitation.senderUserId}|$myName|$myAvatarSeed|$myIp"
-        BleManager.startAdvertisingWithPayload(payload)
-        kotlinx.coroutines.delay(30_000)
-        BleManager.stopProximityAdvertising()
+        // Iter 47: formato ACCEPT|targetUserId|acceptorUserId|acceptorName|acceptorSeed
+        // El canal es GATT directo (mismo que la invitacion), no advertising.
+        val payload = "ACCEPT|${invitation.senderUserId}|$myUserId|$myName|$myAvatarSeed"
+        DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] Enviando ACCEPT a ${invitation.senderUserId}")
+        // Buscar el BluetoothDevice del emisor: primero por nearbyUsers, sino por foundBluetoothDevices
+        val targetDevice = ProximityEngine.nearbyUsers.value
+            .firstOrNull { it.userId == invitation.senderUserId }
+            ?.bluetoothDevice
+        if (targetDevice == null) {
+            DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] SIN device BLE para emisor ${invitation.senderUserId}")
+            return
+        }
+        val ok = BleManager.connectAndWriteData(
+            targetDevice,
+            BleTransport.INVITE_CHAR_UUID,
+            payload.toByteArray(Charsets.UTF_8)
+        )
+        DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] connectAndWriteData resultado=$ok")
     }
 
     fun receiveInvitation(invitation: ContactInvitation) {
