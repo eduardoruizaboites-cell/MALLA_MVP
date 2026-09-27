@@ -67,7 +67,11 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         // Observar mensajes entrantes del bus global
         viewModelScope.launch {
             MallaEventBus.messageReceived.collect { msg ->
-                if (msg.senderId != "self") {  // Evitar procesar mensajes propios (se guardan localmente al enviar)
+                // Iter 52b: filtro correcto por userId propio (el filtro anterior
+                // comparaba contra "self" literal, nunca matcheaba, y dejaba pasar
+                // los propios mensajes rebotados como eco TCP).
+                val myId = IdentityManager.getIdentityId()
+                if (msg.senderId != "self" && msg.senderId != myId) {
                     handleIncomingMessage(msg)
                 }
             }
@@ -120,7 +124,18 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     val database = db ?: return@launch
                     database.messageDao().deleteExpiredMessages(convId, System.currentTimeMillis())
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
-                    _messages.value = msgs.filter { it.conversationId == convId }.map { msg ->
+                    // Iter 52c: filtro defensivo. Descartar cualquier residuo de mensajes
+                    // de control que haya llegado a Room por caminos no previstos
+                    // (accept, read_all, ack, typing, invitation, zumbido).
+                    val CONTROL_PREFIXES = listOf("ACCEPT|", "read_all", "typing|")
+                    val CONTROL_TYPES = setOf("ack", "typing", "read_all", "accept", "invitation", "zumbido")
+                    val filtered = msgs.filter { m ->
+                        m.conversationId == convId &&
+                        !CONTROL_PREFIXES.any { p -> m.content.startsWith(p) } &&
+                        m.content !in CONTROL_TYPES &&
+                        !(m.content.length < 3 && m.content.all { it.isDigit() })  // ACK "1"/"2"
+                    }
+                    _messages.value = filtered.map { msg ->
                         if (msg.encrypted && sessionKey != null) {
                             try {
                                 val decryptedContent = SessionCipher.decrypt(msg.content, sessionKey!!)
@@ -131,8 +146,8 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         } else msg
                     }.map { MessageMapper.toMessageData(it) }
                     _pinnedMessage.value = _messages.value.firstOrNull { it.isPinned }
-                    if (msgs.isNotEmpty()) {
-                        lastMessageTimestamp = msgs.maxOf { it.timestamp }
+                    if (filtered.isNotEmpty()) {
+                        lastMessageTimestamp = filtered.maxOf { it.timestamp }
                     }
                 } catch (e: Exception) {
                     Log.e("MeshChatVM", "Error cargando mensajes", e)

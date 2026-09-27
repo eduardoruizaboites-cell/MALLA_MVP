@@ -12,7 +12,10 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     suspend fun getMessagesForConversationOnce(conversationId: String): List<MessageEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Iter 52c: IGNORE en vez de REPLACE. Con el ID determinístico, la segunda
+    // llegada del mismo mensaje es no-op en vez de pisar la fila existente
+    // (evita perder status, isEdited, reaction actualizados entre medio).
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMessage(message: MessageEntity)
 
     @Query("UPDATE messages SET status = :status WHERE id = :messageId")

@@ -120,25 +120,13 @@ object Injector {
                                 viewOnce = message.viewOnce
                             )
                         )
-                        android.widget.Toast.makeText(
-                            App.context,
-                            "Mensaje guardado en BD",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        // iter 52: Toast eliminado (crash en Dispatchers.IO, ver CRASH 2026-09-27)
                     } else {
                         fallbackMessages.value = fallbackMessages.value + message
-                        android.widget.Toast.makeText(
-                            App.context,
-                            "BD no disponible - guardado en memoria",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        com.malla.mvp.core.engine.LogBuffer.add("Injector", "BD no disponible - guardado en memoria")
                     }
                 } catch (e: Exception) {
-                    android.widget.Toast.makeText(
-                        App.context,
-                        "Error al guardar: ${e.message}",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                    com.malla.mvp.core.engine.LogBuffer.add("Injector", "Error al guardar: ${e.message}")
                 }
             }
             override suspend fun getLastMessage(conversationId: String): MessageData? = null

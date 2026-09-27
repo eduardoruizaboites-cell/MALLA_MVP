@@ -214,6 +214,15 @@ object NetworkService {
                         return@launch
                     }
 
+                    // Iter 52: guard defensivo — no aceptar conexión con uno mismo.
+                    // El bug de auto-conexión del hotspot hacía que el device se
+                    // conectara a su propia IP y creara un ClientHandler espejo.
+                    if (peerUserId == localUserId) {
+                        DiagnosticsLogger.log(TAG, "[HS:SELF] Conexión consigo mismo detectada — cerrando")
+                        try { socket.close() } catch (_: Exception) {}
+                        return@launch
+                    }
+
                     // 5. Derivar secreto compartido
                     DiagnosticsLogger.log(TAG, "[HS:6] Derivando secreto compartido...")
                     val peerPublicKey = CryptoEngine.base64ToPublicKey(peerPubKeyBase64)
@@ -231,7 +240,13 @@ object NetworkService {
                     // disconnect() del viejo elimine al nuevo del mapa.
                     val previous = clients[peerUserId]
                     if (previous != null && previous !== handler) {
-                        DiagnosticsLogger.log(TAG, "[HS:DUP] Cerrando handler previo para $peerUserId")
+                        // Iter 52b: si ya hay una conexión activa a este peer,
+                        // preferir la entrante (server-side) y cerrar la saliente
+                        // para evitar doble camino TCP y eco de mensajes.
+                        // La entrante es la que el peer abrió hacia nosotros, es más estable.
+                        val isIncoming = expectedContactId == null  // server-side = esperado null
+                        val prevIsIncoming = previous.contactId != null && expectedContactId == null
+                        DiagnosticsLogger.log(TAG, "[HS:DUP] Cerrando handler previo para $peerUserId (isIncoming=$isIncoming)")
                         previous.disconnect()
                     }
                     clients[peerUserId] = handler

@@ -26,7 +26,7 @@ import com.malla.mvp.core.config.MeshFlags
 class MeshChatService : Service() {
     override fun onCreate() {
         super.onCreate()
-        com.malla.mvp.core.engine.DiagnosticsLogger.log("BUILD", "MALLA APK: iter 38 — StateFlow invitación + log activo")
+        com.malla.mvp.core.engine.DiagnosticsLogger.log("BUILD", "MALLA APK: ${com.malla.mvp.BuildConfig.BUILD_LABEL}")
         createNotificationChannel()
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -59,7 +59,31 @@ class MeshChatService : Service() {
         // asi que se usa MallaEventBus (:events) como puente.
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val lastAttempt = mutableMapOf<String, Long>()
+            // Iter 52b: enumerar TODAS las IPs locales (fix del filtro en devices con datos móviles)
+            val myIps: Set<String> = try {
+                java.net.NetworkInterface.getNetworkInterfaces().toList()
+                    .flatMap { iface ->
+                        iface.inetAddresses.toList().mapNotNull { it.hostAddress }
+                    }
+                    .filter { it.isNotBlank() && !it.contains(":") }  // solo IPv4
+                    .toSet()
+            } catch (e: Exception) {
+                com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                    "MeshChatService", "Error enumerando interfaces: ${e.message}"
+                )
+                emptySet()
+            }
+            com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                "MeshChatService", "mDNS collector iniciado, myIps=$myIps (se filtrará auto-conexión)"
+            )
             com.malla.mvp.events.MallaEventBus.peerMdnsResolved.collect { ip ->
+                // Iter 52b: no conectarse a la propia IP (bug de auto-conexión del hotspot)
+                if (ip.isBlank() || ip in myIps) {
+                    com.malla.mvp.core.engine.DiagnosticsLogger.log(
+                        "MeshChatService", "mDNS peer $ip es self o vacío (myIps=$myIps) — ignorado"
+                    )
+                    return@collect
+                }
                 val now = System.currentTimeMillis()
                 val last = lastAttempt[ip] ?: 0L
                 if (now - last > 30_000L) {

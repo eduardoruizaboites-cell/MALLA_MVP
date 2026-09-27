@@ -129,6 +129,14 @@ object MessageReceiver {
 
     private suspend fun processInternal(context: Context, meshMsg: MeshMessage) {
         try {
+            // Iter 52b: guard contra self-echo. Si el senderId es nuestro propio userId,
+            // este mensaje es un rebote de la red (conexión dual TCP) y NO debe
+            // procesarse: ni insertarse en DB, ni emitirse a la UI, ni dispararse ACK.
+            val myId = IdentityManager.getIdentityId()
+            if (meshMsg.senderId == myId) {
+                LogBuffer.add(TAG, "Self-echo descartado: type=${meshMsg.type}")
+                return
+            }
             val db = AppDatabase.getInstance(context) ?: return
             val messageId = "${meshMsg.senderId}_${meshMsg.timestamp}_${meshMsg.content.hashCode()}"
 
@@ -142,6 +150,19 @@ object MessageReceiver {
             }
             bloomFilter.add(messageId)
 
+            // Iter 52: invitaciones y aceptaciones recibidas por TCP (cascada)
+            if (meshMsg.type == "invitation") {
+                DiagnosticsLogger.log(TAG, "Invitación recibida por red de ${meshMsg.senderId}")
+                InvitationManager.processIncomingInvitationPayload(meshMsg.content)
+                return
+            }
+
+            if (meshMsg.type == "accept") {
+                DiagnosticsLogger.log(TAG, "Aceptación recibida por red de ${meshMsg.senderId}")
+                InvitationManager.processIncomingAcceptancePayload(meshMsg.content)
+                return
+            }
+
             if (meshMsg.type == "typing") {
                 val isTyping = meshMsg.content == "1"
                 MallaEventBus.typingReceived.emit(meshMsg.senderId to isTyping)
@@ -149,11 +170,19 @@ object MessageReceiver {
                 return
             }
 
+            if (meshMsg.type == "zumbido") {
+                // Iter 52: zumbido es señal de control. NO se inserta en DB ni se emite
+                // como mensaje de chat. Solo se emite al bus específico.
+                DiagnosticsLogger.log(TAG, "Zumbido recibido de ${meshMsg.senderId}")
+                MallaEventBus.zumbidoReceived.emit(meshMsg)
+                return
+            }
+
             if (meshMsg.type == "read_all") {
                 val peerId = meshMsg.senderId
                 try {
                     db.messageDao().updateStatusForConversationAndOwn(peerId, isOwn = true, newStatus = 2)
-                    MallaEventBus.messageReceived.emit(meshMsg)
+                    // Iter 52: no emitir a la UI — read_all es señal de control, no mensaje
                     DiagnosticsLogger.log(TAG, "read_all procesado de $peerId")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error procesando read_all: ${e.message}")
@@ -217,7 +246,7 @@ object MessageReceiver {
                     else -> 1
                 }
                 db.messageDao().updateStatus(meshMsg.messageId!!, newStatus)
-                MallaEventBus.messageReceived.emit(meshMsg)
+                // Iter 52: no emitir a la UI — ack es señal de control, no mensaje
                 return
             }
 
@@ -233,6 +262,14 @@ object MessageReceiver {
                 val originalId = meshMsg.quotedMessageId!!
                 db?.messageDao()?.markAsDeleted(originalId)
                 MallaEventBus.messageReceived.emit(meshMsg)
+                return
+            }
+
+            // Iter 52: filtro final. Cualquier tipo que no sea un mensaje real de usuario
+            // no debe llegar a la DB ni a la UI. Atrapa tipos desconocidos, edit/reaction
+            // sin quotedMessageId, tipos nuevos no manejados, etc.
+            if (meshMsg.type !in setOf("chat", "sms", "zumbido")) {
+                DiagnosticsLogger.log(TAG, "Tipo de control sin branch explícito: '${meshMsg.type}' de ${meshMsg.senderId} — ignorado (no se inserta)")
                 return
             }
 
@@ -264,7 +301,10 @@ object MessageReceiver {
             }
 
             val msgEntity = MessageEntity(
-                id = UUID.randomUUID().toString(),
+                // Iter 52c: ID determinístico. Si el mensaje llega por TCP + BLE + rebote,
+                // los 3 usan el MISMO ID y Room deduplica automáticamente (PK).
+                // Solo cae a UUID random si el emisor no puso messageId.
+                id = meshMsg.messageId ?: UUID.randomUUID().toString(),
                 conversationId = conversationId,
                 content = meshMsg.content,
                 timestamp = meshMsg.timestamp,

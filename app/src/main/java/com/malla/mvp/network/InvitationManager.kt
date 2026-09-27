@@ -45,26 +45,7 @@ object InvitationManager {
         // Iter 47: escuchar aceptaciones entrantes y emitir al bus
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             BleTransport.acceptancePayloads.collect { payload ->
-                try {
-                    val parts = payload.split("|")
-                    if (parts.size >= 5 && parts[0] == "ACCEPT") {
-                        val targetUserId = parts[1]
-                        val acceptorUserId = parts[2]
-                        val acceptorName = parts[3]
-                        val acceptorAvatarSeed = parts[4].toIntOrNull() ?: 0
-                        val myUserId = IdentityManager.getIdentityId()
-                        if (targetUserId == myUserId) {
-                            DiagnosticsLogger.log("InvitationManager", "ACCEPT para mi de $acceptorName ($acceptorUserId)")
-                            com.malla.mvp.events.MallaEventBus.acceptanceReceived.tryEmit(
-                                Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
-                            )
-                        } else {
-                            DiagnosticsLogger.log("InvitationManager", "ACCEPT para $targetUserId (ignorado)")
-                        }
-                    }
-                } catch (e: Exception) {
-                    DiagnosticsLogger.log("InvitationManager", "Error parseando ACCEPT: ${e.message}")
-                }
+                processIncomingAcceptancePayload(payload)
             }
         }
         appContext = context.applicationContext
@@ -132,7 +113,7 @@ object InvitationManager {
         } catch (_: Exception) {}
     }
 
-    private fun processIncomingInvitationPayload(payload: String) {
+    fun processIncomingInvitationPayload(payload: String) {
         try {
             val json = JSONObject(payload)
             val invitation = ContactInvitation(
@@ -233,11 +214,28 @@ object InvitationManager {
             }.toString()
             DiagnosticsLogger.log("InvitationManager", "[sendInvitation] JSON preparado (${json.length} chars)")
 
+            // Iter 52: cascada — TCP primero si el peer está conectado por red.
+            // user.userId puede ser null cuando el peer solo se descubrió por mDNS sin BLE.
+            val peerUserId = user.userId
+            val sentViaTcp = if (!peerUserId.isNullOrBlank()) {
+                trySendViaTcp(peerUserId, json, "invitation")
+            } else {
+                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] userId null — TCP omitido, se intenta BLE")
+                false
+            }
+            if (sentViaTcp) {
+                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] Enviado por TCP a ${user.userId}")
+                withContext(Dispatchers.Main) {
+                    ToastHelper.show(context, "Solicitud enviada a ${user.displayName}", Toast.LENGTH_LONG)
+                }
+                return
+            }
+
             val targetDevice = user.bluetoothDevice
             if (targetDevice == null) {
-                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] SIN device BLE para ${user.displayName}")
+                DiagnosticsLogger.log("InvitationManager", "[sendInvitation] SIN device BLE ni TCP para ${user.displayName}")
                 withContext(Dispatchers.Main) {
-                    ToastHelper.show(context, "Sin canal BLE disponible para ${user.displayName}", Toast.LENGTH_LONG)
+                    ToastHelper.show(context, "Sin canal disponible para ${user.displayName}", Toast.LENGTH_LONG)
                 }
                 return
             }
@@ -284,12 +282,18 @@ object InvitationManager {
         // El canal es GATT directo (mismo que la invitacion), no advertising.
         val payload = "ACCEPT|${invitation.senderUserId}|$myUserId|$myName|$myAvatarSeed"
         DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] Enviando ACCEPT a ${invitation.senderUserId}")
-        // Buscar el BluetoothDevice del emisor: primero por nearbyUsers, sino por foundBluetoothDevices
+        // Iter 52: cascada — TCP primero si el peer está conectado por red
+        val sentViaTcp = trySendViaTcp(invitation.senderUserId, payload, "accept")
+        if (sentViaTcp) {
+            DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] Enviado por TCP a ${invitation.senderUserId}")
+            return
+        }
+        // Fallback BLE
         val targetDevice = ProximityEngine.nearbyUsers.value
             .firstOrNull { it.userId == invitation.senderUserId }
             ?.bluetoothDevice
         if (targetDevice == null) {
-            DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] SIN device BLE para emisor ${invitation.senderUserId}")
+            DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] SIN device BLE ni TCP para emisor ${invitation.senderUserId}")
             return
         }
         val ok = BleManager.connectAndWriteData(
@@ -298,6 +302,58 @@ object InvitationManager {
             payload.toByteArray(Charsets.UTF_8)
         )
         DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] connectAndWriteData resultado=$ok")
+    }
+
+    /**
+     * Iter 52: procesa un payload de ACCEPT (por BLE o por TCP). Extraído del bloque
+     * de BleTransport.acceptancePayloads.collect para reutilizarse desde MessageReceiver.
+     */
+    fun processIncomingAcceptancePayload(payload: String) {
+        try {
+            val parts = payload.split("|")
+            if (parts.size >= 5 && parts[0] == "ACCEPT") {
+                val targetUserId = parts[1]
+                val acceptorUserId = parts[2]
+                val acceptorName = parts[3]
+                val acceptorAvatarSeed = parts[4].toIntOrNull() ?: 0
+                val myUserId = IdentityManager.getIdentityId()
+                if (targetUserId == myUserId) {
+                    DiagnosticsLogger.log("InvitationManager", "ACCEPT para mi de $acceptorName ($acceptorUserId)")
+                    com.malla.mvp.events.MallaEventBus.acceptanceReceived.tryEmit(
+                        Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
+                    )
+                } else {
+                    DiagnosticsLogger.log("InvitationManager", "ACCEPT para $targetUserId (ignorado)")
+                }
+            }
+        } catch (e: Exception) {
+            DiagnosticsLogger.log("InvitationManager", "Error parseando ACCEPT: ${e.message}")
+        }
+    }
+
+    /**
+     * Iter 52: intenta enviar un payload de control (invitation/accept) por TCP si el peer
+     * está conectado por red. Devuelve true si el envío fue exitoso por TCP.
+     */
+    private suspend fun trySendViaTcp(targetUserId: String, payload: String, type: String): Boolean {
+        return try {
+            if (!NetworkService.isContactConnected(targetUserId)) {
+                DiagnosticsLogger.log("InvitationManager", "[trySendViaTcp] peer $targetUserId NO conectado por TCP")
+                return false
+            }
+            val ok = TransportManager.send(targetUserId, com.malla.mvp.data.entity.MeshMessage(
+                content = payload,
+                senderId = IdentityManager.getIdentityId(),
+                type = type,
+                timestamp = System.currentTimeMillis(),
+                messageId = java.util.UUID.randomUUID().toString()
+            ))
+            DiagnosticsLogger.log("InvitationManager", "[trySendViaTcp] type=$type target=$targetUserId resultado=$ok")
+            ok
+        } catch (e: Exception) {
+            DiagnosticsLogger.log("InvitationManager", "[trySendViaTcp] excepción: ${e.message}")
+            false
+        }
     }
 
     fun receiveInvitation(invitation: ContactInvitation) {
