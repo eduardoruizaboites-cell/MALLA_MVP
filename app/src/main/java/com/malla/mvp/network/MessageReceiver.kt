@@ -313,8 +313,11 @@ object MessageReceiver {
                 quotedMessageId = meshMsg.quotedMessageId,
                 quotedMessageContent = meshMsg.quotedMessageContent,
                 expireAt = meshMsg.expireAt,
-                viewOnce = meshMsg.viewOnce
+                viewOnce = meshMsg.viewOnce,
+                // Iter 53: persistir el type para que la UI pueda filtrar sin heurísticas
+                type = meshMsg.type
             )
+            DiagnosticsLogger.log(TAG, "INSERT en DB: id=${msgEntity.id}, type=${msgEntity.type}, content=${msgEntity.content.take(40)}")
             messageDao.insertMessage(msgEntity)
 
             // Notificar mensaje si la app no está en primer plano

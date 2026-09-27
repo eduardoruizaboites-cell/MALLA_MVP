@@ -27,7 +27,8 @@ object MessageMapper {
             isDeleted = entity.isDeleted,
             pollId = entity.pollId,
             isPinned = entity.isPinned,
-            status = entity.status
+            status = entity.status,
+            type = entity.type
         )
     }
 
@@ -51,7 +52,8 @@ object MessageMapper {
             isDeleted = data.isDeleted,
             pollId = data.pollId,
             isPinned = data.isPinned,
-            status = data.status
+            status = data.status,
+            type = data.type
         )
     }
 }

@@ -124,16 +124,11 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     val database = db ?: return@launch
                     database.messageDao().deleteExpiredMessages(convId, System.currentTimeMillis())
                     val msgs = database.messageDao().getMessagesForConversationOnce(convId)
-                    // Iter 52c: filtro defensivo. Descartar cualquier residuo de mensajes
-                    // de control que haya llegado a Room por caminos no previstos
-                    // (accept, read_all, ack, typing, invitation, zumbido).
-                    val CONTROL_PREFIXES = listOf("ACCEPT|", "read_all", "typing|")
-                    val CONTROL_TYPES = setOf("ack", "typing", "read_all", "accept", "invitation", "zumbido")
+                    // Iter 53: filtro REAL por type (no heurística). Solo chat/sms son
+                    // mensajes de usuario. El resto (ack, read_all, typing, invitation,
+                    // accept, zumbido, poll_*, reaction, edit, delete_for_all) se excluye.
                     val filtered = msgs.filter { m ->
-                        m.conversationId == convId &&
-                        !CONTROL_PREFIXES.any { p -> m.content.startsWith(p) } &&
-                        m.content !in CONTROL_TYPES &&
-                        !(m.content.length < 3 && m.content.all { it.isDigit() })  // ACK "1"/"2"
+                        m.conversationId == convId && (m.type == "chat" || m.type == "sms")
                     }
                     _messages.value = filtered.map { msg ->
                         if (msg.encrypted && sessionKey != null) {

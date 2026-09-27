@@ -34,7 +34,7 @@ import java.io.File
         ContactEntity::class,
         PollVoteEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -73,6 +73,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Iter 53: type en messages + isFavorite/isMuted en contacts
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN type TEXT NOT NULL DEFAULT 'chat'")
+                db.execSQL("ALTER TABLE contacts ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE contacts ADD COLUMN isMuted INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val CALLBACK = object : RoomDatabase.Callback() {
             override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 super.onCreate(db)
@@ -104,7 +113,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
@@ -121,7 +130,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()

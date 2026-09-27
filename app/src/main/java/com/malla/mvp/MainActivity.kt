@@ -1,4 +1,6 @@
 package com.malla.mvp
+
+import com.malla.mvp.ui.screen.ContactsScreen
 import androidx.fragment.app.FragmentActivity
 
 import android.Manifest
@@ -272,6 +274,7 @@ class MainActivity : FragmentActivity() {
             var currentConversationId by remember { mutableStateOf(conversationIdFromNotification) }
             var selectedContact by remember { mutableStateOf<String?>(null) }
             var showSettings by remember { mutableStateOf(false) }
+            var showContacts by remember { mutableStateOf(false) }
             var showChatSettings by remember { mutableStateOf(false) }
             var showCall by remember { mutableStateOf(false) }
             var callContact by remember { mutableStateOf("") }
@@ -847,13 +850,19 @@ fun MainApp(
         )
         return
     }
+    var showContacts by remember { mutableStateOf(false) }
     val onProfileClick = { selectedTab = 2 }
+    if (showContacts) {
+        ContactsScreen(onBack = { showContacts = false })
+        return
+    }
     Scaffold(
         topBar = {
             MainTopBar(
                 onSettingsClick = onSettingsClick,
                 onChatSettingsClick = onChatSettingsClick,
                 onProfileClick = onProfileClick,
+                onContactsClick = { showContacts = true },
                 isOnline = !isMeshMode,
                 showEncryption = currentConversationId != null
             )

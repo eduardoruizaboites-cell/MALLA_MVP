@@ -11,5 +11,8 @@ data class ContactEntity(
     val publicKey: String,
     val addedAt: Long,
     val isBlocked: Boolean = false,
-    val isHidden: Boolean = false
+    val isHidden: Boolean = false,
+    // Iter 53: preferencias del usuario sobre el contacto
+    val isFavorite: Boolean = false,
+    val isMuted: Boolean = false
 )

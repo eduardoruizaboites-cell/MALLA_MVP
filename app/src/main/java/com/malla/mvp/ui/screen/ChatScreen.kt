@@ -249,13 +249,9 @@ fun ChatScreen(
         vm.loadConversation(conversationId)
     }
 
-    LaunchedEffect(Unit) {
-        NetworkService.messages.collect { msg ->
-            if (msg.type == "zumbido") {
-                MallaEventBus.zumbidoReceived.tryEmit(msg)
-            }
-        }
-    }
+    // Iter 53: eliminado el collector paralelo sobre NetworkService.messages.
+    // El zumbido ahora se maneja por MallaEventBus.zumbidoReceived desde
+    // MessageReceiver (branch type=="zumbido"), que es el único pipeline oficial.
 
     // Receptor de zumbido
     LaunchedEffect(Unit) {

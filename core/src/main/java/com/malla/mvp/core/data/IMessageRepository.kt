@@ -23,6 +23,8 @@ data class MessageData(
     val pollId: String? = null,
     val isPinned: Boolean = false,
     val status: Int = 0,
+    // Iter 53: tipo del mensaje. La UI filtra por type == "chat" || type == "sms".
+    val type: String = "chat",
 )
 
 interface IMessageRepository {

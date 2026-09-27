@@ -11,6 +11,8 @@ data class MessageEntity(
     val timestamp: Long = System.currentTimeMillis(),
     val isOwn: Boolean = false,
     val status: Int = 0,
+    // Iter 53: tipo de mensaje (chat, sms, ack, read_all, typing, invitation, accept, zumbido, poll_create, poll_vote, reaction, edit, delete_for_all). Permite filtrar control messages de la UI sin heurísticas.
+    val type: String = "chat",
     val reaction: String? = null,
     val expireAt: Long? = null,
     val mediaUri: String? = null,

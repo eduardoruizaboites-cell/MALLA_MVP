@@ -31,6 +31,7 @@ fun MainTopBar(
     onSettingsClick: () -> Unit,
     onChatSettingsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
+    onContactsClick: () -> Unit = {},
     isOnline: Boolean,
     showEncryption: Boolean = false
 ) {
@@ -125,6 +126,10 @@ fun MainTopBar(
                     DropdownMenuItem(
                         text = { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Person, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Perfil") } },
                         onClick = { showMenu = false; onProfileClick() }
+                    )
+                    DropdownMenuItem(
+                        text = { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Contacts, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Contactos") } },
+                        onClick = { showMenu = false; onContactsClick() }
                     )
                     DropdownMenuItem(
                         text = { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Settings, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Ajustes") } },
