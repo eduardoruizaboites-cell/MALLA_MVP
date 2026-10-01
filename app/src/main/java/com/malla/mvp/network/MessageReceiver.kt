@@ -138,7 +138,13 @@ object MessageReceiver {
                 return
             }
             val db = AppDatabase.getInstance(context) ?: return
-            val messageId = "${meshMsg.senderId}_${meshMsg.timestamp}_${meshMsg.content.hashCode()}"
+            // Iter 55: bucket temporal de 1s para la clave de dedupe. Cuando el
+            // payload no es JSON (ACCEPT legacy pre-54, fallbacks), el timestamp
+            // viene de System.currentTimeMillis() en el catch y difiere entre
+            // copias, impidiendo que ReplayProtection los detecte como duplicados.
+            // El timestamp ORIGINAL se sigue usando para la ventana temporal.
+            val tsBucket = meshMsg.timestamp / 1000L
+            val messageId = "${meshMsg.senderId}_${tsBucket}_${meshMsg.content.hashCode()}"
 
             if (!ReplayProtection.validate(messageId, meshMsg.timestamp)) {
                 Log.w(TAG, "Duplicado: $messageId")

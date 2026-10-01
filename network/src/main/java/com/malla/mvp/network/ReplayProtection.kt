@@ -23,6 +23,11 @@ object ReplayProtection {
      * Valida un mensaje entrante.
      * @return true si el mensaje es válido (no duplicado y dentro de la ventana temporal)
      */
+    // Iter 55: @Synchronized para hacer check-y-add atómico. Antes, dos llamadas
+    // concurrentes desde Dispatchers.IO podían pasar el `window.any` antes de que
+    // la primera hiciera `addLast`, y ambas retornaban true → ambas insertaban en DB.
+    // Causa raíz real de B2 (duplicados), no el messageId.
+    @Synchronized
     fun validate(messageId: String, timestamp: Long): Boolean {
         val now = System.currentTimeMillis()
 
@@ -48,6 +53,7 @@ object ReplayProtection {
     }
 
     /** Vacía la ventana de protección */
+    @Synchronized
     fun clear() {
         window.clear()
     }
