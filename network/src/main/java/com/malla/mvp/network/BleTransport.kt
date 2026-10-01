@@ -507,14 +507,23 @@ object BleTransport {
                         // La aceptacion viaja por el mismo canal GATT que la invitacion
                         // (antes usaba advertising serviceData y el scanner solo lee
                         // manufacturerData — nunca llegaba).
-                        if (payload.startsWith("ACCEPT|")) {
-                            LogBuffer.add(TAG, "Aceptacion BLE recibida: $payload")
-                            DiagnosticsLogger.log(TAG, "Aceptacion BLE recibida: $payload")
+                        // Iter 54: deteccion dual. Formato nuevo = JSON con type.
+                        // Formato legacy = prefijo ACCEPT|.
+                        val isAcceptance = payload.startsWith("ACCEPT|") ||
+                            (payload.trimStart().startsWith("{") &&
+                                runCatching { org.json.JSONObject(payload).optString("type") }.getOrNull() == "accept")
+                        val isInvitationJson = payload.trimStart().startsWith("{") &&
+                            runCatching { org.json.JSONObject(payload).optString("type") }.getOrNull() == "invitation"
+                        if (isAcceptance) {
+                            LogBuffer.add(TAG, "Aceptacion BLE recibida: ${payload.take(60)}")
+                            DiagnosticsLogger.log(TAG, "Aceptacion BLE recibida: ${payload.take(60)}")
                             incomingAcceptancePayloads.tryEmit(payload)
-                        } else {
-                            LogBuffer.add(TAG, "Invitacion BLE recibida: $payload")
-                            DiagnosticsLogger.log(TAG, "Invitacion BLE recibida: $payload")
+                        } else if (isInvitationJson || !payload.trimStart().startsWith("{")) {
+                            LogBuffer.add(TAG, "Invitacion BLE recibida: ${payload.take(60)}")
+                            DiagnosticsLogger.log(TAG, "Invitacion BLE recibida: ${payload.take(60)}")
                             incomingInvitationPayloads.tryEmit(payload)
+                        } else {
+                            DiagnosticsLogger.log(TAG, "Payload JSON con type desconocido en INVITE_CHAR: ${payload.take(60)}")
                         }
                     } else {
                         DiagnosticsLogger.log(TAG, "Invitacion fragmentada incompleta de ${device.address}")

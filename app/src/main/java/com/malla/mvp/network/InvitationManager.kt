@@ -203,6 +203,8 @@ object InvitationManager {
             )
 
             val json = JSONObject().apply {
+                // Iter 54: type explicito para que el receptor no lo trate como chat.
+                put("type", "invitation")
                 put("senderUserId", invitation.senderUserId)
                 put("senderDisplayName", invitation.senderDisplayName)
                 put("senderAvatarSeed", invitation.senderAvatarSeed)
@@ -278,9 +280,17 @@ object InvitationManager {
         val myUserId = IdentityManager.getIdentityId()
         val myName = IdentityManager.getUserName(context)
         val myAvatarSeed = 0
-        // Iter 47: formato ACCEPT|targetUserId|acceptorUserId|acceptorName|acceptorSeed
-        // El canal es GATT directo (mismo que la invitacion), no advertising.
-        val payload = "ACCEPT|${invitation.senderUserId}|$myUserId|$myName|$myAvatarSeed"
+        // Iter 54: formato JSON con type explicito para que el receptor no lo
+        // trate como chat. Retrocompatibilidad con formato legacy ACCEPT|...
+        // se maneja en processIncomingAcceptancePayload.
+        val payload = JSONObject().apply {
+            put("type", "accept")
+            put("targetUserId", invitation.senderUserId)
+            put("acceptorUserId", myUserId)
+            put("acceptorName", myName)
+            put("acceptorAvatarSeed", myAvatarSeed)
+            put("timestamp", System.currentTimeMillis())
+        }.toString()
         DiagnosticsLogger.log("InvitationManager", "[sendAcceptance] Enviando ACCEPT a ${invitation.senderUserId}")
         // Iter 52: cascada — TCP primero si el peer está conectado por red
         val sentViaTcp = trySendViaTcp(invitation.senderUserId, payload, "accept")
@@ -310,21 +320,50 @@ object InvitationManager {
      */
     fun processIncomingAcceptancePayload(payload: String) {
         try {
-            val parts = payload.split("|")
-            if (parts.size >= 5 && parts[0] == "ACCEPT") {
-                val targetUserId = parts[1]
-                val acceptorUserId = parts[2]
-                val acceptorName = parts[3]
-                val acceptorAvatarSeed = parts[4].toIntOrNull() ?: 0
-                val myUserId = IdentityManager.getIdentityId()
-                if (targetUserId == myUserId) {
-                    DiagnosticsLogger.log("InvitationManager", "ACCEPT para mi de $acceptorName ($acceptorUserId)")
-                    com.malla.mvp.events.MallaEventBus.acceptanceReceived.tryEmit(
-                        Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
-                    )
-                } else {
-                    DiagnosticsLogger.log("InvitationManager", "ACCEPT para $targetUserId (ignorado)")
+            // Iter 54: dual-parse. Formato nuevo = JSON con type=accept.
+            // Formato legacy (iter 47-53) = "ACCEPT|target|acceptor|name|seed".
+            val trimmed = payload.trimStart()
+            var targetUserId: String? = null
+            var acceptorUserId: String? = null
+            var acceptorName: String? = null
+            var acceptorAvatarSeed: Int = 0
+            var format = "unknown"
+
+            if (trimmed.startsWith("{")) {
+                val json = org.json.JSONObject(trimmed)
+                if (json.optString("type") != "accept") {
+                    DiagnosticsLogger.log("InvitationManager", "ACCEPT JSON con type inesperado: ${json.optString("type")} — ignorado")
+                    return
                 }
+                targetUserId = json.optString("targetUserId", "").takeIf { it.isNotBlank() }
+                acceptorUserId = json.optString("acceptorUserId", "").takeIf { it.isNotBlank() }
+                acceptorName = json.optString("acceptorName", "Usuario Malla")
+                acceptorAvatarSeed = json.optInt("acceptorAvatarSeed", 0)
+                format = "json"
+            } else if (payload.startsWith("ACCEPT|")) {
+                val parts = payload.split("|")
+                if (parts.size >= 5) {
+                    targetUserId = parts[1]
+                    acceptorUserId = parts[2]
+                    acceptorName = parts[3]
+                    acceptorAvatarSeed = parts[4].toIntOrNull() ?: 0
+                    format = "legacy"
+                }
+            }
+
+            if (targetUserId == null || acceptorUserId == null || acceptorName == null) {
+                DiagnosticsLogger.log("InvitationManager", "ACCEPT con formato no reconocido: ${payload.take(60)}")
+                return
+            }
+
+            val myUserId = IdentityManager.getIdentityId()
+            if (targetUserId == myUserId) {
+                DiagnosticsLogger.log("InvitationManager", "ACCEPT($format) para mi de $acceptorName ($acceptorUserId)")
+                com.malla.mvp.events.MallaEventBus.acceptanceReceived.tryEmit(
+                    Triple(acceptorUserId, acceptorName, acceptorAvatarSeed)
+                )
+            } else {
+                DiagnosticsLogger.log("InvitationManager", "ACCEPT($format) para $targetUserId (ignorado)")
             }
         } catch (e: Exception) {
             DiagnosticsLogger.log("InvitationManager", "Error parseando ACCEPT: ${e.message}")
