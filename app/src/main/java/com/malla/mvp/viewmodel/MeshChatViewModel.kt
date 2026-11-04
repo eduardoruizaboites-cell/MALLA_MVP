@@ -77,10 +77,19 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
             }
         }
         // Observar estado de escribiendo remoto
+        // Fix iter 61: auto-expiry a 5s si no llega el typing=0 (por pérdida de paquete,
+        // desconexión, o demora del BLE). Sin esto el bubble queda pegado varios segundos.
         viewModelScope.launch {
             MallaEventBus.typingReceived.collect { (sender, isTyping) ->
                 if (sender != "self" && sender == _conversationId.value) {
+                    remoteTypingExpiryJob?.cancel()
                     _remoteTyping.value = isTyping
+                    if (isTyping) {
+                        remoteTypingExpiryJob = viewModelScope.launch {
+                            kotlinx.coroutines.delay(5_000L)
+                            _remoteTyping.value = false
+                        }
+                    }
                 }
             }
         }
@@ -128,7 +137,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     // mensajes de usuario. El resto (ack, read_all, typing, invitation,
                     // accept, zumbido, poll_*, reaction, edit, delete_for_all) se excluye.
                     val filtered = msgs.filter { m ->
-                        m.conversationId == convId && (m.type == "chat" || m.type == "sms")
+                        m.conversationId == convId &&
+                            (m.type == "chat" || m.type == "sms") &&
+                            !isGarbageMessage(m.content) // Fix iter 58: filtro defensivo contra DB sucia
                     }
                     _messages.value = filtered.map { msg ->
                         if (msg.encrypted && sessionKey != null) {
@@ -149,6 +160,23 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+    }
+
+    /**
+     * Fix iter 58: defensa contra mensajes basura que puedan existir en Room
+     * por migraciones v16→v17 (todos quedaron como type="chat") o inserts
+     * previos sin filtro. No toca la DB, solo filtra la vista.
+     */
+    private fun isGarbageMessage(content: String): Boolean {
+        val t = content.trim()
+        if (t.isEmpty()) return true
+        if (t == "1" || t == "0" || t == "2") return true
+        if (t == "read_all") return true
+        if (t.startsWith("{")) return true  // JSON de invitación/accept
+        if (t.startsWith("ACCEPT|")) return true
+        if (t.startsWith("typing|")) return true
+        if (t.length > 150 && (t.startsWith("MFkw") || t.startsWith("MII"))) return true  // clave pública
+        return false
     }
 
     suspend fun getPollData(pollId: String): Pair<PollEntity?, List<PollOptionEntity>> {
@@ -199,6 +227,7 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     private var typingStartJob: Job? = null
     private var typingStopJob: Job? = null
     private var lastSentTyping: Boolean = false
+    private var remoteTypingExpiryJob: Job? = null  // Fix iter 61: auto-expiry del typing remoto
 
     fun sendTyping(isTyping: Boolean) {
         val convId = _conversationId.value ?: return

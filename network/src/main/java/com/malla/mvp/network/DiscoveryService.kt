@@ -33,6 +33,20 @@ object DiscoveryService {
         Log.d(TAG, "NSD detenido")
     }
 
+    /**
+     * Fix iter 61: restart asíncrono. unregisterService() es async y el listener
+     * queda "in use" durante ~500ms. El start() inmediato fallaba con
+     * "listener already in use" y el mDNS nunca se refrescaba con el nombre nuevo.
+     */
+    fun restart(context: Context) {
+        nsdManager?.unregisterService(registrationListener)
+        nsdManager?.stopServiceDiscovery(discoveryListener)
+        isRegistered = false
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            start(context)
+        }, 600L)
+    }
+
     private fun registerService(context: Context) {
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "MALLA_${IdentityManager.getUserName(context).take(20)}"

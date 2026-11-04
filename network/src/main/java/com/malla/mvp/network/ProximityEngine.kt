@@ -75,16 +75,27 @@ object ProximityEngine {
                     val parts = addressWithName.split("|")
                     val address = parts.getOrElse(0) { addressWithName }
                     val serviceName = parts.getOrElse(1) { "MALLA_${address.substringBefore(":")}" }
-                    val localIp = DhtService.getLocalAddress() ?: "127.0.0.1"
                     val remoteIp = address.substringBefore(":")
+                    // Fix iter 59: enumerar TODAS las IPs locales (no solo una).
+                    // DhtService.getLocalAddress() puede devolver la IP pública/móvil
+                    // y falla al filtrar la IP del hotspot en el Cubot.
+                    val myIps: Set<String> = try {
+                        java.net.NetworkInterface.getNetworkInterfaces().toList()
+                            .flatMap { iface -> iface.inetAddresses.toList().mapNotNull { it.hostAddress } }
+                            .filter { it.isNotBlank() && !it.contains(":") }
+                            .toSet()
+                    } catch (e: Exception) {
+                        setOf(DhtService.getLocalAddress() ?: "127.0.0.1")
+                    }
                     // Ignorar IPs de rango Wi-Fi Direct para evitar auto-detección del propio grupo
                     if (remoteIp.startsWith("192.168.49.")) {
                         DiagnosticsLogger.log("PROX", "Ignorando IP Wi-Fi Direct: $remoteIp")
-                    } else if (remoteIp != localIp && remoteIp != "127.0.0.1") {
-                        val token = "mdns_$remoteIp"
-                        val displayName = serviceName.removePrefix("MALLA_")
-                        addOrUpdate(token, null, displayName, 0, SignalType.MDNS, 3)
-                        // Iter 46: emitir evento al bus para que :app dispare NetworkService.connectToPeer
+                    } else if (remoteIp !in myIps && remoteIp != "127.0.0.1") {
+                        // Fix iter 61: NO agregar a _nearbyUsers. El mDNS no trae userId
+                        // real ni bluetoothDevice, y crea entradas fantasmas ("Lalo (2)"
+                        // sin userId) que nunca se fusionan con la entrada BLE del mismo
+                        // peer ("eduard" con userId real). Los peers visibles en la UI
+                        // vienen 100% del BLE. El mDNS solo se usa para disparar TCP.
                         MallaEventBus.peerMdnsResolved.tryEmit(remoteIp)
                     }
                 }
@@ -94,7 +105,7 @@ object ProximityEngine {
             // (a veces sin disparar onScanFailed). Re-registrar cada 2 min garantiza
             // continuidad del descubrimiento y evita que nearbyUsers quede vacio.
             while (isActive) {
-                delay(2 * 60_000L)
+                delay(30_000L) // Fix iter 57: bajar de 2min a 30s para Xiaomi
                 DiagnosticsLogger.log("PROX", "Watchdog BLE: re-registrando escaneo de proximidad")
                 BleManager.restartProximityScanning()
             }
@@ -171,7 +182,14 @@ object ProximityEngine {
         val name = IdentityManager.getUserName(context)
         stopAdvertising()
         startAdvertising(name, 0)
-        DiagnosticsLogger.log("PROX", "Advertising refrescado con nombre=$name")
+        // Fix iter 61: usar restart() que espera al callback async del listener.
+        // El stop()+start() de iter 59 fallaba con "listener already in use".
+        try {
+            DiscoveryService.restart(context)
+        } catch (e: Exception) {
+            DiagnosticsLogger.log("PROX", "refreshAdvertising: error refrescando mDNS: ${e.message}")
+        }
+        DiagnosticsLogger.log("PROX", "Advertising refrescado con nombre=$name (BLE + mDNS)")
     }
 
     fun hideUser(token: String) {
@@ -201,14 +219,41 @@ object ProximityEngine {
                 bluetoothDevice = device ?: current[idx].bluetoothDevice
             )
         } else {
-            // Buscar por displayName para fusionar transportes distintos
-            idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
+            // Fix iter 59: fusionar BLE con mDNS huérfano del mismo peer.
+            // El advertising BLE trunca el nombre a 6 chars ("Eduard" vs "Eduardo" del mDNS).
+            // Caso 1: llega BLE con userId y hay mDNS sin userId con nombre prefijo.
+            if (userId != null) {
+                idx = current.indexOfFirst { existing ->
+                    existing.userId == null &&
+                        existing.signalType == SignalType.MDNS &&
+                        (name.startsWith(existing.displayName, ignoreCase = true) ||
+                            existing.displayName.startsWith(name, ignoreCase = true))
+                }
+            }
+            // Caso 2: llega mDNS sin userId y hay BLE con nombre prefijo.
+            if (idx == -1 && type == SignalType.MDNS && userId == null) {
+                idx = current.indexOfFirst { existing ->
+                    existing.signalType != SignalType.MDNS &&
+                        existing.userId != null &&
+                        (name.startsWith(existing.displayName, ignoreCase = true) ||
+                            existing.displayName.startsWith(name, ignoreCase = true))
+                }
+            }
+            // Buscar por displayName exacto como fallback
+            if (idx == -1) {
+                idx = current.indexOfFirst { it.displayName.equals(name, ignoreCase = true) }
+            }
             if (idx != -1) {
                 val existing = current[idx]
                 val preferredType = if (type == SignalType.MDNS) existing.signalType else type
                 val preferredToken = if (type == SignalType.MDNS) existing.token else token
+                // Preservar userId del BLE y nombre más largo del mDNS
+                val mergedUserId = userId ?: existing.userId
+                val mergedName = if (name.length > existing.displayName.length) name else existing.displayName
                 current[idx] = existing.copy(
                     token = preferredToken,
+                    userId = mergedUserId,
+                    displayName = mergedName,
                     signalType = preferredType,
                     signalStrength = maxOf(strength, existing.signalStrength),
                     bluetoothDevice = device ?: existing.bluetoothDevice

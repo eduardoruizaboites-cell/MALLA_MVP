@@ -237,12 +237,11 @@ fun ChatScreen(
 
 
 
+    // Fix iter 61: el delay(2000) del LaunchedEffect se reiniciaba en cada keystroke,
+    // impidiendo que se disparara el stop. El debounce real ya vive en el ViewModel
+    // (typingStartJob 300ms + scheduleTypingStop 4s + auto-expiry 5s).
     LaunchedEffect(typingText) {
         vm.sendTyping(typingText.isNotEmpty())
-        if (typingText.isNotEmpty()) {
-            delay(2000)  // debounce: después de 2s sin escribir, envía false
-            if (typingText.isEmpty()) vm.sendTyping(false)
-        }
     }
 
     LaunchedEffect(conversationId) {
@@ -647,8 +646,13 @@ fun ChatScreen(
 
                 // Barra inferior: cambia entre vista previa y composición normal
                                 if (pendingMediaUris.isEmpty()) {
+                    // Fix iter 60: mostrar typing DEL PEER, no el typing local del input.
+                    // Antes: visible = typingText.isNotEmpty() → self-echo (aparecía
+                    // en el celular del emisor). Ahora: lee vm.remoteTyping, que solo
+                    // se activa cuando llega un mensaje type=typing del peer.
+                    val isPeerTyping by vm.remoteTyping.collectAsState()
                     AnimatedVisibility(
-                        visible = typingText.isNotEmpty(),
+                        visible = isPeerTyping,
                         enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f)) + fadeIn(tween(200)),
                         exit = scaleOut(tween(150)) + fadeOut(tween(150))
                     ) {

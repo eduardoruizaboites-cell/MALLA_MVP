@@ -144,7 +144,8 @@ object MessageReceiver {
             // copias, impidiendo que ReplayProtection los detecte como duplicados.
             // El timestamp ORIGINAL se sigue usando para la ventana temporal.
             val tsBucket = meshMsg.timestamp / 1000L
-            val messageId = "${meshMsg.senderId}_${tsBucket}_${meshMsg.content.hashCode()}"
+            val deterministicId = meshMsg.messageId?.takeIf { it.isNotBlank() } ?: java.util.UUID.nameUUIDFromBytes("${meshMsg.senderId}_${meshMsg.timestamp}_${meshMsg.content}".toByteArray()).toString()
+            val messageId = deterministicId // Fix iter 57: usar ID determinístico
 
             if (!ReplayProtection.validate(messageId, meshMsg.timestamp)) {
                 Log.w(TAG, "Duplicado: $messageId")
@@ -310,7 +311,7 @@ object MessageReceiver {
                 // Iter 52c: ID determinístico. Si el mensaje llega por TCP + BLE + rebote,
                 // los 3 usan el MISMO ID y Room deduplica automáticamente (PK).
                 // Solo cae a UUID random si el emisor no puso messageId.
-                id = meshMsg.messageId ?: UUID.randomUUID().toString(),
+                id = deterministicId, // Fix iter 57: evitar duplicados
                 conversationId = conversationId,
                 content = meshMsg.content,
                 timestamp = meshMsg.timestamp,
@@ -323,8 +324,13 @@ object MessageReceiver {
                 // Iter 53: persistir el type para que la UI pueda filtrar sin heurísticas
                 type = meshMsg.type
             )
-            DiagnosticsLogger.log(TAG, "INSERT en DB: id=${msgEntity.id}, type=${msgEntity.type}, content=${msgEntity.content.take(40)}")
-            messageDao.insertMessage(msgEntity)
+            // Fix iter 57: no insertar control messages en Room
+            if (msgEntity.type == "chat" || msgEntity.type == "sms") {
+                DiagnosticsLogger.log(TAG, "INSERT en DB: id=${msgEntity.id}, type=${msgEntity.type}, content=${msgEntity.content.take(40)}")
+                messageDao.insertMessage(msgEntity)
+            } else {
+                DiagnosticsLogger.log(TAG, "Control message ignorado en Room: type=${msgEntity.type}")
+            }
 
             // Notificar mensaje si la app no está en primer plano
             if (!com.malla.mvp.MainActivity.appForeground) {

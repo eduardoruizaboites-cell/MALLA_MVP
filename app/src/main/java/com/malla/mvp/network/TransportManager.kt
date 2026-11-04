@@ -145,6 +145,23 @@ object TransportManager {
     }
     suspend fun sendTyping(contactId: String, isTyping: Boolean) = withContext(Dispatchers.IO) {
         try {
+            // Fix iter 61: intentar TCP primero (latencia ~50ms vs BLE 2-15s).
+            // Sin esto el typing llega DESPUÉS que los mensajes al receptor.
+            if (NetworkService.isContactConnected(contactId)) {
+                try {
+                    val typingMsg = MeshMessage(
+                        senderId = IdentityManager.getIdentityId(),
+                        content = if (isTyping) "1" else "0",
+                        timestamp = System.currentTimeMillis(),
+                        type = "typing"
+                    )
+                    NetworkService.sendMessageToContact(contactId, typingMsg)
+                    DiagnosticsLogger.log(TAG, "Typing enviado por TCP a $contactId (isTyping=$isTyping)")
+                    return@withContext
+                } catch (e: Exception) {
+                    DiagnosticsLogger.log(TAG, "Typing TCP falló, cayendo a BLE: ${e.message}")
+                }
+            }
             val payload = org.json.JSONObject().apply {
                 put("senderId", IdentityManager.getIdentityId())
                 put("type", "typing")

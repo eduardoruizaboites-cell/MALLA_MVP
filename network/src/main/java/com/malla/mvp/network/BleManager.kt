@@ -516,8 +516,9 @@ object BleManager {
                     // forzar reconexion limpia en el proximo intento.
                     DiagnosticsLogger.log("BleManager", "Service $serviceUuid no encontrado; forzando discovery extra")
                     try {
+                        try { gatt.javaClass.getMethod("refresh").invoke(gatt) } catch (_: Exception) {}
                         gatt.discoverServices()
-                        delay(1500L)
+                        delay(2000L)
                         service = gatt.getService(serviceUuid)
                     } catch (e: Exception) {
                         DiagnosticsLogger.log("BleManager", "Discovery retry fallo: ${e.message}")

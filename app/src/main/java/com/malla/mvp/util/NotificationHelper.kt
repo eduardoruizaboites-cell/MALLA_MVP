@@ -93,12 +93,13 @@ object NotificationHelper {
             .setColor(accentColor)
             .setColorized(false)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Fix iter 57: encender pantalla en lock screen
             .setStyle(messagingStyle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true) // Fix iter 58: encender pantalla bloqueada
             .setWhen(System.currentTimeMillis())
             .setShowWhen(true)
             .setGroup(GROUP_KEY)
@@ -189,10 +190,11 @@ object NotificationHelper {
             .setContentTitle("Dispositivo MALLA encontrado")
             .setContentText(peerName)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOnlyAlertOnce(true) // Fix iter 57: no re-notificar si ya existe
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val uniqueId = System.currentTimeMillis().toInt()
+        val uniqueId = peerName.hashCode() // Fix iter 57: ID fijo por peer
         manager.notify(uniqueId, builder.build())
     }
 }
