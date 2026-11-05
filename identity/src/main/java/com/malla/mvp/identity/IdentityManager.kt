@@ -190,6 +190,23 @@ object IdentityManager {
         return prefs.getBoolean("registration_complete", false)
     }
 
+    /**
+     * Iter 67: modo invisible en la malla.
+     * true  = advertising BLE activo, otros peers nos ven en "cerca de ti".
+     * false = advertising BLE detenido, nadie nos ve pero nosotros si escaneamos.
+     * Persistido en SharedPreferences("identity") con key "visible_in_ble".
+     * Default true (comportamiento previo).
+     */
+    fun isVisibleInBle(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("identity", Context.MODE_PRIVATE)
+        return prefs.getBoolean("visible_in_ble", true)
+    }
+
+    fun setVisibleInBle(context: Context, visible: Boolean) {
+        context.getSharedPreferences("identity", Context.MODE_PRIVATE).edit()
+            .putBoolean("visible_in_ble", visible).apply()
+    }
+
     fun setRegistrationComplete(context: Context, complete: Boolean) {
         context.getSharedPreferences("identity", Context.MODE_PRIVATE).edit().putBoolean("registration_complete", complete).apply()
     }

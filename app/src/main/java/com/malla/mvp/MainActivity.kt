@@ -286,6 +286,7 @@ class MainActivity : FragmentActivity() {
             var showInvitationDialog by remember { mutableStateOf(false) }
             // Iter 50: card flotante cuando alguien nos acepta la invitacion (foreground)
             var showAcceptanceCard by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
+            var isVisibleInBleState by remember { mutableStateOf(IdentityManager.isVisibleInBle(context)) }
 
             // 1) Al arrancar, si había una invitación pendiente persistida, la cargamos
             //    en el StateFlow (que sobrevive recomposiciones).
@@ -617,6 +618,13 @@ class MainActivity : FragmentActivity() {
                                             currentConversationId = convId
                                         }
                                     },
+                                    isVisibleInBle = isVisibleInBleState,
+                                    onVisibilityToggle = { newValue ->
+                                        isVisibleInBleState = newValue
+                                        com.malla.mvp.network.ProximityEngine.setVisibility(context, newValue)
+                                        val msg = if (newValue) "Ahora eres visible en la malla" else "Ya no eres visible en la malla"
+                                        com.malla.mvp.util.ToastHelper.show(context, msg, android.widget.Toast.LENGTH_SHORT)
+                                    },
                                     onVoiceCallClick = {
                                         showCall = true
                                         callContact = "Contacto"
@@ -815,7 +823,9 @@ fun MainApp(
     onProfileClicked: (String) -> Unit,
     onNavigateToQrScanner: () -> Unit,
     onConnectToPeer: (String) -> Unit,
-    db: AppDatabase?
+    db: AppDatabase?,
+    isVisibleInBle: Boolean = true,
+    onVisibilityToggle: (Boolean) -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var currentContactName by remember { mutableStateOf("Chat") }
@@ -864,7 +874,9 @@ fun MainApp(
                 onProfileClick = onProfileClick,
                 onContactsClick = { showContacts = true },
                 isOnline = !isMeshMode,
-                showEncryption = currentConversationId != null
+                showEncryption = currentConversationId != null,
+                isVisibleInBle = isVisibleInBle,
+                onVisibilityToggle = onVisibilityToggle
             )
         },
         bottomBar = {

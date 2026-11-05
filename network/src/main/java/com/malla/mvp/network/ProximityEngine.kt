@@ -51,7 +51,12 @@ object ProximityEngine {
             val myAvatarSeed = myUserId.hashCode()
             val token = generateToken(myUserId)
             DiagnosticsLogger.log("PROX", "Advertising propio: userId=$myUserId, name=$myName, token=$token")
-            BleManager.startAdvertisingWithUserData(myUserId, token, myName)
+            if (IdentityManager.isVisibleInBle(context)) {
+                BleManager.startAdvertisingWithUserData(myUserId, token, myName)
+                advertising = true
+            } else {
+                DiagnosticsLogger.log("PROX", "Advertising omitido (modo invisible)")
+            }
 
             // Wi‑Fi Direct (en modo descubrimiento) solo si es soportado Y habilitado
             if (!MeshFlags.enableWifiDirect) {
@@ -157,6 +162,11 @@ object ProximityEngine {
 
     fun startAdvertising(displayName: String, avatarSeed: Int) {
         if (advertising) return
+        val ctx = appContext ?: return
+        if (!IdentityManager.isVisibleInBle(ctx)) {
+            DiagnosticsLogger.log("PROX", "startAdvertising: omitido (modo invisible)")
+            return
+        }
         val userId = IdentityManager.getIdentityId()
         val token = generateToken(userId)
         BleManager.startAdvertisingWithUserData(userId, token, displayName)
@@ -179,8 +189,12 @@ object ProximityEngine {
      * PerfilScreen (edicion de nombre) y EditProfileScreen (guardar cambios).
      */
     fun refreshAdvertising(context: android.content.Context) {
-        val name = IdentityManager.getUserName(context)
         stopAdvertising()
+        if (!IdentityManager.isVisibleInBle(context)) {
+            DiagnosticsLogger.log("PROX", "refreshAdvertising: modo invisible, advertising detenido")
+            return
+        }
+        val name = IdentityManager.getUserName(context)
         startAdvertising(name, 0)
         // Fix iter 61: usar restart() que espera al callback async del listener.
         // El stop()+start() de iter 59 fallaba con "listener already in use".
@@ -190,6 +204,21 @@ object ProximityEngine {
             DiagnosticsLogger.log("PROX", "refreshAdvertising: error refrescando mDNS: ${e.message}")
         }
         DiagnosticsLogger.log("PROX", "Advertising refrescado con nombre=$name (BLE + mDNS)")
+    }
+
+    /**
+     * Iter 67: cambia el modo de visibilidad BLE del usuario.
+     * Persiste el flag y aplica el cambio inmediatamente.
+     */
+    fun setVisibility(context: android.content.Context, visible: Boolean) {
+        IdentityManager.setVisibleInBle(context, visible)
+        if (visible) {
+            refreshAdvertising(context)
+            DiagnosticsLogger.log("PROX", "Visibilidad activada (visible=true)")
+        } else {
+            stopAdvertising()
+            DiagnosticsLogger.log("PROX", "Visibilidad desactivada (visible=false)")
+        }
     }
 
     fun hideUser(token: String) {

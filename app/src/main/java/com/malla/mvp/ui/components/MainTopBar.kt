@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +35,9 @@ fun MainTopBar(
     onProfileClick: () -> Unit = {},
     onContactsClick: () -> Unit = {},
     isOnline: Boolean,
-    showEncryption: Boolean = false
+    showEncryption: Boolean = false,
+    isVisibleInBle: Boolean = true,
+    onVisibilityToggle: (Boolean) -> Unit = {}
 ) {
     val currentAvatar by IdentityManager.avatarBitmap.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
@@ -138,6 +142,25 @@ fun MainTopBar(
                     DropdownMenuItem(
                         text = { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.ChatBubble, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Configuración de chat") } },
                         onClick = { showMenu = false; onChatSettingsClick() }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (isVisibleInBle) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                    null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(if (isVisibleInBle) "Visible en malla" else "Invisible en malla")
+                                Spacer(Modifier.weight(1f))
+                                Switch(
+                                    checked = isVisibleInBle,
+                                    onCheckedChange = { newValue -> onVisibilityToggle(newValue) }
+                                )
+                            }
+                        },
+                        onClick = { /* Switch maneja el click */ }
                     )
                     Divider()
                     DropdownMenuItem(
