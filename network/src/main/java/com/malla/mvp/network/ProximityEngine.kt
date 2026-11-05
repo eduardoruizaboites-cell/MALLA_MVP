@@ -23,6 +23,13 @@ object ProximityEngine {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var appContext: Context? = null
 
+    /**
+     * Iter 67B: cache de contactos registrados (userId -> displayName).
+     * Poblada por Injector observando ContactDao.observeAllVisible().
+     * Usada por isGhostPeer() para ocultar duplicados huérfanos en "cerca de ti".
+     */
+    @Volatile private var contactCache: Map<String, String> = emptyMap()
+
     fun start(context: Context) {
         synchronized(this) {
             if (started) return
@@ -221,6 +228,38 @@ object ProximityEngine {
         }
     }
 
+    /**
+     * Iter 67B: actualiza el cache de contactos registrados.
+     * Llamado por Injector cada vez que ContactDao.observeAllVisible() emite.
+     */
+    fun setContactCache(cache: Map<String, String>) {
+        contactCache = cache
+        DiagnosticsLogger.log("PROX", "contactCache actualizado: ${cache.size} contactos")
+    }
+
+    /**
+     * Iter 67B: detecta si un peer es "ghost" (duplicado huérfano de un contacto
+     * registrado cuyo userId cambió por reinstalación).
+     *
+     * Condiciones (las 3 deben cumplirse):
+     *  1. El peer tiene userId (no es entrada mDNS sin identidad).
+     *  2. El userId NO está entre los contactos registrados.
+     *  3. Existe un contacto con displayName igual (o prefijo significativo >=4 chars,
+     *     para tolerar el truncamiento a 6 chars del advertising BLE).
+     *
+     * Si las 3 se cumplen, se considera ghost y NO se agrega a nearbyUsers.
+     */
+    private fun isGhostPeer(userId: String?, name: String): Boolean {
+        if (userId == null || contactCache.isEmpty()) return false
+        if (contactCache.containsKey(userId)) return false
+        return contactCache.values.any { existingName ->
+            existingName.equals(name, ignoreCase = true) ||
+                (name.length >= 4 && existingName.length >= 4 &&
+                    (name.startsWith(existingName, ignoreCase = true) ||
+                        existingName.startsWith(name, ignoreCase = true)))
+        }
+    }
+
     fun hideUser(token: String) {
         _nearbyUsers.value = _nearbyUsers.value.filter { it.token != token }
     }
@@ -232,6 +271,10 @@ object ProximityEngine {
 
     private fun addOrUpdate(token: String, userId: String? = null, name: String, seed: Int, type: SignalType, strength: Int, device: android.bluetooth.BluetoothDevice? = null) {
         if (isSelfUser(name, token)) return
+        if (isGhostPeer(userId, name)) {
+            DiagnosticsLogger.log("PROX", "Peer oculto: name=$name userId=$userId (ghost de contacto registrado)")
+            return
+        }
         val current = _nearbyUsers.value.toMutableList()
         // Buscar por token exacto
         var idx = current.indexOfFirst { it.token == token }

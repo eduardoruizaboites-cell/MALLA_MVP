@@ -172,6 +172,26 @@ object Injector {
         messageBridge.start()
         MessageReceiver.start(context)
 
+        // Iter 67B: observar contactos registrados y pasarlos a ProximityEngine.
+        // ProximityEngine los usa para filtrar "ghosts": peers cuyo displayName
+        // coincide con un contacto registrado pero cuyo userId cambió
+        // (típicamente por reinstalación de la app del peer).
+        if (db != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    db.contactDao().observeAllVisible().collect { contacts ->
+                        val cache = contacts.associate { it.contactUserId to it.displayName }
+                        com.malla.mvp.network.ProximityEngine.setContactCache(cache)
+                    }
+                } catch (e: Exception) {
+                    Log.e("Injector", "Error observando contactos para ProximityEngine: ${e.message}", e)
+                }
+            }
+        } else {
+            com.malla.mvp.core.engine.LogBuffer.add("Injector",
+                "db null: observer de contactos para ProximityEngine no iniciado")
+        }
+
         // Inicializar Premium y perfil del dispositivo
         PremiumManager.init()
         if (MeshFlags.enableDht) {
