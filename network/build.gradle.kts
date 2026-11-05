@@ -28,5 +28,6 @@ dependencies {
     implementation(project(":transport"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("androidx.core:core-ktx:1.12.0")
-    implementation("io.getstream:stream-webrtc-android:1.1.1")
+    // stream-webrtc-android eliminado en iter 65: 0 usos en :network (confirmado con grep)
+    // :app sigue declarándolo en su propio build.gradle.kts:73
 }
