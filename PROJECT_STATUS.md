@@ -1,6 +1,6 @@
 # 📊 Estado del Proyecto – MALLA MVP
 
-**Fecha/Hora:** 2026-08-13 (actual)
+**Fecha/Hora:** 2026-11-04 (actual) — Numeración: Sesión 1 = iter 62 (2026-11-04), Sesión 2 = iter 63, etc.
 
 ## 🎯 Cambios realizados en esta sesión
 
