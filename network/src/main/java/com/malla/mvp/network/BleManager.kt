@@ -292,7 +292,12 @@ object BleManager {
         }
         try { scanner?.stopScan(proximityScanCallbackWrapper) } catch (_: Exception) {}
         isProximityScanning = false
-        startScanningWithCallback(cb)
+        // Fix iter 66: stopScan es async a nivel Android. Llamar startScan
+        // inmediato con el mismo callback produce APP_REGISTRATION_FAILED.
+        // Delay 600ms respeta el desregistro (mismo patrón que DiscoveryService.restart iter 61).
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            startScanningWithCallback(cb)
+        }, 600L)
     }
 
     fun startScanning(context: Context, callback: (token: String, userId: String?, name: String, seed: Int, strength: Int, device: BluetoothDevice) -> Unit) {
@@ -347,6 +352,16 @@ object BleManager {
             }
             LogBuffer.add("BLE", "Escaneo de proximidad fallido: $readable")
             DiagnosticsLogger.log("BLE", "onScanFailed: $readable")
+            // Fix iter 66: si startScanningWithCallback seteó isProximityScanning=true
+            // pero startScan falló async, hay que corregir el flag o el siguiente
+            // restartProximityScanning se bloquea con "if (isProximityScanning) return".
+            // NO se toca proximityScanCallback (es la única referencia para reintentar).
+            isProximityScanning = false
+            val cb = proximityScanCallback ?: return
+            DiagnosticsLogger.log("BLE", "Retry de scan programado en 2000ms tras onScanFailed")
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                restartProximityScanning()
+            }, 2000L)
         }
     }
 
