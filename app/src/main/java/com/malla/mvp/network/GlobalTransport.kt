@@ -43,16 +43,18 @@ object GlobalTransport : INetworkService {
 
     /**
      * Envía un mensaje a un contactId específico por WebRTC DataChannel.
+     * Acepta data.entity.MeshMessage (el que usa TransportManager.send),
+     * lo convierte al mismo tipo que WebRtcDataManager.sendToContact espera.
      * A diferencia de sendMeshMessage (INetworkService), recibe contactId explícito,
      * evitando el bug de usar senderId como destinatario.
      */
-    suspend fun sendToContact(contactId: String, message: CoreMeshMessage): Result<Unit> {
+    suspend fun sendToContact(contactId: String, message: MeshMessage): Result<Unit> {
         return try {
             val meshMsg = MeshMessage(
                 content = message.content,
                 senderId = IdentityManager.getIdentityId(),
                 timestamp = message.timestamp,
-                type = "chat"
+                type = message.type ?: "chat"
             )
             WebRtcDataManager.sendToContact(contactId, meshMsg)
             Result.success(Unit)

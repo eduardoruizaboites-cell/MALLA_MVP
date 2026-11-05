@@ -58,6 +58,23 @@ object TransportManager {
             }
         }
 
+        // 1.5 WebRTC (internet global, requiere servidor de señalización)
+        if (com.malla.mvp.core.config.MeshFlags.enableWebRtcTransport) {
+            try {
+                DiagnosticsLogger.log(TAG, "Intentando WebRTC para $contactId")
+                val result = GlobalTransport.sendToContact(contactId, message)
+                if (result.isSuccess) {
+                    updateStatus(TransportStatus.TCP_CONNECTED, "WebRTC")
+                    DiagnosticsLogger.log(TAG, "WebRTC enviado a $contactId")
+                    return@withContext true
+                } else {
+                    DiagnosticsLogger.log(TAG, "WebRTC falló: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                DiagnosticsLogger.log(TAG, "WebRTC excepción: ${e.message}")
+            }
+        }
+
         // 2. BLE broadcast como fallback (mesh sin infraestructura)
         try {
             val payload = org.json.JSONObject().apply {

@@ -80,7 +80,15 @@ object Injector {
         }
         this.networkService = networkService
 
-        // Iniciar transporte global (WebRTC DataChannel) solo si legacy está activo
+        // Iniciar transporte global (WebRTC DataChannel) si enableWebRtcTransport
+        // NOTA: NO cambiamos networkService. MessageBridge/WebRtcManager siguen usando
+        // el networkService original (TCP LAN). GlobalTransport solo se usa para
+        // mensajes de chat vía TransportManager.
+        if (MeshFlags.enableWebRtcTransport) {
+            GlobalTransport.start()
+        }
+
+        // Legacy (MeshConnector/CascadeRouter): comportamiento anterior
         if (MeshFlags.enableLegacyTransport) {
             GlobalTransport.start()
             this.networkService = GlobalTransport

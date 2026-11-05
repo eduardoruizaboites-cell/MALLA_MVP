@@ -29,4 +29,12 @@ object MeshFlags {
 
     /** Sistema legacy: MeshConnector + GlobalTransport + CascadeRouter. */
     const val enableLegacyTransport: Boolean = false
+
+    /**
+     * WebRTC DataChannel como transporte de mensajes (WebRtcDataManager + SignalClient).
+     * Requiere servidor de señalización (SIGNAL_SERVER_URL) y opcionalmente TURN.
+     * Gateado por separado de enableLegacyTransport para activar solo el canal WebRTC
+     * sin arrastrar MeshConnector/CascadeRouter/DHT.
+     */
+    const val enableWebRtcTransport: Boolean = false
 }
