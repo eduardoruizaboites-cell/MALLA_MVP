@@ -2459,3 +2459,14 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (API 30) + Android 16 (API 36). Com
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): (1) iter 68: verificación en device de A+B (toggle visible/invisible + ghost oculto). (2) iter 68: botón "Borrar conversación" en ChatScreen (UX básica). (3) iter 68+: si RC7 molesta mucho, Nivel 2 (recovery code 12 palabras) — decisión de producto. (4) iter 68+: warning MeshChatViewModel.kt:133 label duplicado, PulsoScreen.kt:191 pulseRadius unused — cosméticos.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: (a) iter 67 sin verificar en device. (b) RC7 sigue abierto arquitectónicamente — mitigado con ocultar ghosts, solución real requiere recovery code (Nivel 2, 2-3 sesiones). (c) RC6 BLE sin TCP. (d) enableWebRtcTransport=false (WebRTC dormido, espera VPS). (e) processed_messages persistente. (f) Botón borrar conversación. (g) Refactor ChatScreen RC5. (h) Dead code R18. (i) WebRtcManager solo LAN. (j) CallScreen cosmética. (k) CallActionReceiver perdido. (l) Warning MeshChatViewModel.kt:133 label duplicado. (m) Warning PulsoScreen.kt:191 pulseRadius unused.
 ──────────────────────────────
+
+── ENTRADA — 2026-11-05 (Iter 67 — CORRECCIÓN DE TRAZABILIDAD: Bloque B commiteado + build verificado) ──
+Compilación: BUILD SUCCESSFUL in 50s (Bloque B — CONFIRMADO, no pendiente).
+QUÉ SE HIZO: Corrección administrativa del cierre de iter 67. El Bloque B (ocultar ghosts: ProximityEngine.contactCache @Volatile Map<userId, displayName> + setContactCache(cache) + isGhostPeer(userId, name) con 3 condiciones + early-return en addOrUpdate + Injector observer de db.contactDao().observeAllVisible()) compiló exitosamente en 50s (4 parches OK [B1/4] a [B4/4]) pero no fue incluido en el commit de status 9410bddf por salto de paso en el flujo (el usuario ejecutó directamente el bloque de cierre sin pasar por el commit intermedio de Bloque B). Este commit incluye los 2 archivos modificados de Bloque B + este cierre correctivo. La entrada R14 de iter 67 decía "Bloque B pendiente de confirmar build" — era precisa en el momento de escribirla (build no se había corrido aún) pero quedó desactualizada 50s después.
+¿ERA UN FIX DE ERROR?: no aplica — corrección de trazabilidad. Sin cambios de código adicionales respecto a lo ya compilado.
+HIPÓTESIS DESCARTADAS: no aplica.
+VERIFICADO EN: compilación (Bloque B BUILD SUCCESSFUL in 50s confirmado).
+COMPATIBILIDAD CONSIDERADA (R21): misma que iter 67 original (Android 11 + 16, sin cambios de wire format, sin migración Room).
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): ninguna nueva. Se preservan las de iter 67.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: (a) iter 67 (A+B) sin verificar en device. (b) resto de deuda de iter 67 sin cambios. Esta corrección cierra la brecha de trazabilidad detectada al revisar el working tree antes del cierre formal.
+──────────────────────────────
