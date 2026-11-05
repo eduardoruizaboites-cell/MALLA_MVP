@@ -56,7 +56,7 @@ object WebRtcDataManager {
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
             .createPeerConnectionFactory()
 
-        SignalClient.setListener { from, payload ->
+        SignalClient.addListener("data") { from, payload ->
             handleSignal(from, payload)
         }
         SignalClient.connect()
