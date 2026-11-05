@@ -26,10 +26,23 @@ object WebRtcDataManager {
     private val peers = ConcurrentHashMap<String, PeerConnection>()
     private val dataChannels = ConcurrentHashMap<String, DataChannel>()
 
-    private val iceServers = listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-        PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
-    )
+    private val iceServers: List<PeerConnection.IceServer> = buildIceServers()
+
+    private fun buildIceServers(): List<PeerConnection.IceServer> {
+        val servers = mutableListOf(
+            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+            PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+        )
+        if (com.malla.mvp.BuildConfig.TURN_URL.isNotEmpty()) {
+            servers.add(
+                PeerConnection.IceServer.builder(com.malla.mvp.BuildConfig.TURN_URL)
+                    .setUsername(com.malla.mvp.BuildConfig.TURN_USER)
+                    .setPassword(com.malla.mvp.BuildConfig.TURN_PASS)
+                    .createIceServer()
+            )
+        }
+        return servers
+    }
 
     private lateinit var factory: PeerConnectionFactory
 

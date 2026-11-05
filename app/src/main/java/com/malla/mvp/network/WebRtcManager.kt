@@ -102,12 +102,21 @@ class WebRtcManager(private val context: Context) {
     fun setMicrophoneMute(mute: Boolean) { audioManager.setMicrophoneMute(mute) }
 
     private fun createPeerConnection() {
-        val rtcConfig = PeerConnection.RTCConfiguration(listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-        PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
-    )).apply {
-        iceTransportsType = PeerConnection.IceTransportsType.ALL
-    }
+        val iceServers = mutableListOf(
+            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+            PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+        )
+        if (com.malla.mvp.BuildConfig.TURN_URL.isNotEmpty()) {
+            iceServers.add(
+                PeerConnection.IceServer.builder(com.malla.mvp.BuildConfig.TURN_URL)
+                    .setUsername(com.malla.mvp.BuildConfig.TURN_USER)
+                    .setPassword(com.malla.mvp.BuildConfig.TURN_PASS)
+                    .createIceServer()
+            )
+        }
+        val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
+            iceTransportsType = PeerConnection.IceTransportsType.ALL
+        }
         val observer = object : PeerConnection.Observer {
             override fun onIceCandidate(candidate: IceCandidate?) {
                 candidate?.let { sendIceCandidate(it) }

@@ -16,9 +16,16 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "SIGNAL_SERVER_URL", "\"ws://10.0.2.2:8080\"")
+        val signalUrl = (project.findProperty("signalServerUrl") as? String)?.trim().orEmpty().ifEmpty { "ws://10.0.2.2:8080" }
+        buildConfigField("String", "SIGNAL_SERVER_URL", "\"$signalUrl\"")
+        val turnUrl = (project.findProperty("turnUrl") as? String)?.trim().orEmpty()
+        val turnUser = (project.findProperty("turnUser") as? String)?.trim().orEmpty()
+        val turnPass = (project.findProperty("turnPass") as? String)?.trim().orEmpty()
+        buildConfigField("String", "TURN_URL", "\"$turnUrl\"")
+        buildConfigField("String", "TURN_USER", "\"$turnUser\"")
+        buildConfigField("String", "TURN_PASS", "\"$turnPass\"")
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
-        buildConfigField("String", "BUILD_LABEL", "\"iter 61 built $buildTime\"")
+        buildConfigField("String", "BUILD_LABEL", "\"iter 64 built $buildTime\"")
     }
 
     buildTypes {
