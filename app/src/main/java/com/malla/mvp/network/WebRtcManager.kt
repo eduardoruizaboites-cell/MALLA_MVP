@@ -38,6 +38,7 @@ object WebRtcManager {
 
     private var currentContactId: String? = null
     private var currentCallType: String = "voice"
+    private var pendingOffer: SessionDescription? = null
 
     fun start(appContext: Context) {
         if (initialized) return
@@ -83,6 +84,7 @@ object WebRtcManager {
         currentCallType = "voice"
         _callState.value = CallState.Outgoing
         LogBuffer.add(TAG, "Iniciando llamada de voz con $contactId")
+        sendRawSignal("call_start:voice")
         createPeerConnection()
         createOffer()
     }
@@ -94,6 +96,7 @@ object WebRtcManager {
         currentCallType = "video"
         _callState.value = CallState.Outgoing
         LogBuffer.add(TAG, "Iniciando videollamada con $contactId")
+        sendRawSignal("call_start:video")
         createPeerConnection()
         createOffer()
     }
@@ -104,7 +107,18 @@ object WebRtcManager {
         currentCallType = callType
         _callState.value = CallState.Connected
         LogBuffer.add(TAG, "Llamada aceptada: $callType de $contactId")
+        sendRawSignal("call_accept:")
         createPeerConnection()
+        pendingOffer?.let { offer ->
+            peerConnection?.setRemoteDescription(object : SdpObserver {
+                override fun onSetSuccess() { createAnswer() }
+                override fun onSetFailure(p0: String?) {}
+                override fun onCreateSuccess(p0: SessionDescription?) {}
+                override fun onCreateFailure(p0: String?) {}
+            }, offer)
+            pendingOffer = null
+            LogBuffer.add(TAG, "pendingOffer procesado — createAnswer enviado")
+        }
     }
 
     fun endCall() {
@@ -112,12 +126,7 @@ object WebRtcManager {
         _callState.value = CallState.Ended
         cleanupCall()
         _callState.value = CallState.Idle
-        val contactId = currentContactId ?: return
-        if (MeshFlags.enableWebRtcCallsTransport) {
-            SignalClient.sendSignal(contactId, "call_end:")
-        } else {
-            Injector.messageBridge.sendWebRtcSignal(contactId, "call_end:")
-        }
+        sendRawSignal("call_end:")
     }
 
     fun isInCall(): Boolean = _callState.value != CallState.Idle && _callState.value != CallState.Ended
@@ -201,18 +210,16 @@ object WebRtcManager {
     }
 
     private fun sendSdp(description: String, type: String) {
-        val contactId = currentContactId ?: return
-        val signal = "sdp:$type:$description"
-        if (MeshFlags.enableWebRtcCallsTransport) {
-            SignalClient.sendSignal(contactId, signal)
-        } else {
-            Injector.messageBridge.sendWebRtcSignal(contactId, signal)
-        }
+        sendRawSignal("sdp:$type:$description")
     }
 
     private fun sendIceCandidate(candidate: IceCandidate) {
+        sendRawSignal("ice:${candidate.sdp}:${candidate.sdpMLineIndex}:${candidate.sdpMid}")
+    }
+
+
+    private fun sendRawSignal(signal: String) {
         val contactId = currentContactId ?: return
-        val signal = "ice:${candidate.sdp}:${candidate.sdpMLineIndex}:${candidate.sdpMid}"
         if (MeshFlags.enableWebRtcCallsTransport) {
             SignalClient.sendSignal(contactId, signal)
         } else {
@@ -236,6 +243,15 @@ object WebRtcManager {
             "sdp" -> {
                 if (parts.size == 3) {
                     val sdp = SessionDescription(if (parts[1] == "offer") SessionDescription.Type.OFFER else SessionDescription.Type.ANSWER, parts[2])
+                    // Iter 70C-fix: si llega offer sin peerConnection, entrar Incoming y guardar pendingOffer
+                    if (peerConnection == null && parts[1] == "offer") {
+                        currentContactId = senderId
+                        currentCallType = "voice"
+                        _callState.value = CallState.Incoming(senderId, currentCallType)
+                        pendingOffer = sdp
+                        LogBuffer.add(TAG, "Oferta pendiente de $senderId — esperando acceptCall")
+                        return
+                    }
                     peerConnection?.setRemoteDescription(object : SdpObserver {
                         override fun onSetSuccess() { if (parts[1] == "offer") createAnswer() }
                         override fun onSetFailure(p0: String?) {}
