@@ -27,6 +27,10 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.malla.mvp.ui.viewmodel.CallViewModel
+import com.malla.mvp.network.WebRtcManager
+import com.malla.mvp.ui.screen.CallScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -287,6 +291,13 @@ class MainActivity : FragmentActivity() {
             // Iter 50: card flotante cuando alguien nos acepta la invitacion (foreground)
             var showAcceptanceCard by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
             var isVisibleInBleState by remember { mutableStateOf(IdentityManager.isVisibleInBle(context)) }
+            var selectedContactId by remember { mutableStateOf<String?>(null) }
+
+            // Iter 70D-2b: ViewModel + estado reactivo para llamadas
+            val callViewModel: CallViewModel = viewModel()
+            val callState by callViewModel.callState.collectAsState()
+            val callerName by callViewModel.callerName.collectAsState()
+            val callTypeState by callViewModel.callType.collectAsState()
 
             // 1) Al arrancar, si había una invitación pendiente persistida, la cargamos
             //    en el StateFlow (que sobrevive recomposiciones).
@@ -442,7 +453,8 @@ class MainActivity : FragmentActivity() {
                     onOpenChat = {
                         showAcceptanceCard = null
                         currentConversationId = acceptorId
-                        selectedContact = acceptorId
+                        selectedContact = acceptorName
+                        selectedContactId = acceptorId
                     },
                     onDismiss = { showAcceptanceCard = null }
                 )
@@ -599,10 +611,17 @@ class MainActivity : FragmentActivity() {
                                     onBack = { showSettings = false }
                                 )
                             } else if (selectedContact != null) {
-                                BackHandler { selectedContact = null }
+                                BackHandler { selectedContact = null; selectedContactId = null }
                                 ContactProfileScreen(
                                     contactName = selectedContact!!,
-                                    onBack = { selectedContact = null }
+                                    contactId = selectedContactId ?: "",
+                                    onBack = { selectedContact = null; selectedContactId = null },
+                                    onVoiceCallClick = { id, name ->
+                                        if (id.isNotBlank()) callViewModel.startVoiceCall(id, name)
+                                    },
+                                    onVideoCallClick = { id, name ->
+                                        if (id.isNotBlank()) callViewModel.startVideoCall(id, name)
+                                    }
                                 )
                             } else {
                                 MainApp(
