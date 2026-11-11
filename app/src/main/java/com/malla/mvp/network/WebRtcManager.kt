@@ -65,7 +65,12 @@ object WebRtcManager {
             } else {
                 CoroutineScope(Dispatchers.IO).launch {
                     NetworkService.messages.collect { msg ->
-                        if (msg.type == "webrtc") {
+                        // Iter 70-fix: filtro defensivo por contenido, no por type
+                        // (MessageReceiver no mapea type=3 → "webrtc"; el filtro anterior nunca matcheaba)
+                        if (msg.content.startsWith("call_") ||
+                            msg.content.startsWith("sdp:") ||
+                            msg.content.startsWith("ice:")) {
+                            LogBuffer.add(TAG, "Señal recibida (type=${msg.type}): ${msg.content.take(30)} de ${msg.senderId}")
                             handleSignal(msg.content, msg.senderId)
                         }
                     }
@@ -228,6 +233,7 @@ object WebRtcManager {
     }
 
     private fun handleSignal(content: String, senderId: String) {
+        LogBuffer.add(TAG, "handleSignal: parts=${content.take(20)} senderId=$senderId state=${_callState.value::class.simpleName}")
         val parts = content.split(":", limit = 3)
         when (parts[0]) {
             "call_start" -> {
