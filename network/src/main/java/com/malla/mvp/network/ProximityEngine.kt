@@ -129,10 +129,10 @@ object ProximityEngine {
                 delay(15_000L)
                 val now = System.currentTimeMillis()
                 val current = _nearbyUsers.value
-                val filtered = current.filter { now - it.lastSeen < 90_000L }
+                val filtered = current.filter { now - it.lastSeen < 45_000L }
                 if (filtered.size != current.size) {
                     _nearbyUsers.value = filtered
-                    DiagnosticsLogger.log("PROX", "Peers expirados (TTL 90s): ${current.size - filtered.size}")
+                    DiagnosticsLogger.log("PROX", "Peers expirados (TTL 45s): ${current.size - filtered.size}")
                 }
             }
         }
