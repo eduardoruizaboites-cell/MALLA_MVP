@@ -656,6 +656,20 @@ class MainActivity : FragmentActivity() {
                                     },
                                     db = database
                                 )
+                                // Iter 70D-2c: overlay de llamada activa (incoming/outgoing/connected)
+                                if (callState !is WebRtcManager.CallState.Idle) {
+                                    val incoming = callState as? WebRtcManager.CallState.Incoming
+                                    CallScreen(
+                                        contactName = callerName ?: "Contacto",
+                                        callType = callTypeState,
+                                        isIncoming = incoming != null,
+                                        isConnected = callState is WebRtcManager.CallState.Connected,
+                                        onAcceptCall = { callViewModel.acceptCall() },
+                                        onEndCall = { callViewModel.endCall() },
+                                        onToggleMute = { muted -> callViewModel.toggleMute(muted) },
+                                        onToggleSpeaker = { on -> callViewModel.toggleSpeaker(on) }
+                                    )
+                                }
                             }
                         }
                     }
