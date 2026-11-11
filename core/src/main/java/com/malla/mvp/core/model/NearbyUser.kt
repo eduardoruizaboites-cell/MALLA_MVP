@@ -12,5 +12,6 @@ data class NearbyUser(
     val signalType: SignalType,
     val signalStrength: Int = 0,
     val publicKeyFingerprint: String? = null,
-    val bluetoothDevice: BluetoothDevice? = null   // solo para BLE
+    val bluetoothDevice: BluetoothDevice? = null,   // solo para BLE
+    val lastSeen: Long = System.currentTimeMillis()
 )
