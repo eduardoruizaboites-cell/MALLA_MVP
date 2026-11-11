@@ -37,4 +37,12 @@ object MeshFlags {
      * sin arrastrar MeshConnector/CascadeRouter/DHT.
      */
     const val enableWebRtcTransport: Boolean = false
+
+    /**
+     * Iter 70: transporte de llamadas (WebRtcManager) por internet global vía SignalClient.
+     * Separado de enableWebRtcTransport (que gatea mensajería por WebRtcDataManager).
+     * false = llamadas usan NetworkService.messages (LAN, actual).
+     * true = llamadas usan SignalClient (internet, requiere servidor).
+     */
+    const val enableWebRtcCallsTransport: Boolean = false
 }
