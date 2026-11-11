@@ -2,16 +2,18 @@ package com.malla.mvp.network
 
 import android.content.Context
 import android.media.AudioManager
+import com.malla.mvp.App
+import com.malla.mvp.core.config.MeshFlags
 import com.malla.mvp.core.engine.LogBuffer
 import com.malla.mvp.di.Injector
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.webrtc.*
 
-class WebRtcManager(private val context: Context) {
-    companion object {
-        private const val TAG = "WebRtcManager"
-    }
+object WebRtcManager {
+    private const val TAG = "WebRtcManager"
+    @Volatile private var initialized = false
+    private lateinit var context: Context
 
     sealed class CallState {
         object Idle : CallState()
@@ -32,33 +34,50 @@ class WebRtcManager(private val context: Context) {
     private var videoSource: VideoSource? = null
     private var localVideoTrack: VideoTrack? = null
     var remoteVideoView: SurfaceViewRenderer? = null
-    private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioManager: AudioManager by lazy { App.context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
     private var currentContactId: String? = null
     private var currentCallType: String = "voice"
 
-    init {
-        val options = PeerConnectionFactory.InitializationOptions.builder(context)
-            .setFieldTrials("")
-            .createInitializationOptions()
-        PeerConnectionFactory.initialize(options)
+    fun start(appContext: Context) {
+        if (initialized) return
+        synchronized(this) {
+            if (initialized) return
+            this.context = appContext.applicationContext
 
-        val eglBase = EglBase.create()
-        peerConnectionFactory = PeerConnectionFactory.builder()
-            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true))
-            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
-            .createPeerConnectionFactory()
+            val options = PeerConnectionFactory.InitializationOptions.builder(this.context)
+                .setFieldTrials("")
+                .createInitializationOptions()
+            PeerConnectionFactory.initialize(options)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            NetworkService.messages.collect { msg ->
-                if (msg.type == "webrtc") {
-                    handleSignal(msg.content, msg.senderId)
+            val eglBase = EglBase.create()
+            peerConnectionFactory = PeerConnectionFactory.builder()
+                .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true))
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
+                .createPeerConnectionFactory()
+
+            // Iter 70B: bifurcación de señalización LAN (actual) vs internet (SignalClient)
+            if (MeshFlags.enableWebRtcCallsTransport) {
+                SignalClient.addListener("calls") { from, payload -> handleSignal(payload, from) }
+                SignalClient.connect()
+                LogBuffer.add(TAG, "WebRtcManager iniciado: señalización por SignalClient (internet)")
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    NetworkService.messages.collect { msg ->
+                        if (msg.type == "webrtc") {
+                            handleSignal(msg.content, msg.senderId)
+                        }
+                    }
                 }
+                LogBuffer.add(TAG, "WebRtcManager iniciado: señalización por NetworkService (LAN)")
             }
+
+            initialized = true
         }
     }
 
     fun startVoiceCall(contactId: String) {
+        check(initialized) { "WebRtcManager no inicializado — llamar start(context) primero" }
         if (_callState.value != CallState.Idle) return
         currentContactId = contactId
         currentCallType = "voice"
@@ -69,6 +88,7 @@ class WebRtcManager(private val context: Context) {
     }
 
     fun startVideoCall(contactId: String) {
+        check(initialized) { "WebRtcManager no inicializado — llamar start(context) primero" }
         if (_callState.value != CallState.Idle) return
         currentContactId = contactId
         currentCallType = "video"
@@ -92,7 +112,12 @@ class WebRtcManager(private val context: Context) {
         _callState.value = CallState.Ended
         cleanupCall()
         _callState.value = CallState.Idle
-        Injector.messageBridge.sendWebRtcSignal(currentContactId ?: return, "call_end:")
+        val contactId = currentContactId ?: return
+        if (MeshFlags.enableWebRtcCallsTransport) {
+            SignalClient.sendSignal(contactId, "call_end:")
+        } else {
+            Injector.messageBridge.sendWebRtcSignal(contactId, "call_end:")
+        }
     }
 
     fun isInCall(): Boolean = _callState.value != CallState.Idle && _callState.value != CallState.Ended
@@ -176,12 +201,23 @@ class WebRtcManager(private val context: Context) {
     }
 
     private fun sendSdp(description: String, type: String) {
-        Injector.messageBridge.sendWebRtcSignal(currentContactId ?: return, "sdp:$type:$description")
+        val contactId = currentContactId ?: return
+        val signal = "sdp:$type:$description"
+        if (MeshFlags.enableWebRtcCallsTransport) {
+            SignalClient.sendSignal(contactId, signal)
+        } else {
+            Injector.messageBridge.sendWebRtcSignal(contactId, signal)
+        }
     }
 
     private fun sendIceCandidate(candidate: IceCandidate) {
+        val contactId = currentContactId ?: return
         val signal = "ice:${candidate.sdp}:${candidate.sdpMLineIndex}:${candidate.sdpMid}"
-        Injector.messageBridge.sendWebRtcSignal(currentContactId ?: return, signal)
+        if (MeshFlags.enableWebRtcCallsTransport) {
+            SignalClient.sendSignal(contactId, signal)
+        } else {
+            Injector.messageBridge.sendWebRtcSignal(contactId, signal)
+        }
     }
 
     private fun handleSignal(content: String, senderId: String) {
