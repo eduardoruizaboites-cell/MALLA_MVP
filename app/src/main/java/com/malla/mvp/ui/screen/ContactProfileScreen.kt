@@ -31,8 +31,8 @@ fun ContactProfileScreen(
     contactId: String = "",
     onBack: () -> Unit,
     onChatClicked: (String, String) -> Unit = { _, _ -> },
-    onVoiceCallClick: () -> Unit = {},
-    onVideoCallClick: () -> Unit = {}
+    onVoiceCallClick: (String, String) -> Unit = { _, _ -> },
+    onVideoCallClick: (String, String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,7 +90,7 @@ fun ContactProfileScreen(
                 Text("Chat", color = Color(0xFF0D1117))
             }
             Button(
-                onClick = onVoiceCallClick,
+                onClick = { onVoiceCallClick(contactId, contactName) },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71))
             ) {
@@ -99,7 +99,7 @@ fun ContactProfileScreen(
                 Text("Voz", color = Color.White)
             }
             Button(
-                onClick = onVideoCallClick,
+                onClick = { onVideoCallClick(contactId, contactName) },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3498DB))
             ) {
