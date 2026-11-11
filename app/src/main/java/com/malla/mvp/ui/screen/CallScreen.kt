@@ -19,11 +19,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
+/**
+ * Iter 70D-1: pantalla de llamada con estado externo.
+ * El estado (Incoming/Outgoing/Connected) lo maneja WebRtcManager y lo expone CallViewModel.
+ * Esta pantalla solo renderiza según el estado y emite eventos (accept/end/mute/speaker).
+ *
+ * - Ringtone solo si isIncoming && !isConnected
+ * - Timer solo si isConnected, empieza en 0 al conectar
+ * - Botonera condicional según estado
+ */
 @Composable
 fun CallScreen(
     contactName: String = "Contacto",
     callType: String = "voice",
-    onEndCall: () -> Unit = {}
+    isIncoming: Boolean = false,
+    isConnected: Boolean = false,
+    onAcceptCall: () -> Unit = {},
+    onEndCall: () -> Unit = {},
+    onToggleMute: (Boolean) -> Unit = {},
+    onToggleSpeaker: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -33,43 +47,59 @@ fun CallScreen(
     var isSpeakerOn by remember { mutableStateOf(true) }
     var ringtonePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
-    // Iniciar tono de llamada
-    LaunchedEffect(Unit) {
-        val ringtoneUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-        val player = MediaPlayer.create(context, ringtoneUri)
-        if (player != null) {
-            player.isLooping = true
-            player.start()
-            ringtonePlayer = player
-        }
-        // Temporizador
-        while (true) {
-            delay(1000)
-            callDuration++
+    // Ringtone: solo en incoming no conectado
+    LaunchedEffect(isIncoming, isConnected) {
+        if (isIncoming && !isConnected) {
+            val ringtoneUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            val player = MediaPlayer.create(context, ringtoneUri)
+            if (player != null) {
+                player.isLooping = true
+                player.start()
+                ringtonePlayer = player
+            }
+        } else {
+            ringtonePlayer?.stop()
+            ringtonePlayer?.release()
+            ringtonePlayer = null
         }
     }
 
-    // Limpiar al salir
-    DisposableEffect(Unit) {
-        onDispose {
-            ringtonePlayer?.stop()
-            ringtonePlayer?.release()
-            audioManager.isSpeakerphoneOn = false
-            audioManager.setMicrophoneMute(false)
+    // Timer: solo cuando está conectado, se resetea a 0 al conectar
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            callDuration = 0
+            while (true) {
+                delay(1000)
+                callDuration++
+            }
+        } else {
+            callDuration = 0
         }
     }
 
     // Control de altavoz
     LaunchedEffect(isSpeakerOn) {
-        audioManager.isSpeakerphoneOn = isSpeakerOn
+        try {
+            audioManager.isSpeakerphoneOn = isSpeakerOn
+        } catch (_: Exception) {}
     }
 
     // Control de mute
     LaunchedEffect(isMuted) {
         try {
             audioManager.setMicrophoneMute(isMuted)
-        } catch (e: Exception) {
-            // Algunos dispositivos no permiten silenciar el micrófono del sistema
+        } catch (_: Exception) {}
+    }
+
+    // Limpieza al salir
+    DisposableEffect(Unit) {
+        onDispose {
+            ringtonePlayer?.stop()
+            ringtonePlayer?.release()
+            try {
+                audioManager.isSpeakerphoneOn = false
+                audioManager.setMicrophoneMute(false)
+            } catch (_: Exception) {}
         }
     }
 
@@ -81,40 +111,88 @@ fun CallScreen(
             Text(contactName, style = MaterialTheme.typography.headlineMedium, color = Color.White)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (callType == "video") "Videollamada" else "Llamada de voz",
+                text = when {
+                    isIncoming && !isConnected -> "Llamada entrante..."
+                    isConnected -> if (callType == "video") "Videollamada" else "Llamada de voz"
+                    else -> "Llamando..."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF8899AA)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = formatDuration(callDuration),
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White
-            )
+            if (isConnected) {
+                Text(
+                    text = formatDuration(callDuration),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
+                )
+            }
             Spacer(modifier = Modifier.height(48.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                FloatingActionButton(
-                    onClick = { isMuted = !isMuted },
-                    containerColor = Color.White.copy(alpha = if (isMuted) 0.8f else 0.2f)
-                ) {
-                    Icon(
-                        if (isMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
-                        contentDescription = "Micrófono",
-                        tint = if (isMuted) Color.Red else Color.White
-                    )
+
+            // Botonera condicional
+            when {
+                isIncoming && !isConnected -> {
+                    // Llamada entrante: Reject (rojo) + Accept (verde)
+                    Row(horizontalArrangement = Arrangement.spacedBy(48.dp)) {
+                        FloatingActionButton(
+                            onClick = onEndCall,
+                            containerColor = Color(0xFFFF1744)
+                        ) {
+                            Icon(Icons.Filled.CallEnd, contentDescription = "Rechazar", tint = Color.White)
+                        }
+                        FloatingActionButton(
+                            onClick = onAcceptCall,
+                            containerColor = Color(0xFF00C853)
+                        ) {
+                            Icon(Icons.Filled.Call, contentDescription = "Aceptar", tint = Color.White)
+                        }
+                    }
                 }
-                FloatingActionButton(onClick = onEndCall, containerColor = Color(0xFFFF1744)) {
-                    Icon(Icons.Filled.CallEnd, contentDescription = "Colgar", tint = Color.White)
+                isConnected -> {
+                    // Conectado: Mute + End + Speaker
+                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        FloatingActionButton(
+                            onClick = {
+                                isMuted = !isMuted
+                                onToggleMute(isMuted)
+                            },
+                            containerColor = Color.White.copy(alpha = if (isMuted) 0.8f else 0.2f)
+                        ) {
+                            Icon(
+                                if (isMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
+                                contentDescription = "Micrófono",
+                                tint = if (isMuted) Color.Red else Color.White
+                            )
+                        }
+                        FloatingActionButton(
+                            onClick = onEndCall,
+                            containerColor = Color(0xFFFF1744)
+                        ) {
+                            Icon(Icons.Filled.CallEnd, contentDescription = "Colgar", tint = Color.White)
+                        }
+                        FloatingActionButton(
+                            onClick = {
+                                isSpeakerOn = !isSpeakerOn
+                                onToggleSpeaker(isSpeakerOn)
+                            },
+                            containerColor = Color.White.copy(alpha = if (isSpeakerOn) 0.8f else 0.2f)
+                        ) {
+                            Icon(
+                                if (isSpeakerOn) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                                contentDescription = "Altavoz",
+                                tint = Color.White
+                            )
+                        }
+                    }
                 }
-                FloatingActionButton(
-                    onClick = { isSpeakerOn = !isSpeakerOn },
-                    containerColor = Color.White.copy(alpha = if (isSpeakerOn) 0.8f else 0.2f)
-                ) {
-                    Icon(
-                        if (isSpeakerOn) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
-                        contentDescription = "Altavoz",
-                        tint = Color.White
-                    )
+                else -> {
+                    // Outgoing: Cancel + "Llamando..."
+                    FloatingActionButton(
+                        onClick = onEndCall,
+                        containerColor = Color(0xFFFF1744)
+                    ) {
+                        Icon(Icons.Filled.CallEnd, contentDescription = "Cancelar", tint = Color.White)
+                    }
                 }
             }
         }
