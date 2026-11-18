@@ -46,6 +46,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -298,6 +300,16 @@ class MainActivity : FragmentActivity() {
             val callState by callViewModel.callState.collectAsState()
             val callerName by callViewModel.callerName.collectAsState()
             val callTypeState by callViewModel.callType.collectAsState()
+
+            // Iter 70e-fix: cerrar teclado al entrar en llamada (overlay tapa ChatScreen pero el IME queda)
+            val keyboardController = LocalSoftwareKeyboardController.current
+            val focusManager = LocalFocusManager.current
+            LaunchedEffect(callState) {
+                if (callState !is WebRtcManager.CallState.Idle) {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                }
+            }
 
             // 1) Al arrancar, si había una invitación pendiente persistida, la cargamos
             //    en el StateFlow (que sobrevive recomposiciones).
