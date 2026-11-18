@@ -2536,3 +2536,36 @@ COMPATIBILIDAD CONSIDERADA (R21): Android 11 (API 30) + Android 16 (API 36) veri
 SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar aún): (1) 70e — Picture-in-Picture + Foreground Service con notificación persistente para mantener llamada al minimizar + acciones Mute/End/Speaker en la notificación ~2-3h. (2) CallActionReceiver para llamadas entrantes con app cerrada — recuperar del backup backup-chat-yo-20260816-033435 o escribir desde cero. (3) Iconos SVG custom (MallaIcons.Mic, MicOff, Speaker, CallEnd, CallAccept) en vez de Material Icons — diferenciación visual ~30min. (4) Animación de "Llamando..." con 3 dots pulsantes (agregar 1 animación más al glow si se justifica performance). (5) Eliminar halo residual en botón End con indication=null más agresivo o color de pressed state transparente. (6) Vibración háptica al aceptar/colgar (HapticFeedbackConstants.CONFIRM/REJECT). (7) Fondo del avatar: si contact.avatarBitmap != null, mostrar foto circular en vez de inicial. Requiere consultar ContactDao en CallViewModel y exponer avatarBitmap como StateFlow. (8) `allowBackup="true"` en manifest restaurando identidad/DB tras desinstalar — persiste deuda de iter 70b, considerar allowBackup="false" en próxima iteración con re-verificación en device.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: (a) AUDIO no verificado por hardware Xiaomi dañado. Requiere device funcional o auriculares BT/cable. (b) Sin PiP + background service (70e pendiente). (c) Sin CallActionReceiver (llamadas entrantes con app cerrada no manejadas). (d) Iconos Material genéricos, no custom MALLA (opcional). (e) `allowBackup="true"` en manifest — restaura identidad/DB tras desinstalar. (f) `WebRtcManager` con `SignalClient` path NUNCA ejecutado — primer contacto en iter 72 podría requerir debugging. (g) Sin TURN operativo. (h) Sin servidor `wss://` montado. (i) Multimedia sin cablear. (j) H3 no está en Gradle. (k) RC6 BLE sin TCP, RC7 userId huérfano, sync PerfilScreen↔MainTopBar, cleanup mesh_visible, TTL job cancelación, `scope` en CallViewModel sin onCleared que lo cancele (leak menor) — resto de deuda acumulada. (l) Tag cierre-iter-70c-d creado en este cierre formal, apuntando a este commit final.
 ──────────────────────────────
+── ENTRADA — 2026-11-18 (PRIORIDAD #1 ESTABLECIDA: Mensajería persistente E2E) ──
+Compilación: no aplica — entrada documental.
+PRIORIDAD #1 DEL PROYECTO (por encima de servidor, H3, multimedia, todo):
+  El mensaje debe llegar al destinatario sin importar nada (app muerta, peer offline,
+  cambio de red, reintentos). Con cifrado robusto (Double Ratchet + X3DH).
+  Esta prioridad se valida al inicio de CADA sesión futura: ¿ya está implementada?
+  Si no, ¿en qué sub-tarea estamos? Continuar hasta cierre.
+
+ESTADO REAL AL 2026-11-18 (auditoría de solo lectura):
+  CIFRADO EN WIRE: funciona con AES/GCM/NoPadding + IV random, sobre ECDH
+  secp256r1 → SHA-256. No es plaintext. Ubicaciones: CryptoEngine.kt (primitiva),
+  SessionCipher.kt (app layer), NetworkService.kt:278,312 (wire layer).
+  FALTA FORWARD SECRECY: sessionKey estática por contacto, sin rotación.
+  FALTA AUTENTICACION X3DH: pubkeys viajan sin firma, MITM posible.
+  DoubleRatchet.kt en :core es STUB literal (encrypt/decrypt devuelven input).
+  Sin cola persistente: pendingMessages en NetworkService es en memoria.
+  Sin store-and-forward en nodos ni servidor.
+  ACK de entrega: parcial (MessageReceiver.kt:105 sugiere existencia, verificar).
+  Doble keypair: NetworkService usa keypair ephemeral propio, no el del Keystore.
+
+SUB-TAREAS PRIORIDAD #1 (orden definitivo):
+  1b. Cola saliente persistente Room (PENDING/SENT/DELIVERED/FAILED + retry backoff) — 1-2 ses.
+  1c. Verificar/crear ACK real de entrega — 0-1 ses.
+  1f. UI checkmark confirmacion — 1 ses.
+  1a. Double Ratchet + X3DH cableados (reemplaza stub) — 3-6 ses.
+  1d. Store-and-forward nodos intermedios — 2-3 ses.
+  1e. Store-and-forward servidor — 2-4 ses.
+  Total estimado: 9-17 sesiones.
+
+VERIFICADO EN: solo lectura (grep + cat de :core/crypto y app/crypto).
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1b-1e, 1a (forward secrecy + X3DH), 1c verificar.
+──────────────────────────────
+
