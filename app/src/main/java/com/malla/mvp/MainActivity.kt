@@ -644,15 +644,11 @@ class MainActivity : FragmentActivity() {
                                         val msg = if (newValue) "Ahora eres visible en la malla" else "Ya no eres visible en la malla"
                                         com.malla.mvp.util.ToastHelper.show(context, msg, android.widget.Toast.LENGTH_SHORT)
                                     },
-                                    onVoiceCallClick = {
-                                        showCall = true
-                                        callContact = "Contacto"
-                                        callType = "voice"
+                                    onVoiceCallClick = { contactId, name ->
+                                        if (contactId.isNotBlank()) callViewModel.startVoiceCall(contactId, name)
                                     },
-                                    onVideoCallClick = {
-                                        showCall = true
-                                        callContact = "Contacto"
-                                        callType = "video"
+                                    onVideoCallClick = { contactId, name ->
+                                        if (contactId.isNotBlank()) callViewModel.startVideoCall(contactId, name)
                                     },
                                     db = database
                                 )
@@ -846,8 +842,8 @@ fun SettingsScreenWrapper(
 @Composable
 fun MainApp(
     onVerifyClick: () -> Unit = {},
-    onVoiceCallClick: () -> Unit = {},
-    onVideoCallClick: () -> Unit = {},
+    onVoiceCallClick: (String, String) -> Unit = { _, _ -> },
+    onVideoCallClick: (String, String) -> Unit = { _, _ -> },
     isMeshMode: Boolean,
     currentConversationId: String?,
     onConversationChanged: (String?) -> Unit,

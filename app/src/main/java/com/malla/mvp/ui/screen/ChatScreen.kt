@@ -41,6 +41,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.filled.AttachFile
@@ -160,8 +162,8 @@ fun ChatScreen(
     isMeshMode: Boolean = false,
     onBack: () -> Unit = {},
     onProfileClicked: () -> Unit = {},
-    onVoiceCallClick: () -> Unit = {},
-    onVideoCallClick: () -> Unit = {}
+    onVoiceCallClick: (String, String) -> Unit = { _, _ -> },
+    onVideoCallClick: (String, String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val vm: MeshChatViewModel = viewModel()
@@ -316,6 +318,12 @@ fun ChatScreen(
                             }
                         },
                         actions = {
+                            IconButton(onClick = { onVoiceCallClick(conversationId, contactName) }) {
+                                Icon(Icons.Filled.Call, "Llamada de voz", tint = Color(0xFF4CE6FF))
+                            }
+                            IconButton(onClick = { onVideoCallClick(conversationId, contactName) }) {
+                                Icon(Icons.Filled.Videocam, "Videollamada", tint = Color(0xFF4CE6FF))
+                            }
                             Box {
                                 IconButton(onClick = { showChatMenu = true }) {
                                     Surface(
