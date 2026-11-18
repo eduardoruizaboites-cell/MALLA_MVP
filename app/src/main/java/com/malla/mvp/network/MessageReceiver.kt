@@ -137,6 +137,14 @@ object MessageReceiver {
                 LogBuffer.add(TAG, "Self-echo descartado: type=${meshMsg.type}")
                 return
             }
+            // Iter 70e-fix2 (CORREGIDO): señales WebRTC no son chat. Return antes de DB/notify.
+            if (meshMsg.content.startsWith("sdp:") ||
+                meshMsg.content.startsWith("ice:") ||
+                meshMsg.content.startsWith("call_")) {
+                LogBuffer.add(TAG, "Señal WebRTC ignorada por MessageReceiver: ${meshMsg.content.take(20)}")
+                return
+            }
+
             val db = AppDatabase.getInstance(context) ?: return
             // Iter 55: bucket temporal de 1s para la clave de dedupe. Cuando el
             // payload no es JSON (ACCEPT legacy pre-54, fallbacks), el timestamp
@@ -341,17 +349,7 @@ object MessageReceiver {
 
             // Enviar ACK=1 (delivered) al emisor si el mensaje trae messageId.
             // ACK=2 (read) se envía cuando el receptor abre la conversación (type="read_all").
-                        // Iter 70e-fix2: señales WebRTC (sdp/ice/call_*) NO son mensajes de chat.
-            // Se procesan por WebRtcManager.handleSignal (filtro defensivo startsWith).
-            // MessageReceiver las ignora para no ensuciar la UI ni generar notificaciones spam.
-            if (meshMsg.content.startsWith("sdp:") ||
-                meshMsg.content.startsWith("ice:") ||
-                meshMsg.content.startsWith("call_")) {
-                LogBuffer.add(TAG, "Señal WebRTC ignorada por MessageReceiver: ${meshMsg.content.take(20)}")
-                return
-            }
-
-if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
+            if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
                 // Por TCP
                 try {
                     NetworkService.sendMessageToContact(
