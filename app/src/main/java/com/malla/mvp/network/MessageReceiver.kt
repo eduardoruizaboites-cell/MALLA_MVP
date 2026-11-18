@@ -341,7 +341,17 @@ object MessageReceiver {
 
             // Enviar ACK=1 (delivered) al emisor si el mensaje trae messageId.
             // ACK=2 (read) se envía cuando el receptor abre la conversación (type="read_all").
-            if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
+                        // Iter 70e-fix2: señales WebRTC (sdp/ice/call_*) NO son mensajes de chat.
+            // Se procesan por WebRtcManager.handleSignal (filtro defensivo startsWith).
+            // MessageReceiver las ignora para no ensuciar la UI ni generar notificaciones spam.
+            if (meshMsg.content.startsWith("sdp:") ||
+                meshMsg.content.startsWith("ice:") ||
+                meshMsg.content.startsWith("call_")) {
+                LogBuffer.add(TAG, "Señal WebRTC ignorada por MessageReceiver: ${meshMsg.content.take(20)}")
+                return
+            }
+
+if (meshMsg.type == "chat" && meshMsg.messageId != null && meshMsg.senderId != "self") {
                 // Por TCP
                 try {
                     NetworkService.sendMessageToContact(
