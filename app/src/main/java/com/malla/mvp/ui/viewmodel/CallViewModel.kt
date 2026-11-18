@@ -3,6 +3,11 @@ package com.malla.mvp.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import com.malla.mvp.App
 import com.malla.mvp.network.WebRtcManager
+import com.malla.mvp.data.AppDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,8 +31,25 @@ class CallViewModel : ViewModel() {
     private val _callType = MutableStateFlow("voice")
     val callType: StateFlow<String> = _callType.asStateFlow()
 
+    private val scope = CoroutineScope(Dispatchers.Main)
+
     init {
         WebRtcManager.start(App.context)
+        // Iter 70c: hidratar callerName cuando llega una llamada entrante
+        scope.launch {
+            WebRtcManager.callState.collect { state ->
+                if (state is WebRtcManager.CallState.Incoming && _callerName.value == null) {
+                    val resolved = withContext(Dispatchers.IO) {
+                        try {
+                            AppDatabase.getInstance(App.context)?.contactDao()
+                                ?.getById(state.contactId)?.displayName
+                        } catch (e: Exception) { null }
+                    }
+                    _callerName.value = resolved ?: state.contactId.take(8)
+                    _callType.value = state.callType
+                }
+            }
+        }
     }
 
     fun startVoiceCall(contactId: String, name: String) {
