@@ -127,6 +127,40 @@ object NotificationHelper {
         manager.cancelAll()
     }
 
+    fun showInvitationNotification(context: Context, senderId: String, senderName: String) {
+        if (!areNotificationsEnabled(context)) return
+        if (channelBlocked(context)) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            putExtra("sender_id", senderId)
+            putExtra("open_invitation", true)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, senderId.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(android.graphics.Color.parseColor("#4CE6FF"))
+            .setContentTitle("Nueva solicitud de contacto")
+            .setContentText("$senderName quiere conectar contigo")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$senderName quiere conectar contigo. Desliza para aceptar o rechazar."))
+            .setCategory(NotificationCompat.CATEGORY_CALL) // Crítico para encender pantalla bloqueada
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true) // Despierta la pantalla
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(("inv_$senderId").hashCode(), builder.build())
+        DiagnosticsLogger.log("NotifHelper", "Notificacion invitacion mostrada para $senderName")
+    }
+
     fun showAcceptanceNotification(context: Context, acceptorUserId: String, acceptorName: String) {
         if (!areNotificationsEnabled(context)) {
             DiagnosticsLogger.log("NotifHelper", "OMITIDA acceptance: notificaciones deshabilitadas")

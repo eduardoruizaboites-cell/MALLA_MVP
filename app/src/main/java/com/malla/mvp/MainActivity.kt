@@ -410,6 +410,16 @@ class MainActivity : FragmentActivity() {
                     } else {
                         incomingInvitation = inv
                         showInvitationDialog = true
+                        
+                        // Fix Bug 2 (iter 73): despertar pantalla si la app está en background o bloqueada
+                        val lifecycleState = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycle?.currentState
+                        if (lifecycleState != androidx.lifecycle.Lifecycle.State.RESUMED) {
+                            NotificationHelper.showInvitationNotification(
+                                context,
+                                inv.senderUserId,
+                                inv.senderDisplayName
+                            )
+                        }
                     }
                 }
             }
