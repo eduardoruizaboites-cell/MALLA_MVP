@@ -244,13 +244,13 @@ fun ConversationCard(
                                 Text(conversation.lastMessage ?: "Sin mensajes", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             if (conversation.unreadCount > 0) {
-                                Badge(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onPrimary) {
-                                    Text(conversation.unreadCount.toString(), fontSize = 12.sp)
+                                Badge(containerColor = Color(0xFF4CE6FF), contentColor = Color(0xFF0A1B2A)) {
+                                    Text(conversation.unreadCount.toString(), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         Spacer(modifier = Modifier.width(4.dp))
                         var showCallMenu by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = { showCallMenu = true }) {
-                                Icon(Icons.Filled.Phone, "Llamada", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Filled.Phone, "Llamada", tint = Color(0xFF4CE6FF), modifier = Modifier.size(20.dp))
                             }
                             DropdownMenu(expanded = showCallMenu, onDismissRequest = { showCallMenu = false }) {
                                 DropdownMenuItem(text = { Text("Llamada de voz") }, onClick = { showCallMenu = false; /* TODO: iniciar llamada de voz */ })
