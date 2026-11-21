@@ -2700,3 +2700,31 @@ X3DH, 3-6 sesiones), 1d/1e (store-and-forward nodos/servidor). Verificación
 device 1b pendiente. Checkpoint internet postergado a post-1a según bitácora.
 ──────────────────────────────
 
+── ENTRADA — 2026-11-21 (ITER 73 — BUGS DE UX Y NOTIFICACIONES RESUELTOS) ──
+Compilación: BUILD SUCCESSFUL (3 builds consecutivos durante la sesión).
+HEAD previo: ad281e4a. HEAD de esta entrada: 5dec538b.
+
+QUÉ SE HIZO (iter 73, cierre de bugs de prueba de usuario):
+  4cbe3b99 — fix BUILD_LABEL: decía "iter 70", ahora dice "iter 73 built ...".
+    El APK compilado hoy sí tenía el código nuevo, pero el label confundía.
+  acc555f0 — fix UI ConversationCard: el badge de "no leídos" era naranja
+    (usaba MaterialTheme.colorScheme.secondary), ahora es cyan #4CE6FF.
+    El ícono de llamada también era naranja por defecto, ahora es cyan forzado.
+  5dec538b — fix Bug 2 (Pantalla apagada): se agregó showInvitationNotification
+    en NotificationHelper.kt (con setFullScreenIntent + CATEGORY_CALL).
+    MainActivity.kt ahora evalúa si la app está RESUMED; si está en background
+    o pantalla bloqueada, dispara la notificación para despertar la pantalla.
+
+HALLAZGOS DE LA PRUEBA DE USUARIO (Xiaomi A11 + Cubot A16, 2026-11-21):
+  - AMBOS devices corren iter 73 (confirmado en logs de diagnóstico a las 10:05).
+  - Flujo BLE (Xiaomi -> Cubot y viceversa) funciona: INSERT en DB y ACK de
+    transporte. El problema de latencia es por el timeout de 3500ms del BleManager.
+  - El bug de "checkmarks lentos" es realmente 1c (ACK llega por wire, pero
+    MessageReceiver lo ignora y no actualiza el status a DELIVERED en Room).
+  - Nota: el log de Xiaomi del 2026-11-18 mostraba un bug de reconexión TCP
+    (EOF inmediato tras handshake). Es un bug preexistente de NetworkService
+    y no afecta el flujo BLE actual.
+
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1c (ACK real a DB), latencia BLE (timeout
+3500ms), reconexión TCP, actualizar notificación de "aceptación" con FullScreen.
+
