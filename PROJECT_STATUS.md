@@ -2569,3 +2569,42 @@ VERIFICADO EN: solo lectura (grep + cat de :core/crypto y app/crypto).
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1b-1e, 1a (forward secrecy + X3DH), 1c verificar.
 ──────────────────────────────
 
+── ENTRADA — 2026-11-18 (DIRECTIVA DE AUTONOMÍA TÉCNICA + CIERRE SESIÓN 9) ──
+Compilación: no aplica — entrada documental.
+DIRECTIVA DEL USUARIO (aplica desde Sesión 10 en adelante):
+  El arquitecto toma la mejor decisión técnica para la creación y ejecución de MALLA,
+  dentro del alcance del proyecto y sus principios. Cada decisión debe:
+    (a) estar justificada contra los ejes de calidad del ROL 1 (batería, memoria,
+        latencia, confiabilidad offline, compatibilidad, UX);
+    (b) validarse con evidencia sólida (código real leído en sesión, no supuestos);
+    (c) verificarse con pruebas (build exitoso + device cuando aplique).
+  Si la decisión es no trivial o el alcance es grande, se documenta la justificación
+  en esta bitácora ANTES de ejecutar. Si la decisión falla en prueba, se revierte y
+  se documenta la hipótesis descartada. Esta directiva AMPLÍA el límite de alcance
+  del ROL 1: el arquitecto puede proponer y ejecutar cambios técnicos que sirvan al
+  objetivo del proyecto sin esperar instrucción explícita para cada paso, siempre
+  que respete las reglas inquebrantables (R1-R24) y documente cada decisión.
+
+CIERRE SESIÓN 9:
+  HEAD: d77ceb90 (chore(status): prioridad #1).
+  Working tree: clean.
+  Stash: 1 entrada "iter 72 WIP - flags + label" (MeshFlags + build.gradle.kts).
+  Procesos: node, cloudflared, python http.server — todos detenidos.
+  Tag de cierre: no se creó (no hubo BUILD SUCCESSFUL de código nuevo).
+
+DECISIONES PENDIENTES PARA SESIÓN 10 (1b):
+  D1 — Migración 17→18 explícita (recomendado) vs fallbackToDestructiveMigration.
+  D2 — WorkManager para retry (recomendado) vs coroutine con delay().
+  D3 — Estados separados SENT(1)/DELIVERED(2) (recomendado) vs colapsar en uno.
+  Si Sesión 10 no recibe objeción del usuario, procede con A/A/A por default.
+
+STASH DE ITER 72 — DECISIÓN RECOMENDADA:
+  Descartar el stash (git stash drop) porque la prioridad #1 es 1b (cola persistente),
+  no el checkpoint internet. Tener enableWebRtcTransport=true haría que TODO intente
+  WebRTC primero, generando ruido en el retry de 1b. Los flags se reactivan cuando
+  se retome el checkpoint internet (después de 1b-1c-1f, mínimo).
+
+VERIFICADO EN: solo lectura.
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1b-1e, 1a (forward secrecy + X3DH), 1c verificar.
+──────────────────────────────
+
