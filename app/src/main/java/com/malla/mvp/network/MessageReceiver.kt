@@ -261,7 +261,7 @@ object MessageReceiver {
                     else -> 1
                 }
                 db.messageDao().updateStatus(meshMsg.messageId!!, newStatus)
-                LogBuffer.add(TAG, "[ACK] Mensaje ${meshMsg.messageId} actualizado a status=$newStatus (1c)")
+                DiagnosticsLogger.log(TAG, "[ACK] Mensaje ${meshMsg.messageId} actualizado a status=$newStatus (1c)")
                 // Fix 1c: emitir a la UI para que refresque el checkmark al instante
                 MallaEventBus.messageReceived.emit(meshMsg)
                 return

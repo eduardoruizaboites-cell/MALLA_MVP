@@ -73,7 +73,14 @@ fun ConversationsScreen(
     var selectedNearbyUser by remember { mutableStateOf<NearbyUser?>(null) }
     var showContacts by remember { mutableStateOf(false) }
     var acceptanceMessage by remember { mutableStateOf<String?>(null) }
+    var typingPeerId by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // Escuchar typing en tiempo real
+    LaunchedEffect(Unit) {
+        com.malla.mvp.events.MallaEventBus.typingReceived.collect { (sender, isTyping) ->
+            typingPeerId = if (isTyping) sender else null
+        }
+    }
     // El listener de incomingInvitation se removió: MainActivity lo maneja globalmente.
     LaunchedEffect(Unit) {
         InvitationManager.acceptanceReceived.collect { (name, seed) ->
@@ -247,6 +254,7 @@ fun ConversationsScreen(
                             conversation = conversation,
                             onClick = { onChatClicked(conversation.id, conversation.title) },
                             avatarBitmap = avatarBitmap,
+                            isTyping = typingPeerId == conversation.id,
                             onProfile = { onProfileClicked(conversation.title) },
                             onStories = { ToastHelper.show(context, "Historias de ${conversation.title}", Toast.LENGTH_SHORT) },
                             onHide = { scope.launch { conversationDao?.hideConversation(conversation.id) } },

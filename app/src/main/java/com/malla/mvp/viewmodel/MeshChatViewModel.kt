@@ -209,13 +209,15 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     }
 
     private suspend fun handleIncomingMessage(msg: MeshMessage) {
+        // Fix 1c: Si es un ACK, el senderId es nuestro propio ID. Refrescamos la conversación actual.
+        if (msg.type == "ack") {
+            _conversationId.value?.let { refreshMessages(it) }
+            return
+        }
         val convId = msg.senderId
-        // MessageReceiver ya inserta el mensaje en la BD;
-        // solo actualizamos la UI si la conversación actual está abierta.
         if (convId == _conversationId.value) {
             refreshMessages(convId)
         }
-        // Si no es la conversación actual, MessageReceiver se encargó de guardarla.
     }
 
     fun updateInputText(text: String) {

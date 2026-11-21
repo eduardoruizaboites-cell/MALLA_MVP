@@ -48,7 +48,8 @@ fun ConversationCard(
     onHide: () -> Unit = {},
     onProfile: () -> Unit = {},
     onStories: () -> Unit = {},
-    avatarBitmap: Bitmap? = null
+    avatarBitmap: Bitmap? = null,
+    isTyping: Boolean = false
 ) {
     var showAvatarDialog by remember { mutableStateOf(false) }
 
@@ -235,13 +236,18 @@ fun ConversationCard(
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                if (conversation.lastMessageStatus >= 0 && conversation.lastMessage?.isNotBlank() == true) {
-                                    val check = when (conversation.lastMessageStatus) { 0 -> "✓" 1 -> "✓✓" 2 -> "✓✓" else -> "" }
-                                    val checkColor = if (conversation.lastMessageStatus == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    Text(check, style = MaterialTheme.typography.labelSmall, color = checkColor)
-                                    Spacer(modifier = Modifier.width(2.dp))
+                                if (isTyping) {
+                                    Text("escribiendo...", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4CE6FF), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                } else {
+                                    if (conversation.lastMessageStatus >= 0 && conversation.lastMessage?.isNotBlank() == true) {
+                                        val check = when (conversation.lastMessageStatus) { 0 -> "✓" 1 -> "✓✓" 2 -> "✓✓" else -> "" }
+                                        val checkColor = if (conversation.lastMessageStatus == 2) Color(0xFF4CE6FF) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        Text(check, style = MaterialTheme.typography.labelSmall, color = checkColor)
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                    }
+                                    val msgColor = if (conversation.unreadCount > 0) Color(0xFF4CE6FF).copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    Text(conversation.lastMessage ?: "Sin mensajes", style = MaterialTheme.typography.bodyMedium, color = msgColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
-                                Text(conversation.lastMessage ?: "Sin mensajes", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             if (conversation.unreadCount > 0) {
                                 Badge(containerColor = Color(0xFF4CE6FF), contentColor = Color(0xFF0A1B2A)) {
