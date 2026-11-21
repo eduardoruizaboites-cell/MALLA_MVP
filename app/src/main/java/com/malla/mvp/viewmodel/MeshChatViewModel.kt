@@ -149,8 +149,10 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                         if (msg.encrypted && sessionKey != null) {
                             try {
                                 val decryptedContent = SessionCipher.decrypt(msg.content, sessionKey!!)
+                                com.malla.mvp.core.engine.LogBuffer.add("MeshChatVM", "[SEC] Descifrado OK para msg ${msg.id.take(8)}")
                                 msg.copy(content = decryptedContent)
                             } catch (e: Exception) {
+                                com.malla.mvp.core.engine.LogBuffer.add("MeshChatVM", "[SEC] ERROR descifrando msg ${msg.id.take(8)}: ${e.message}")
                                 msg
                             }
                         } else msg
@@ -302,11 +304,15 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val finalContent = if (encryptionEnabled && sessionKey != null) {
                 try {
-                    SessionCipher.encrypt(text.ifBlank { "📷 Imagen" }, sessionKey!!)
+                    val encrypted = SessionCipher.encrypt(text.ifBlank { "📷 Imagen" }, sessionKey!!)
+                    com.malla.mvp.core.engine.LogBuffer.add("MeshChatVM", "[SEC] Cifrado AES-GCM OK. Ciphertext: ${encrypted.take(10)}...")
+                    encrypted
                 } catch (e: Exception) {
+                    com.malla.mvp.core.engine.LogBuffer.add("MeshChatVM", "[SEC] ERROR cifrando mensaje: ${e.message}")
                     text.ifBlank { "📷 Imagen" }
                 }
             } else {
+                com.malla.mvp.core.engine.LogBuffer.add("MeshChatVM", "[SEC] WARN: Enviando SIN cifrar (encryptionEnabled=$encryptionEnabled)")
                 text.ifBlank { "📷 Imagen" }
             }
             // Si hay imagen, comprimir y codificar en Base64 para que viaje en content

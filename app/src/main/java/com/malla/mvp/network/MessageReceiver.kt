@@ -261,7 +261,9 @@ object MessageReceiver {
                     else -> 1
                 }
                 db.messageDao().updateStatus(meshMsg.messageId!!, newStatus)
-                // Iter 52: no emitir a la UI — ack es señal de control, no mensaje
+                LogBuffer.add(TAG, "[ACK] Mensaje ${meshMsg.messageId} actualizado a status=$newStatus (1c)")
+                // Fix 1c: emitir a la UI para que refresque el checkmark al instante
+                MallaEventBus.messageReceived.emit(meshMsg)
                 return
             }
 
@@ -335,6 +337,11 @@ object MessageReceiver {
             // Fix iter 57: no insertar control messages en Room
             if (msgEntity.type == "chat" || msgEntity.type == "sms") {
                 DiagnosticsLogger.log(TAG, "INSERT en DB: id=${msgEntity.id}, type=${msgEntity.type}, content=${msgEntity.content.take(40)}")
+                if (msgEntity.encrypted) {
+                    LogBuffer.add(TAG, "[SEC] Mensaje guardado cifrado en DB. Ciphertext len=${msgEntity.content.length}")
+                } else {
+                    LogBuffer.add(TAG, "[SEC] WARN: Mensaje guardado SIN cifrar en DB (encrypted=false)")
+                }
                 messageDao.insertMessage(msgEntity)
             } else {
                 DiagnosticsLogger.log(TAG, "Control message ignorado en Room: type=${msgEntity.type}")
