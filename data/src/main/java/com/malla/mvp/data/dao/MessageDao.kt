@@ -53,4 +53,28 @@ interface MessageDao {
 
     @Query("UPDATE messages SET status = :newStatus WHERE conversationId = :conversationId AND isOwn = :isOwn")
     suspend fun updateStatusForConversationAndOwn(conversationId: String, isOwn: Boolean, newStatus: Int)
+
+    // ══════════ Iter 73 (1b): queries para cola persistente de reintentos ══════════
+
+    /**
+     * Cola de mensajes pendientes de reintento (WorkManager).
+     * Solo mensajes propios, en estado PENDING, con menos de [maxRetries] intentos.
+     * Ordenados por antigüedad para procesar FIFO. El índice (status) hace la
+     * consulta O(log n); el índice compuesto (conversationId, status) se usa para
+     * la variante por conversación.
+     */
+    @Query("SELECT * FROM messages WHERE isOwn = 1 AND status = 0 AND retryCount < :maxRetries ORDER BY timestamp ASC")
+    suspend fun getPendingMessagesForRetry(maxRetries: Int): List<MessageEntity>
+
+    /** Variante por conversación — útil para el botón "reintentar ahora" de la UI. */
+    @Query("SELECT * FROM messages WHERE isOwn = 1 AND status = 0 AND retryCount < :maxRetries AND conversationId = :conversationId ORDER BY timestamp ASC")
+    suspend fun getPendingMessagesForRetryInConversation(conversationId: String, maxRetries: Int): List<MessageEntity>
+
+    /** Incrementa el contador y registra el último intento (para backoff exponencial). */
+    @Query("UPDATE messages SET retryCount = retryCount + 1, lastRetryAt = :now WHERE id = :messageId")
+    suspend fun incrementRetry(messageId: String, now: Long)
+
+    /** Marca el mensaje como FAILED definitivo con causa. No se reintenta más. */
+    @Query("UPDATE messages SET status = 3, errorMessage = :error WHERE id = :messageId")
+    suspend fun markFailed(messageId: String, error: String?)
 }
