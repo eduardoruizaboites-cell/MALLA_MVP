@@ -2608,3 +2608,95 @@ VERIFICADO EN: solo lectura.
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1b-1e, 1a (forward secrecy + X3DH), 1c verificar.
 ──────────────────────────────
 
+── ENTRADA — 2026-11-21 (ITER 73 — 1b: COLA PERSISTENTE ROOM + 1f UI HONESTA) ──
+Compilación: BUILD SUCCESSFUL (último: ver bloque B de cierre). 5 commits de código en 1b.
+HEAD previo: d77ceb90 (prioridad #1). HEAD de cierre: commit de esta entrada.
+
+CIERRE SESIÓN 9 RE-APLICADO (f49160f1): la directiva de autonomía técnica que
+sesión 9 describió como aplicada NO estaba en repo. Re-aplicada idéntica desde el
+heredoc original del informe sesión 9. Sin cambios al texto.
+
+QUÉ SE HIZO (iter 73, 1b — cola persistente E2E):
+  5a804195 — 1b Paso 1: MessageEntity + retryCount/lastRetryAt/errorMessage
+    + companion STATUS_{PENDING,SENT,DELIVERED,FAILED}
+    + índices (conversationId, status) y (status)
+    + MIGRATION_17_18 explícita en AppDatabase (version 17→18)
+    + addMigrations actualizado en las 2 ocurrencias del builder
+  b5ee168e — 1b Paso 2: MessageDao + 4 métodos:
+    + getPendingMessagesForRetry(maxRetries)
+    + getPendingMessagesForRetryInConversation(convId, maxRetries)
+    + incrementRetry(messageId, now)
+    + markFailed(messageId, error)
+  774e0ade — 1b Paso 3+4: MessageRetryWorker + MessageRetryScheduler
+    + hook en MeshChatViewModel.sendMessage: si send() false → schedule
+    + ensurePeriodicScheduled en init() del ViewModel
+    + self_chat: literal 2 → MessageEntity.STATUS_DELIVERED (semántica)
+    + worker periódico cada 2 min (KEEP) + one-shot tras cada fallo (REPLACE)
+    + backoff exponencial: 15s, 30s, 1m, 2m, 4m, 8m, 16m, 32m capeado
+    + MAX_RETRIES=8 (~1h de intentos) → status=FAILED + errorMessage
+  feat(chat) 1f — ChatScreen.kt (BubbleContent) checkmarks honestos
+    + 0 (PENDING)  → Icons.Filled.Schedule gris claro "Pendiente"
+    + 1 (SENT)     → Icons.Filled.Done gris "Enviado"
+    + 2 (DELIVERED)→ Icons.Filled.DoneAll cyan "Entregado"
+    + 3 (FAILED)   → Icons.Filled.ErrorOutline rojo "Falló"
+    + else         → DoneAll gris "Entregado" (defensivo)
+    Bug corregido: antes el else caía en "Leído" para FAILED → mostraba ✓✓
+    cyan sobre mensajes que nunca salieron del device (seguridad percibida).
+    Literales 0/1/2/3 en la UI, no constantes, para no acoplar :app a :data.
+
+VERIFICACIÓN DE ESTADO BASE (R24, antes de tocar código):
+  - HEAD = d77ceb90 + working tree clean + stash 6 entradas (drop stash@{0}).
+  - Discrepancia 1 (R13): el commit de cierre de sesión 9 NO existía en repo.
+    Resuelta con re-aplicación idéntica (f49160f1).
+  - Discrepancia 2 (R13): módulo :data NO listado en prompt maestro v5. Room,
+    entities, DAOs y AppDatabase viven en :data, no en :core. Deuda documental.
+
+DECISIÓN TÉCNICA — DISEÑO DEL WORKER:
+  Un solo worker periódico (cada 2 min, KEEP) + one-shot por fallo (REPLACE).
+  Razones: (a) N entradas de WorkManager significan N wake-ups potenciales en
+  MIUI/HyperOS; una sola periodic entra al bucket whitelisted más fácil;
+  (b) Room queries agrupadas consumen menos CPU que una por mensaje;
+  (c) one-shot garantiza primer retry inmediato sin esperar 2 min.
+  Contra: el retry en background puede tardar hasta 2 min. Mitigado por one-shot.
+
+DECISIÓN TÉCNICA — HISTÓRICOS RESCATADOS:
+  Mensajes PENDING (status=0) preexistentes en device (los del bug "el mensaje
+  se pierde si la app se cierra") se reintentan automáticamente en el primer
+  batch periódico tras instalar la nueva versión. retryCount=0 los incluye.
+  Status 1/2/3 (SENT/DELIVERED/FAILED) NO se tocan. Deseado: cierra gap histórico.
+
+VERIFICADO EN: solo compilación (BUILD SUCCESSFUL múltiple). Device PENDIENTE:
+  - APK instalada en Xiaomi (A11) + Cubot (A16).
+  - Test manual: enviar mensaje con peer offline → cerrar app → reabrir → confirmar
+    que el mensaje llega tras reconectar peer. Sin esta prueba, 1b NO está
+    verificado en device (R12/R13).
+  - Test UI: 4 estados con iconos correctos (Schedule/Done/DoneAll/ErrorOutline).
+
+COMPATIBILIDAD CONSIDERADA (R21):
+  - Room 2.6.1 (mismo que ya estaba) + KSP regenera schema v18 OK.
+  - WorkManager 2.9.0 (ya estaba en :app, no se agregó dep).
+  - API 24+ en :data, API 26+ en :app — WorkManager compatible.
+  - MIUI/HyperOS: worker periódico único = menos impacto bucket restrictions.
+  - Migración explícita 17→18 evita fallbackToDestructiveMigration (que sí está
+    activo como red de seguridad final pero NO debería activarse).
+
+DEUDA NUEVA ABIERTA:
+  (a) Verificación device 1b pendiente (bloqueante para dar 1b por cerrado real).
+  (b) KSP warning preexistente: ksp-1.9.10-1.0.13 too old for kotlin-1.9.22.
+      Fix trivial (subir KSP a 1.9.22-1.0.17), fuera de scope 1b.
+  (c) Warning label collision en MeshChatViewModel.kt:137 preexistente.
+  (d) Módulo :data no documentado en prompt maestro v5 — actualizar prompt.
+  (e) "LÍNEA FALTANTE" comentario residual en App.kt:33 — no es bug, limpiar.
+
+SUGERENCIAS PROACTIVAS OFRECIDAS (R20, sin implementar):
+  (1) Índice compuesto (conversationId, status) — IMPLEMENTADO en Paso 1.
+  (2) Worker periódico único vs N one-shots — IMPLEMENTADO en Paso 3+4.
+  (3) Históricos rescatados automáticamente — IMPLEMENTADO por defecto.
+  (4) Retry manual "reintentar ahora" en UI (botón en mensaje FAILED) —
+      requiere getPendingMessagesForRetryInConversation (ya existe) + UI nueva.
+
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1c (ACK real), 1a (forward secrecy +
+X3DH, 3-6 sesiones), 1d/1e (store-and-forward nodos/servidor). Verificación
+device 1b pendiente. Checkpoint internet postergado a post-1a según bitácora.
+──────────────────────────────
+
