@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.malla.mvp.App
 import com.malla.mvp.data.AppDatabase
 import com.malla.mvp.data.entity.MessageEntity
+import com.malla.mvp.service.MessageRetryScheduler
 import com.malla.mvp.data.entity.ConversationEntity
 import com.malla.mvp.identity.IdentityManager
 import com.malla.mvp.crypto.CryptoEngine
@@ -64,6 +65,9 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
     init {
+        // Iter 73 (1b): asegurar que el worker periódico de retry está registrado.
+        MessageRetryScheduler.ensurePeriodicScheduled(application.applicationContext)
+
         // Observar mensajes entrantes del bus global
         viewModelScope.launch {
             MallaEventBus.messageReceived.collect { msg ->
@@ -354,15 +358,21 @@ class MeshChatViewModel(application: Application) : AndroidViewModel(application
                     )
                     val delivered = TransportManager.send(convId, meshMsg)
                     if (delivered) {
-                        db?.messageDao()?.updateStatus(msg.id, 1)  // entregado
+                        db?.messageDao()?.updateStatus(msg.id, MessageEntity.STATUS_SENT)
+                    } else {
+                        // Iter 73 (1b): encolar reintento persistente (WorkManager).
+                        // El worker subirá el status a SENT cuando logre entregar,
+                        // o a FAILED si agota MAX_RETRIES.
+                        MessageRetryScheduler.ensurePeriodicScheduled(getApplication())
+                        MessageRetryScheduler.scheduleImmediate(getApplication())
                     }
-                    // Si no se entregó, queda en status=0 (SENT). El ACK del
-                    // receptor lo subirá a 1 cuando llegue por read receipt.
                 } catch (e: Exception) {
-                    // fallback: queda como enviado (0)
+                    // Fallback: si TransportManager.send lanza, también encolamos.
+                    MessageRetryScheduler.ensurePeriodicScheduled(getApplication())
+                    MessageRetryScheduler.scheduleImmediate(getApplication())
                 }
             } else {
-                db?.messageDao()?.updateStatus(msg.id, 2)  // leído
+                db?.messageDao()?.updateStatus(msg.id, MessageEntity.STATUS_DELIVERED)  // self_chat: leído por definición
             }
             _inputText.value = ""
             refreshMessages(convId)
