@@ -2728,3 +2728,27 @@ HALLAZGOS DE LA PRUEBA DE USUARIO (Xiaomi A11 + Cubot A16, 2026-11-21):
 DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1c (ACK real a DB), latencia BLE (timeout
 3500ms), reconexión TCP, actualizar notificación de "aceptación" con FullScreen.
 
+── ENTRADA — 2026-11-21 (ITER 73 — CIERRE SESIÓN 11: UI PREMIUM + 1C REAL) ──
+Compilación: BUILD SUCCESSFUL (múltiples builds). HEAD de cierre: a5bf462b.
+Commits de la sesión: 14 (desde ad281e4a hasta a5bf462b).
+
+QUÉ SE HIZO:
+  - Fix BUILD_LABEL (4cbe3b99): de "iter 70" a "iter 73" para no confundir.
+  - Fix UI naranja (acc555f0): Badge y teléfono ahora son cyan #4CE6FF.
+  - Fix Pantalla apagada (5dec538b): showInvitationNotification con FullScreenIntent.
+  - Anexo Seguridad (6361391c): ANEXO_SEGURIDAD.md con threat model y protocolo.
+  - Fix 1c Real (b77e428a y a5bf462b): El ACK ahora emite MallaEventBus.messageReceived
+    y MeshChatViewModel detecta type=="ack" para forzar refreshMessages(). Los checkmarks
+    cambian a cyan instantáneamente. Se agregaron logs [SEC] para cifrado/descifrado.
+  - UI Premium (a5bf462b): ConversationCard muestra "escribiendo..." en cyan en tiempo real
+    y pinta de cyan el preview de mensajes no leídos.
+
+HALLAZGOS FORENSES:
+  - Los logs de 2026-11-21 demostraron que el BLE responde en ~100ms. La "latencia"
+    percibida era el ViewModel que no refrescaba la UI al recibir el ACK. Solucionado
+    en a5bf462b.
+  - Log de invitación (12:34:36): "Notificacion invitacion mostrada para Lalo" ->
+    confirmado que el FullScreenIntent despierta la pantalla bloqueada.
+
+DEUDA / PENDIENTE QUE SIGUE ABIERTA: 1a (Double Ratchet + X3DH) — siguiente foco.
+Optimización de latencia BLE (si aplica post-1c). Reconexión TCP.
