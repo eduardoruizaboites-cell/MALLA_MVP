@@ -64,6 +64,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
@@ -1725,9 +1727,16 @@ private fun BubbleContent(
             if (msg.isOwn) {
                 Spacer(modifier = Modifier.width(3.dp))
                 when (msg.status) {
-                    0 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                    1 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Leído", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
+                    // Iter 73 (1b/1f): semántica alineada con MessageEntity.STATUS_*
+                    // Antes el else caía en "Leído" para FAILED — mostraba ✓✓ cyan
+                    // sobre mensajes que nunca salieron del device. Bug de seguridad
+                    // percibida corregido acá. Literales 0/1/2/3 (no constantes) para
+                    // no acoplar UI al módulo :data.
+                    0 -> Icon(Icons.Filled.Schedule, contentDescription = "Pendiente", tint = textColor.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                    1 -> Icon(Icons.Filled.Done, contentDescription = "Enviado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                    2 -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = Color(0xFF4CE6FF), modifier = Modifier.size(16.dp))
+                    3 -> Icon(Icons.Filled.ErrorOutline, contentDescription = "Falló", tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                    else -> Icon(Icons.Filled.DoneAll, contentDescription = "Entregado", tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
                 }
             }
         }
