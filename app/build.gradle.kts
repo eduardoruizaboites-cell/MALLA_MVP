@@ -25,7 +25,7 @@ android {
         buildConfigField("String", "TURN_USER", "\"$turnUser\"")
         buildConfigField("String", "TURN_PASS", "\"$turnPass\"")
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
-        buildConfigField("String", "BUILD_LABEL", "\"iter 70 built $buildTime\"")
+        buildConfigField("String", "BUILD_LABEL", "\"iter 73 built $buildTime\"")
     }
 
     buildTypes {
