@@ -34,7 +34,7 @@ import java.io.File
         ContactEntity::class,
         PollVoteEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -82,6 +82,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Iter 73 (1b): campos de retry + indices para cola persistente de reintentos
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN retryCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE messages ADD COLUMN lastRetryAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE messages ADD COLUMN errorMessage TEXT")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_messages_conversationId_status ON messages(conversationId, status)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_messages_status ON messages(status)")
+            }
+        }
+
         val CALLBACK = object : RoomDatabase.Callback() {
             override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 super.onCreate(db)
@@ -113,7 +124,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
@@ -130,7 +141,7 @@ abstract class AppDatabase : RoomDatabase() {
                             AppDatabase::class.java,
                             "malla_database"
                         )
-                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                            .addMigrations(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                             .fallbackToDestructiveMigration()
                             .addCallback(CALLBACK)
                             .build()
